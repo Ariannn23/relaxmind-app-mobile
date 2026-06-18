@@ -1,0 +1,14 @@
+.gradle/
+.idea/
+build/
+local.properties
+*.iml
+
+app/build/
+app/google-services.json
+
+captures/
+externalNativeBuild/
+.cxx/
+*.hprof
+*.hprof.*
