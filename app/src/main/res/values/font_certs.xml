@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Certificate resource required by Compose Google Fonts provider. -->
+    <array name="com_google_android_gms_fonts_certs">
+        <item>@array/com_google_android_gms_fonts_certs_empty</item>
+    </array>
+
+    <!-- The production certificate set can be replaced by Android Studio's generated Google Fonts certs. -->
+    <string-array name="com_google_android_gms_fonts_certs_empty" />
+</resources>

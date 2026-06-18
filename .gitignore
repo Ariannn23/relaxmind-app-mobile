@@ -10,3 +10,5 @@ app/google-services.json
 captures/
 externalNativeBuild/
 .cxx/
+*.hprof
+*.hprof.*
