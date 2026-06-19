@@ -197,23 +197,34 @@ object RelaxIcons {
 
     val Meditation: ImageVector = outlinedIcon("RelaxMeditation") {
         path(fill = SolidColor(Color.Black)) {
-            // Center leaf: X from 10 to 14, Y from 6 to 18
-            moveTo(12f, 6f)
-            quadTo(14f, 11f, 13f, 18f)
-            lineTo(11f, 18f)
-            quadTo(10f, 11f, 12f, 6f)
+            // Central petal (vertical drop)
+            moveTo(12f, 5f)
+            quadTo(15f, 11f, 12f, 19f)
+            quadTo(9f, 11f, 12f, 5f)
             close()
 
-            // Left leaf: pointing up-left
-            moveTo(11f, 11f)
-            quadTo(6f, 12f, 5f, 17f)
-            quadTo(8f, 18f, 11f, 15f)
+            // Left inner petal
+            moveTo(11.5f, 10f)
+            quadTo(7f, 10f, 7f, 16f)
+            quadTo(10f, 17.5f, 11.5f, 14f)
             close()
 
-            // Right leaf: pointing up-right
-            moveTo(13f, 11f)
-            quadTo(18f, 12f, 19f, 17f)
-            quadTo(16f, 18f, 13f, 15f)
+            // Right inner petal
+            moveTo(12.5f, 10f)
+            quadTo(17f, 10f, 17f, 16f)
+            quadTo(14f, 17.5f, 12.5f, 14f)
+            close()
+
+            // Left outer petal (horizontal base curve)
+            moveTo(8f, 15f)
+            quadTo(4f, 15f, 4f, 18f)
+            quadTo(7f, 19f, 9.5f, 17f)
+            close()
+
+            // Right outer petal (horizontal base curve)
+            moveTo(16f, 15f)
+            quadTo(20f, 15f, 20f, 18f)
+            quadTo(17f, 19f, 14.5f, 17f)
             close()
         }
     }
