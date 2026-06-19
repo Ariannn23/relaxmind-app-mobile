@@ -81,7 +81,8 @@ class AuthViewModel(
         email: String,
         password: String,
         confirmPassword: String,
-        role: String
+        role: String,
+        phone: String
     ) {
         // Field validation
         val validationError =
@@ -91,6 +92,7 @@ class AuthViewModel(
                 ?: ValidationUtils.validateEmail(email)
                 ?: ValidationUtils.validatePassword(password)
                 ?: ValidationUtils.validateConfirmPassword(password, confirmPassword)
+                ?: ValidationUtils.validatePhone(phone)
                 ?: ValidationUtils.validateRole(role)
 
         if (validationError != null) {
@@ -128,6 +130,7 @@ class AuthViewModel(
                         lastName = lastName,
                         birthDate = birthDate,
                         email = email,
+                        phone = phone,
                         createdAt = createdAt
                     )
                 )
@@ -138,6 +141,7 @@ class AuthViewModel(
                         lastName = lastName,
                         birthDate = birthDate,
                         email = email,
+                        phone = phone,
                         createdAt = createdAt
                     )
                 )

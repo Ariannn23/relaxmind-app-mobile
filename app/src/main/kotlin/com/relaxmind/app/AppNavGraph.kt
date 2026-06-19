@@ -38,6 +38,7 @@ import com.relaxmind.app.features.patient.LinkCaregiverScreen
 import com.relaxmind.app.features.patient.SOSPatientScreen
 import com.relaxmind.app.features.patient.lumi.LumiChatScreen
 import com.relaxmind.app.features.patient.lumi.LumiHistoryScreen
+import com.relaxmind.app.features.patient.EditProfileScreen
 import com.relaxmind.app.features.caregiver.SOSAlertScreen
 
 sealed class Screen(val route: String) {
@@ -344,7 +345,11 @@ fun AppNavGraph(
                 }
             )
         }
-        composable(Screen.EditProfile.route) { PlaceholderScreen("Pantalla Edit Profile") }
+        composable(Screen.EditProfile.route) {
+            EditProfileScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
         composable(Screen.LinkCaregiver.route) {
             LinkCaregiverScreen(
                 onNavigateBack = { navController.popBackStack() },

@@ -229,6 +229,28 @@ object RelaxIcons {
         }
     }
 
+    val Phone: ImageVector = outlinedIcon("RelaxPhone") {
+        path(stroke = SolidColor(Color.Black), strokeLineWidth = 1.8f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(6.5f, 4f)
+            quadTo(5f, 4f, 5f, 5.5f)
+            lineTo(5f, 9f)
+            quadTo(5f, 19f, 15f, 19f)
+            lineTo(18.5f, 19f)
+            quadTo(20f, 19f, 20f, 17.5f)
+            lineTo(20f, 15f)
+            quadTo(20f, 14f, 19f, 14f)
+            lineTo(16.5f, 13f)
+            quadTo(15.5f, 12.7f, 15f, 13.5f)
+            lineTo(14f, 15f)
+            quadTo(11f, 14f, 9f, 10f)
+            lineTo(10.5f, 9f)
+            quadTo(11.3f, 8.5f, 11f, 7.5f)
+            lineTo(10f, 5f)
+            quadTo(9.5f, 4f, 8.5f, 4f)
+            close()
+        }
+    }
+
     val Progress: ImageVector = outlinedIcon("RelaxProgress") {
         path(fill = SolidColor(Color.Black)) {
             // Bar 1 (Left): Y from 13 to 19

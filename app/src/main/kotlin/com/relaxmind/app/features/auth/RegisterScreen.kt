@@ -67,6 +67,7 @@ fun RegisterScreen(
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     var selectedRole by remember { mutableStateOf("patient") }
     var termsAccepted by remember { mutableStateOf(false) }
+    var phone by remember { mutableStateOf("") }
 
     // ── Date picker ─────────────────────────────────────────────────────────
     val calendar = Calendar.getInstance()
@@ -98,12 +99,13 @@ fun RegisterScreen(
     val confirmPasswordError = if (confirmPassword.isNotEmpty()) {
         if (password != confirmPassword) "Las contraseñas no coinciden." else null
     } else null
+    val phoneError = if (phone.isNotEmpty()) ValidationUtils.validatePhone(phone) else null
 
     val isFormValid = name.isNotBlank() && lastName.isNotBlank() &&
             birthDate.isNotBlank() && email.isNotBlank() &&
-            password.isNotBlank() && confirmPassword.isNotBlank() &&
+            password.isNotBlank() && confirmPassword.isNotBlank() && phone.isNotBlank() &&
             nameError == null && lastNameError == null && birthDateError == null &&
-            emailError == null && passwordError == null && confirmPasswordError == null &&
+            emailError == null && passwordError == null && confirmPasswordError == null && phoneError == null &&
             termsAccepted
 
     // ── Side effects ─────────────────────────────────────────────────────────
@@ -182,6 +184,9 @@ fun RegisterScreen(
                         onTogglePasswordVisibility = { passwordVisible = !passwordVisible },
                         confirmPasswordVisible = confirmPasswordVisible,
                         onToggleConfirmPasswordVisibility = { confirmPasswordVisible = !confirmPasswordVisible },
+                        phone = phone,
+                        onPhoneChange = { phone = it },
+                        phoneError = phoneError,
                         selectedRole = selectedRole,
                         onRoleSelected = { selectedRole = it },
                         termsAccepted = termsAccepted,
@@ -197,7 +202,8 @@ fun RegisterScreen(
                                 email = email,
                                 password = password,
                                 confirmPassword = confirmPassword,
-                                role = selectedRole
+                                role = selectedRole,
+                                phone = phone
                             )
                         },
                         onNavigateToLogin = onNavigateBack

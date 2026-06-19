@@ -88,6 +88,9 @@ fun RegisterFormCard(
     onTogglePasswordVisibility: () -> Unit,
     confirmPasswordVisible: Boolean,
     onToggleConfirmPasswordVisibility: () -> Unit,
+    phone: String,
+    onPhoneChange: (String) -> Unit,
+    phoneError: String?,
     selectedRole: String,
     onRoleSelected: (String) -> Unit,
     termsAccepted: Boolean,
@@ -283,6 +286,23 @@ fun RegisterFormCard(
                         )
                     }
                 }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Número de Teléfono
+            RelaxMindAuthTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = phone,
+                onValueChange = { if (it.length <= 9 && it.all { c -> c.isDigit() }) onPhoneChange(it) },
+                placeholder = "Número de teléfono",
+                leadingIcon = RelaxIcons.Phone,
+                keyboardType = KeyboardType.Number,
+                isError = phoneError != null,
+                errorMessage = phoneError,
+                contentDescription = "Campo de número de teléfono",
+                iconColor = iconColor,
+                iconBgColor = iconBgColor
             )
 
             Spacer(modifier = Modifier.height(24.dp))

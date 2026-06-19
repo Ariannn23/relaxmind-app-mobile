@@ -11,7 +11,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -238,7 +240,7 @@ fun SettingsPatientScreen(
                         Image(
                             painter = painterResource(id = R.drawable.icono_plano2),
                             contentDescription = null,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(40.dp)
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
@@ -407,6 +409,34 @@ fun SettingsPatientScreen(
 // ─────────────────────────────────────────────────────────────────────────────
 // CUSTOM VISUAL COMPONENTS
 // ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+fun RelaxSwitch(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val trackColor by animateColorAsState(if (checked) PatientGreen else Color(0xFFCBD5E0), label = "track")
+    val thumbOffset by animateDpAsState(if (checked) 20.dp else 2.dp, label = "thumb")
+
+    Box(
+        modifier = modifier
+            .size(width = 44.dp, height = 24.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(trackColor)
+            .pointerInput(Unit) {
+                detectTapGestures { onCheckedChange(!checked) }
+            },
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(start = thumbOffset)
+                .size(20.dp)
+                .background(Color.White, CircleShape)
+        )
+    }
+}
 
 @Composable
 fun SettingsHeader(
@@ -672,15 +702,9 @@ fun SettingsToggleRow(
             )
         }
         
-        Switch(
+        RelaxSwitch(
             checked = checked,
-            onCheckedChange = onToggle,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = PatientGreen,
-                uncheckedThumbColor = Color.White,
-                uncheckedTrackColor = Color(0xFFCBD5E0)
-            )
+            onCheckedChange = onToggle
         )
     }
 }
