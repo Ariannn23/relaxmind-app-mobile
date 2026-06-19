@@ -164,6 +164,66 @@ class AuthViewModel(
     }
 
     /**
+     * Finishes the registration of a new Google user by saving their chosen role.
+     */
+    fun finishGoogleRegistration(role: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null, success = false) }
+
+            val firebaseUser = authService.getCurrentUser()
+            if (firebaseUser == null) {
+                _uiState.update { it.copy(isLoading = false, error = "Usuario no autenticado.") }
+                return@launch
+            }
+
+            val userId = firebaseUser.uid
+            val nameParts = firebaseUser.displayName?.split(" ") ?: listOf("Usuario")
+            val name = nameParts.firstOrNull() ?: "Usuario"
+            val lastName = if (nameParts.size > 1) nameParts.drop(1).joinToString(" ") else ""
+            val email = firebaseUser.email ?: ""
+            val createdAt = Instant.now().toString()
+
+            val firestoreResult = when (role) {
+                "patient" -> firestoreRepository.createPatient(
+                    Patient(
+                        id = userId,
+                        name = name,
+                        lastName = lastName,
+                        birthDate = "",
+                        email = email,
+                        createdAt = createdAt
+                    )
+                )
+                "caregiver" -> firestoreRepository.createCaregiver(
+                    Caregiver(
+                        id = userId,
+                        name = name,
+                        lastName = lastName,
+                        birthDate = "",
+                        email = email,
+                        createdAt = createdAt
+                    )
+                )
+                else -> Result.failure(IllegalArgumentException("Rol desconocido: $role"))
+            }
+
+            if (firestoreResult.isFailure) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = firestoreResult.exceptionOrNull()?.localizedMessage
+                            ?: "Error al guardar el perfil."
+                    )
+                }
+                return@launch
+            }
+
+            _userRole.value = role
+            _uiState.update { it.copy(isLoading = false, success = true) }
+        }
+    }
+
+    /**
      * Signs the user in and resolves their role from Firestore so the UI
      * can navigate to the correct dashboard.
      */
@@ -203,6 +263,35 @@ class AuthViewModel(
                 return@launch
             }
 
+            _userRole.value = roleResult.getOrNull()
+            _uiState.update { it.copy(isLoading = false, success = true) }
+        }
+    }
+
+    /**
+     * Signs the user in using Google credentials.
+     * If the user doesn't have a role yet (new account), success is true but userRole is null.
+     */
+    fun loginWithGoogle(idToken: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null, success = false) }
+
+            val loginResult = authService.loginWithGoogleCredential(idToken)
+            if (loginResult.isFailure) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = loginResult.exceptionOrNull()?.localizedMessage
+                            ?: "Error al iniciar sesión con Google."
+                    )
+                }
+                return@launch
+            }
+
+            val userId = loginResult.getOrNull()!!.uid
+            val roleResult = firestoreRepository.getRoleById(userId)
+
+            // If it's a new Google user, roleResult will fail/be null, which is expected
             _userRole.value = roleResult.getOrNull()
             _uiState.update { it.copy(isLoading = false, success = true) }
         }

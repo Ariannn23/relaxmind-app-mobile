@@ -152,6 +152,16 @@ fun AppNavGraph(
                     navController.navigate(Screen.EmailVerification.route) {
                         popUpTo(Screen.Register.route) { inclusive = true }
                     }
+                },
+                onNavigateToPatientDashboard = {
+                    navController.navigate(Screen.PatientDashboard.route) {
+                        popUpTo(Screen.Register.route) { inclusive = true }
+                    }
+                },
+                onNavigateToCaregiverDashboard = {
+                    navController.navigate(Screen.CaregiverDashboard.route) {
+                        popUpTo(Screen.Register.route) { inclusive = true }
+                    }
                 }
             )
         }

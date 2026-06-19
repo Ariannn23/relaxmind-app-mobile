@@ -30,6 +30,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import com.relaxmind.app.utils.GoogleAuthHelper
 import com.relaxmind.app.features.auth.components.RegisterFormCard
 import com.relaxmind.app.features.auth.components.RegisterHeader
 import com.relaxmind.app.features.auth.components.RelaxAuthBackButton
@@ -50,11 +53,15 @@ import java.util.Calendar
 fun RegisterScreen(
     viewModel: AuthViewModel = viewModel(),
     onNavigateBack: () -> Unit,
-    onNavigateToEmailVerification: () -> Unit
+    onNavigateToEmailVerification: () -> Unit,
+    onNavigateToPatientDashboard: () -> Unit,
+    onNavigateToCaregiverDashboard: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val userRole by viewModel.userRole.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     // ── Form state ──────────────────────────────────────────────────────────
     var name by remember { mutableStateOf("") }
@@ -107,8 +114,28 @@ fun RegisterScreen(
             termsAccepted
 
     // ── Side effects ─────────────────────────────────────────────────────────
-    LaunchedEffect(uiState.success) {
-        if (uiState.success) onNavigateToEmailVerification()
+    LaunchedEffect(uiState.success, userRole) {
+        if (uiState.success) {
+            // Si el userRole es nulo, significa que acaba de registrarse con Google y falta asignar el rol
+            if (userRole == null) {
+                viewModel.finishGoogleRegistration(selectedRole)
+            } else {
+                // Ya tiene rol, decidir a dónde navegar
+                // Si fue un registro manual, el email verification es el siguiente paso. 
+                // Pero si fue Google Auth, ya está verificado y vamos al dashboard.
+                // Sin embargo, para no complicar, asumo que Google = verificado. Si FirebaseAuthService dice que current user tiene emailVerified, omitimos EmailVerification.
+                val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                if (currentUser?.isEmailVerified == true || currentUser?.providerData?.any { it.providerId == "google.com" } == true) {
+                    if (userRole == "caregiver") {
+                        onNavigateToCaregiverDashboard()
+                    } else {
+                        onNavigateToPatientDashboard()
+                    }
+                } else {
+                    onNavigateToEmailVerification()
+                }
+            }
+        }
     }
 
     LaunchedEffect(uiState.error) {
@@ -200,6 +227,18 @@ fun RegisterScreen(
                                 role = selectedRole
                             )
                         },
+                        onGoogleRegister = {
+                            scope.launch {
+                                val result = GoogleAuthHelper.getGoogleIdToken(context)
+                                result.onSuccess { token ->
+                                    viewModel.loginWithGoogle(token)
+                                }.onFailure { error ->
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar(error.message ?: "Error al autenticar con Google")
+                                    }
+                                }
+                            }
+                        },
                         onNavigateToLogin = onNavigateBack
                     )
 
@@ -254,6 +293,8 @@ private fun String.onlyLettersAndSpaces(): String =
 private fun RegisterScreenPreview() {
     RegisterScreen(
         onNavigateBack = {},
-        onNavigateToEmailVerification = {}
+        onNavigateToEmailVerification = {},
+        onNavigateToPatientDashboard = {},
+        onNavigateToCaregiverDashboard = {}
     )
 }
