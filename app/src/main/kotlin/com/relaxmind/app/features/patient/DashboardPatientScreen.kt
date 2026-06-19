@@ -400,14 +400,20 @@ private fun WellbeingTodayCard(
                 spotColor = PatientGreen.copy(alpha = 0.25f)
             ),
         shape = RoundedCornerShape(30.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(30.dp))
+        ) {
             // Background image asset for wellbeing card
             Image(
                 painter = painterResource(id = R.drawable.fondobienestar),
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(30.dp)),
                 contentScale = ContentScale.Crop
             )
 
