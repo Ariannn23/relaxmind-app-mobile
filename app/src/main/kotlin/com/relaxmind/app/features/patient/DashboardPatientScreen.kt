@@ -407,15 +407,100 @@ private fun WellbeingTodayCard(
                 .fillMaxSize()
                 .clip(RoundedCornerShape(30.dp))
         ) {
-            // Background image asset for wellbeing card
-            Image(
-                painter = painterResource(id = R.drawable.fondobienestar),
-                contentDescription = null,
+            // Programmatic Vector Canvas Background
+            Canvas(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(30.dp)),
-                contentScale = ContentScale.Crop
-            )
+                    .clip(RoundedCornerShape(30.dp))
+            ) {
+                // 1. Draw linear gradient background (minty/green soft palette)
+                drawRect(
+                    brush = Brush.linearGradient(
+                        colors = listOf(Color(0xFFE8F9F3), Color(0xFFCBEFDF)),
+                        start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                        end = androidx.compose.ui.geometry.Offset(size.width, size.height)
+                    )
+                )
+
+                // Helper to draw a flower
+                fun drawFlower(centerX: Float, centerY: Float, flowerSize: Float, alpha: Float) {
+                    val petalRadius = flowerSize / 3.2f
+                    val centerRadius = flowerSize / 5.5f
+                    val baseColor = Color.White.copy(alpha = alpha)
+                    for (i in 0 until 5) {
+                        val angle = i * 72f
+                        val rad = Math.toRadians(angle.toDouble())
+                        val distance = flowerSize / 4.2f
+                        val px = centerX + distance * Math.cos(rad).toFloat()
+                        val py = centerY + distance * Math.sin(rad).toFloat()
+                        drawCircle(
+                            color = baseColor,
+                            radius = petalRadius,
+                            center = androidx.compose.ui.geometry.Offset(px, py)
+                        )
+                    }
+                    // Yellow/cream soft center
+                    drawCircle(
+                        color = Color(0xFFFFFBEA).copy(alpha = alpha * 1.4f.coerceAtMost(1f)),
+                        radius = centerRadius,
+                        center = androidx.compose.ui.geometry.Offset(centerX, centerY)
+                    )
+                }
+
+                // Helper to draw a 4-pointed sparkle star
+                fun drawSparkle(centerX: Float, centerY: Float, sparkleSize: Float, alpha: Float) {
+                    val starPath = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(centerX, centerY - sparkleSize)
+                        quadraticBezierTo(centerX, centerY, centerX + sparkleSize, centerY)
+                        quadraticBezierTo(centerX, centerY, centerX, centerY + sparkleSize)
+                        quadraticBezierTo(centerX, centerY, centerX - sparkleSize, centerY)
+                        quadraticBezierTo(centerX, centerY, centerX, centerY - sparkleSize)
+                        close()
+                    }
+                    drawPath(
+                        path = starPath,
+                        color = Color.White.copy(alpha = alpha)
+                    )
+                }
+
+                // Top-right area flower
+                drawFlower(
+                    centerX = size.width * 0.85f,
+                    centerY = size.height * 0.18f,
+                    flowerSize = 32.dp.toPx(),
+                    alpha = 0.55f
+                )
+
+                // Bottom-left area flower
+                drawFlower(
+                    centerX = size.width * 0.14f,
+                    centerY = size.height * 0.82f,
+                    flowerSize = 24.dp.toPx(),
+                    alpha = 0.45f
+                )
+
+                // Sparkles (stars)
+                drawSparkle(
+                    centerX = size.width * 0.44f,
+                    centerY = size.height * 0.22f,
+                    sparkleSize = 10.dp.toPx(),
+                    alpha = 0.65f
+                )
+
+                drawSparkle(
+                    centerX = size.width * 0.76f,
+                    centerY = size.height * 0.80f,
+                    sparkleSize = 14.dp.toPx(),
+                    alpha = 0.55f
+                )
+
+                drawSparkle(
+                    centerX = size.width * 0.48f,
+                    centerY = size.height * 0.74f,
+                    sparkleSize = 8.dp.toPx(),
+                    alpha = 0.45f
+                )
+            }
 
             Row(
                 modifier = Modifier
