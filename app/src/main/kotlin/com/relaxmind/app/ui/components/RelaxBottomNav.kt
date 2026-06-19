@@ -4,6 +4,8 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,8 +31,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -57,6 +62,22 @@ fun RelaxBottomNav(
         AppRole.CAREGIVER -> caregiverNavItems
     }
 
+    // Dynamic state transition persistence across screen recreations
+    val initialRoute = remember {
+        val last = BottomNavState.lastSelectedRoute
+        if (last.isEmpty() || last == selectedRoute || (last.startsWith("patient") != selectedRoute.startsWith("patient"))) {
+            selectedRoute
+        } else {
+            last
+        }
+    }
+    var animatedSelectedRoute by remember { mutableStateOf(initialRoute) }
+
+    LaunchedEffect(selectedRoute) {
+        animatedSelectedRoute = selectedRoute
+        BottomNavState.lastSelectedRoute = selectedRoute
+    }
+
     val navShape = if (role == AppRole.CAREGIVER) RoundedCornerShape(32.dp) else RoundedCornerShape(40.dp)
     val navBgColor = if (role == AppRole.CAREGIVER) Color(0xFFFDFBFF) else Color(0xFFF4FAF7)
     val navShadowColor = if (role == AppRole.CAREGIVER) Color(0xFF8A88A6).copy(alpha = 0.35f) else Color(0xFF68D391).copy(alpha = 0.15f)
@@ -66,7 +87,7 @@ fun RelaxBottomNav(
             .fillMaxWidth()
             .background(Color.Transparent)
             .navigationBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 10.dp)
+            .padding(start = 20.dp, top = 26.dp, end = 20.dp, bottom = 10.dp) // padding top buffer prevents elevated items from being clipped
     ) {
         Row(
             modifier = Modifier
@@ -90,7 +111,7 @@ fun RelaxBottomNav(
             horizontalArrangement = Arrangement.SpaceAround
         ) {
             items.forEach { item ->
-                val isSelected = selectedRoute == item.route
+                val isSelected = animatedSelectedRoute == item.route
 
                 if (role == AppRole.PATIENT) {
                     PatientNavItem(
@@ -178,28 +199,35 @@ private fun PatientNavItem(
     val activeColor = PatientGreen
     val inactiveColor = Color(0xFF8FA89B)
 
-    // Animated properties for smooth transition
+    // Animated bouncy spring for lively elevation movement
     val offsetAnimation by animateFloatAsState(
-        targetValue = if (isSelected) -14f else 0f,
-        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+        targetValue = if (isSelected) -18f else 0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
         label = "nav-item-offset"
     )
 
+    // Smooth elastic scaling for circles
     val circleScaleAnimation by animateFloatAsState(
         targetValue = if (isSelected) 1f else 0f,
-        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
         label = "nav-item-scale"
     )
 
     val iconColorAnimation by animateColorAsState(
         targetValue = if (isSelected) Color.White else inactiveColor,
-        animationSpec = tween(durationMillis = 300),
+        animationSpec = tween(durationMillis = 200),
         label = "nav-item-icon-color"
     )
 
     val textColorAnimation by animateColorAsState(
         targetValue = if (isSelected) activeColor else inactiveColor,
-        animationSpec = tween(durationMillis = 300),
+        animationSpec = tween(durationMillis = 200),
         label = "nav-item-text-color"
     )
 
@@ -221,7 +249,7 @@ private fun PatientNavItem(
             verticalArrangement = Arrangement.Center
         ) {
             Box(
-                modifier = Modifier.size(64.dp),
+                modifier = Modifier.size(40.dp), // reduced size from 64dp to 40dp to bring text closer to icons
                 contentAlignment = Alignment.Center
             ) {
                 if (circleScaleAnimation > 0.01f) {
@@ -229,7 +257,7 @@ private fun PatientNavItem(
                     Box(
                         modifier = Modifier
                             .offset(y = offsetAnimation.dp)
-                            .size(62.dp)
+                            .size(62.dp) // overflows the 40dp container naturally without clipping
                             .scale(circleScaleAnimation)
                             .shadow(
                                 elevation = (4 * circleScaleAnimation).dp,
@@ -276,13 +304,15 @@ private fun PatientNavItem(
                 }
             }
 
+            Spacer(modifier = Modifier.height(2.dp)) // tight spacing for premium feel
+
             Text(
                 text = item.label,
                 fontFamily = LexendFontFamily,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                 fontSize = 11.sp,
                 color = textColorAnimation,
-                modifier = Modifier.offset(y = (offsetAnimation * 0.5f).dp)
+                modifier = Modifier.offset(y = (offsetAnimation * 0.45f).dp)
             )
         }
     }
@@ -320,4 +350,8 @@ private fun RelaxBottomNavPatientLightPreview() {
             role = AppRole.PATIENT
         )
     }
+}
+
+object BottomNavState {
+    var lastSelectedRoute: String = ""
 }
