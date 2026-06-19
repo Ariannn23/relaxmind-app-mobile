@@ -12,6 +12,8 @@ import com.relaxmind.app.data.model.MeditationExercise
 import com.relaxmind.app.data.model.CompletedMeditation
 import com.relaxmind.app.data.model.DiaryEntry
 import com.relaxmind.app.data.model.Patient
+import com.relaxmind.app.data.model.LumiSession
+import com.relaxmind.app.data.model.LumiMessage
 import com.relaxmind.app.data.model.Streak
 import com.relaxmind.app.data.model.UserAchievement
 import kotlinx.coroutines.tasks.await
@@ -162,30 +164,61 @@ class FirestoreRepository(
             }
     }
 
+    suspend fun createAlert(alert: CaregiverAlert): Result<String> = runCatching {
+        val document = firestore.collection(ALERTS_COLLECTION).document(
+            if (alert.id.isNotBlank()) alert.id else firestore.collection(ALERTS_COLLECTION).document().id
+        )
+        document.set(alert.copy(id = document.id)).await()
+        document.id
+    }
+
+    suspend fun updateAlertLocation(alertId: String, latitude: Double, longitude: Double): Result<Unit> = runCatching {
+        firestore.collection(ALERTS_COLLECTION)
+            .document(alertId)
+            .update(
+                mapOf(
+                    "latitude" to latitude,
+                    "longitude" to longitude
+                )
+            )
+            .await()
+    }
+
+    fun listenToAlert(
+        alertId: String,
+        onChange: (CaregiverAlert?) -> Unit,
+        onError: (Exception) -> Unit
+    ): ListenerRegistration {
+        return firestore.collection(ALERTS_COLLECTION)
+            .document(alertId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    onError(error)
+                    return@addSnapshotListener
+                }
+                onChange(snapshot?.toObject(CaregiverAlert::class.java))
+            }
+    }
+
     suspend fun linkPatientWithCode(
         code: String,
         caregiverId: String
     ): Result<String> = runCatching {
         val now = Date()
-        val bindingSnapshot = bindingCodes
+        val docs = bindingCodes
             .whereEqualTo("code", code)
-            .whereGreaterThan("expiresAt", now)
-            .limit(1)
             .get()
             .await()
             .documents
-            .firstOrNull()
-            ?: error("Código inválido o expirado")
+
+        val bindingSnapshot = docs.firstOrNull { doc ->
+            val expiresAt = doc.getDate("expiresAt")
+            expiresAt != null && expiresAt.after(now)
+        } ?: error("Código inválido o expirado")
 
         val bindingCode = bindingSnapshot.toObject(BindingCode::class.java)
             ?: error("Código inválido o expirado")
         val patientRef = patients.document(bindingCode.patientId)
-        val patient = patientRef.get().await().toObject(Patient::class.java)
-            ?: error("Paciente no encontrado")
-
-        if (!patient.caregiverId.isNullOrBlank()) {
-            error("Este paciente ya está vinculado a un cuidador. El paciente debe desvincularse primero.")
-        }
 
         val linkedAt = LocalDate.now().toString()
         firestore.runBatch { batch ->
@@ -489,6 +522,73 @@ class FirestoreRepository(
             .size()
     }
 
+    // --- LUMI IA METHODS ---
+
+    suspend fun getActiveLumiSession(patientId: String): Result<LumiSession?> = runCatching {
+        firestore.collection(LUMI_SESSIONS_COLLECTION)
+            .whereEqualTo("patientId", patientId)
+            .whereEqualTo("isActive", true)
+            .limit(1)
+            .get()
+            .await()
+            .toObjectList(LumiSession::class.java)
+            .firstOrNull()
+    }
+
+    suspend fun createLumiSession(session: LumiSession): Result<String> = runCatching {
+        val collection = firestore.collection(LUMI_SESSIONS_COLLECTION)
+        val document = collection.document(session.id.ifBlank { collection.document().id })
+        val newSession = session.copy(id = document.id)
+        document.set(newSession).await()
+        newSession.id
+    }
+
+    fun listenToLumiMessages(
+        sessionId: String,
+        onChange: (List<LumiMessage>) -> Unit,
+        onError: (Exception) -> Unit
+    ): ListenerRegistration {
+        return firestore.collection(LUMI_SESSIONS_COLLECTION)
+            .document(sessionId)
+            .collection("messages")
+            .orderBy("timestamp")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    onError(error)
+                    return@addSnapshotListener
+                }
+                onChange(snapshot?.toObjectList(LumiMessage::class.java).orEmpty())
+            }
+    }
+
+    suspend fun addLumiMessage(sessionId: String, message: LumiMessage): Result<String> = runCatching {
+        val collection = firestore.collection(LUMI_SESSIONS_COLLECTION).document(sessionId).collection("messages")
+        val document = collection.document(message.id.ifBlank { collection.document().id })
+        document.set(message.copy(id = document.id)).await()
+        document.id
+    }
+
+    suspend fun getLumiSessionsHistory(patientId: String): Result<List<LumiSession>> = runCatching {
+        firestore.collection(LUMI_SESSIONS_COLLECTION)
+            .whereEqualTo("patientId", patientId)
+            .whereEqualTo("isActive", false)
+            .get()
+            .await()
+            .toObjectList(LumiSession::class.java)
+            .sortedByDescending { it.createdAt }
+    }
+
+    suspend fun archiveLumiSession(sessionId: String): Result<Unit> = runCatching {
+        firestore.collection(LUMI_SESSIONS_COLLECTION)
+            .document(sessionId)
+            .update(
+                mapOf(
+                    "isActive" to false,
+                    "archivedAt" to System.currentTimeMillis()
+                )
+            ).await()
+    }
+
     private fun <T> com.google.firebase.firestore.QuerySnapshot.toObjectList(clazz: Class<T>): List<T> {
         return documents.mapNotNull { it.toObject(clazz) }
     }
@@ -506,5 +606,6 @@ class FirestoreRepository(
         const val DIARY_ENTRIES_COLLECTION = "diaryEntries"
         const val STREAKS_COLLECTION = "streaks"
         const val ACHIEVEMENTS_COLLECTION = "achievements"
+        const val LUMI_SESSIONS_COLLECTION = "lumiSessions"
     }
 }

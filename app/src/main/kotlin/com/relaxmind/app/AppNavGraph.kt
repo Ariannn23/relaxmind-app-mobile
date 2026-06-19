@@ -35,6 +35,10 @@ import com.relaxmind.app.features.patient.AppointmentDetailScreen
 import com.relaxmind.app.features.patient.DiaryScreen
 import com.relaxmind.app.features.patient.DiaryEntryScreen
 import com.relaxmind.app.features.patient.LinkCaregiverScreen
+import com.relaxmind.app.features.patient.SOSPatientScreen
+import com.relaxmind.app.features.patient.lumi.LumiChatScreen
+import com.relaxmind.app.features.patient.lumi.LumiHistoryScreen
+import com.relaxmind.app.features.caregiver.SOSAlertScreen
 
 sealed class Screen(val route: String) {
     data object Welcome : Screen("welcome")
@@ -64,7 +68,12 @@ sealed class Screen(val route: String) {
     }
     data object Diary : Screen("patient/diary")
     data object DiaryEntry : Screen("patient/diary-entry")
-    data object LumiChat : Screen("patient/lumi")
+    data object LumiChat : Screen("patient/lumi?sessionId={sessionId}") {
+        const val SessionIdArg = "sessionId"
+        fun createRoute(sessionId: String? = null): String {
+            return if (sessionId != null) "patient/lumi?sessionId=$sessionId" else "patient/lumi"
+        }
+    }
     data object LumiHistory : Screen("patient/lumi/history")
     data object PatientSettings : Screen("patient/settings")
     data object EditProfile : Screen("patient/profile/edit")
@@ -295,8 +304,29 @@ fun AppNavGraph(
                 }
             )
         }
-        composable(Screen.LumiChat.route) { PlaceholderScreen("Pantalla Lumi Chat") }
-        composable(Screen.LumiHistory.route) { PlaceholderScreen("Pantalla Lumi History") }
+        composable(
+            route = Screen.LumiChat.route,
+            arguments = listOf(navArgument(Screen.LumiChat.SessionIdArg) { 
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            })
+        ) { backStackEntry ->
+            val sessionId = backStackEntry.arguments?.getString(Screen.LumiChat.SessionIdArg)
+            LumiChatScreen(
+                sessionId = sessionId,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToHistory = { navController.navigate(Screen.LumiHistory.route) }
+            )
+        }
+        composable(Screen.LumiHistory.route) {
+            LumiHistoryScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onSessionSelected = { sessionId ->
+                    navController.navigate(Screen.LumiChat.createRoute(sessionId))
+                }
+            )
+        }
         composable(Screen.PatientSettings.route) {
             SettingsPatientScreen(
                 onNavigateToEditProfile = { navController.navigate(Screen.EditProfile.route) },
@@ -325,7 +355,11 @@ fun AppNavGraph(
                 }
             )
         }
-        composable(Screen.SOSPatient.route) { PlaceholderScreen("Pantalla SOS Paciente") }
+        composable(Screen.SOSPatient.route) {
+            SOSPatientScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
 
         composable(Screen.CaregiverDashboard.route) {
             DashboardCaregiverScreen(
@@ -381,7 +415,10 @@ fun AppNavGraph(
             arguments = listOf(navArgument(Screen.SOSAlert.AlertIdArg) { type = NavType.StringType })
         ) { backStackEntry ->
             val alertId = backStackEntry.arguments?.getString(Screen.SOSAlert.AlertIdArg).orEmpty()
-            PlaceholderScreen("Pantalla SOS Alert: $alertId")
+            SOSAlertScreen(
+                alertId = alertId,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
         composable(Screen.ScanQR.route) {
             ScanQRScreen(

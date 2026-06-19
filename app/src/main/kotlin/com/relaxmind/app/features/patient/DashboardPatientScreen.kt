@@ -33,12 +33,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -47,8 +49,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -76,6 +80,7 @@ import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxIcons
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.BorderSoft
+import com.relaxmind.app.ui.themes.CaregiverIndigo
 import com.relaxmind.app.ui.themes.LexendFontFamily
 import com.relaxmind.app.ui.themes.LexendTypography
 import com.relaxmind.app.ui.themes.PatientGreen
@@ -86,8 +91,12 @@ import com.relaxmind.app.ui.themes.SoftLavender
 import com.relaxmind.app.ui.themes.SoftMint
 import com.relaxmind.app.ui.themes.TextPrimary
 import com.relaxmind.app.ui.themes.TextSecondary
+import com.relaxmind.app.utils.WellnessScoreCalculator
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun DashboardPatientScreen(
@@ -183,7 +192,12 @@ fun DashboardPatientScreen(
                             onDiaryClick = { onNavigate(Screen.Diary.route) }
                         )
 
-                        // 6. "Mi Cuidador" Card (Soft 3D style)
+                        // 6. "Hablar con Lumi" Card (Soft 3D style)
+                        LumiCard(
+                            onLumiClick = { onNavigate(Screen.LumiChat.createRoute(null)) }
+                        )
+
+                        // 7. "Mi Cuidador" Card (Soft 3D style)
                         CaregiverCard(
                             caregiverId = patient?.caregiverId,
                             caregiverName = caregiver?.let { "${it.name} ${it.lastName}" },
@@ -1303,6 +1317,13 @@ private fun SOSFloatingButton(
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
 
+    var isSosPressed by remember { mutableStateOf(false) }
+    val progress by animateFloatAsState(
+        targetValue = if (isSosPressed) 1f else 0f,
+        animationSpec = tween(durationMillis = 2000, easing = LinearEasing),
+        label = "SosProgress"
+    )
+
     // Infinite pulse animations
     val infiniteTransition = rememberInfiniteTransition(label = "sos-infinite-pulse")
     val pulseScale by infiniteTransition.animateFloat(
@@ -1358,15 +1379,18 @@ private fun SOSFloatingButton(
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onPress = {
+                            isSosPressed = true
                             val holdJob = scope.launch {
                                 delay(2000L) // Safe hold of 2 seconds
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                isSosPressed = false
                                 onSOSHoldTriggered()
                             }
                             try {
                                 awaitRelease()
                             } finally {
                                 holdJob.cancel()
+                                isSosPressed = false
                             }
                         }
                     )
@@ -1392,6 +1416,91 @@ private fun SOSFloatingButton(
                     color = Color.White
                 )
             }
+        }
+
+        if (progress > 0f) {
+            CircularProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.size(76.dp),
+                color = Color.White,
+                strokeWidth = 4.dp
+            )
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 8. "LUMI AI ASSISTANT" CARD
+// ─────────────────────────────────────────────────────────────────────────────
+@Composable
+private fun LumiCard(
+    onLumiClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(26.dp),
+                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.2f),
+                spotColor = Color(0xFF8A88A6).copy(alpha = 0.2f)
+            )
+            .clickable(onClick = onLumiClick),
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .background(SoftLavender, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = "Lumi AI",
+                        tint = CaregiverIndigo,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Column {
+                    Text(
+                        text = "Hablar con Lumi",
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Tu asistente IA de bienestar",
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 12.sp,
+                        color = TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = TextSecondary,
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }

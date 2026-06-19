@@ -4,7 +4,7 @@
 
 ---
 
-## ESTILO VISUAL BASE
+## ESTILO VISUAL BASE PRIMARIA
 
 ```
 Estilo global RelaxMind — incluir en todos los prompts de ilustraciones:
