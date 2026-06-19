@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.relaxmind.app.data.model.LumiSession
-import com.relaxmind.app.ui.components.FullScreenLoadingIndicator
+import com.relaxmind.app.ui.components.FullScreenLoadingScreen
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -65,7 +65,7 @@ fun LumiHistoryScreen(
         }
     ) { padding ->
         if (uiState.isLoading) {
-            FullScreenLoadingIndicator()
+            FullScreenLoadingScreen(text = "Cargando historial...")
         } else if (uiState.sessions.isEmpty()) {
             Column(
                 modifier = Modifier

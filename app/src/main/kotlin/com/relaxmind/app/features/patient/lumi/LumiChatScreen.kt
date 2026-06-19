@@ -57,7 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.relaxmind.app.data.model.LumiMessage
-import com.relaxmind.app.ui.components.FullScreenLoadingIndicator
+import com.relaxmind.app.ui.components.FullScreenLoadingScreen
 import com.relaxmind.app.ui.themes.PatientGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -181,7 +181,7 @@ fun LumiChatScreen(
         }
     ) { padding ->
         if (uiState.isLoading) {
-            FullScreenLoadingIndicator()
+            FullScreenLoadingScreen(text = "Cargando...")
         } else {
             LazyColumn(
                 state = listState,
