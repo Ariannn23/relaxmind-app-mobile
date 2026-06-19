@@ -366,24 +366,24 @@ cards:
 bottom navigation active on "Meditar" tab, Material Design 3
 ```
 
-#### 21. MeditationDetailScreen — Ejercicio Activo
+    #### 21. MeditationDetailScreen — Ejercicio Activo
 
-```
-Mobile app meditation exercise active screen, Android UI, RelaxMind,
-dark green gradient background #0F6E56 to #0A4D3C full screen,
-top: back arrow white + exercise title "Respiración 4-7-8" Outfit SemiBold 18sp white,
+    ```
+    Mobile app meditation exercise active screen, Android UI, RelaxMind,
+    dark green gradient background #0F6E56 to #0A4D3C full screen,
+    top: back arrow white + exercise title "Respiración 4-7-8" Outfit SemiBold 18sp white,
 
-center: large circular breathing animation (800dp area):
-  soft white translucent circle expanding (inhale phase), glow effect,
-  inner circle with "Inhala..." text Outfit Bold 26sp white centered,
+    center: large circular breathing animation (800dp area):
+    soft white translucent circle expanding (inhale phase), glow effect,
+    inner circle with "Inhala..." text Outfit Bold 26sp white centered,
 
-below animation area (white card section bottom 35% of screen):
-  current phase label: "Inhala... 4" large white text on green,
-  linear progress bar: green track, 60% filled, label "4:32 restantes" below,
-  row of 2 buttons: "Pausar" outline white button + "Completar" outline white smaller button,
+    below animation area (white card section bottom 35% of screen):
+    current phase label: "Inhala... 4" large white text on green,
+    linear progress bar: green track, 60% filled, label "4:32 restantes" below,
+    row of 2 buttons: "Pausar" outline white button + "Completar" outline white smaller button,
 
-immersive full-screen design, minimal distractions, centered calm aesthetic
-```
+    immersive full-screen design, minimal distractions, centered calm aesthetic
+    ```
 
 #### 22. ProgressScreen — Pantalla de Progreso
 
