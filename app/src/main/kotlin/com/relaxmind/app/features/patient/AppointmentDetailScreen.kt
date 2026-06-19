@@ -70,6 +70,7 @@ fun AppointmentDetailScreen(
     viewModel: PatientViewModel = viewModel(),
     onNavigateBack: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val appointment by viewModel.selectedAppointment.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
@@ -306,7 +307,10 @@ fun AppointmentDetailScreen(
                             viewModel.deleteAppointment(
                                 appointmentId = appt.id,
                                 date = appt.date,
-                                onSuccess = onNavigateBack
+                                context = context,
+                                onSuccess = {
+                                    onNavigateBack()
+                                }
                             )
                         }
                     ) {

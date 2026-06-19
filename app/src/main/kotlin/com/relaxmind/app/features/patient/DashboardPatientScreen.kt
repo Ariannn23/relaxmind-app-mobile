@@ -137,6 +137,11 @@ fun DashboardPatientScreen(
                         }
                     )
 
+                    // Diary Card Shortcut
+                    DiaryBlock(
+                        onDiaryClick = { onNavigate(com.relaxmind.app.Screen.DiaryEntry.route) }
+                    )
+
                     // Next Appointment Block
                     NextAppointmentBlock(
                         appointmentTitle = nextAppointment?.title,
@@ -595,6 +600,61 @@ private fun CaregiverBlock(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun DiaryBlock(
+    onDiaryClick: () -> Unit
+) {
+    RelaxCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(PatientGreen.copy(alpha = 0.08f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.Book,
+                        contentDescription = null,
+                        tint = PatientGreen,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column {
+                    Text(
+                        text = "Mi Diario",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontSize = 16.sp),
+                        fontWeight = FontWeight.Bold,
+                        color = PatientGreen
+                    )
+                    Text(
+                        text = "Escribe tus emociones y pensamientos de hoy",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            RelaxButton(
+                text = "Escribir",
+                onClick = onDiaryClick,
+                variant = ButtonVariant.PRIMARY,
+                role = AppRole.PATIENT
+            )
         }
     }
 }

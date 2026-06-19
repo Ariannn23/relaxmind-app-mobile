@@ -12,6 +12,7 @@ import com.relaxmind.app.data.model.Patient
 import com.relaxmind.app.data.model.Streak
 import com.relaxmind.app.data.model.UserAchievement
 import kotlinx.coroutines.tasks.await
+import java.time.LocalDate
 
 class FirestoreRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
@@ -119,12 +120,33 @@ class FirestoreRepository(
     }
 
     suspend fun getAppointments(patientId: String, date: String): Result<List<Appointment>> = runCatching {
-        firestore.collection(APPOINTMENTS_COLLECTION)
+        val targetDate = runCatching { LocalDate.parse(date) }.getOrNull()
+        val targetDayOfWeek = targetDate?.dayOfWeek?.value ?: -1
+
+        val specific = firestore.collection(APPOINTMENTS_COLLECTION)
             .whereEqualTo("patientId", patientId)
             .whereEqualTo("date", date)
             .get()
             .await()
             .toObjectList(Appointment::class.java)
+
+        val recurring = firestore.collection(APPOINTMENTS_COLLECTION)
+            .whereEqualTo("patientId", patientId)
+            .whereEqualTo("recurring", true)
+            .get()
+            .await()
+            .toObjectList(Appointment::class.java)
+
+        val matchingRecurring = if (targetDate != null && targetDayOfWeek != -1) {
+            recurring.filter { appt ->
+                val apptStartDate = runCatching { LocalDate.parse(appt.date) }.getOrNull()
+                apptStartDate != null && !targetDate.isBefore(apptStartDate) && appt.recurringDays.contains(targetDayOfWeek)
+            }
+        } else {
+            emptyList()
+        }
+
+        (specific + matchingRecurring).distinctBy { it.id }
     }
 
     suspend fun updateDailyGoalCompletion(goalId: String, completed: Boolean): Result<Unit> = runCatching {
@@ -218,13 +240,49 @@ class FirestoreRepository(
     }
 
     suspend fun getAppointmentsForMonth(patientId: String, yearMonth: String): Result<List<Appointment>> = runCatching {
-        firestore.collection(APPOINTMENTS_COLLECTION)
+        val parts = yearMonth.split("-")
+        val year = parts[0].toInt()
+        val month = parts[1].toInt()
+        val startLocalDate = LocalDate.of(year, month, 1)
+        val daysInMonth = startLocalDate.lengthOfMonth()
+
+        val specific = firestore.collection(APPOINTMENTS_COLLECTION)
             .whereEqualTo("patientId", patientId)
             .whereGreaterThanOrEqualTo("date", "$yearMonth-01")
             .whereLessThanOrEqualTo("date", "$yearMonth-31")
             .get()
             .await()
             .toObjectList(Appointment::class.java)
+
+        val recurring = firestore.collection(APPOINTMENTS_COLLECTION)
+            .whereEqualTo("patientId", patientId)
+            .whereEqualTo("recurring", true)
+            .get()
+            .await()
+            .toObjectList(Appointment::class.java)
+
+        val expandedList = mutableListOf<Appointment>()
+        expandedList.addAll(specific)
+
+        for (day in 1..daysInMonth) {
+            val currentDate = LocalDate.of(year, month, day)
+            val currentDayOfWeek = currentDate.dayOfWeek.value // 1 = Mon, 7 = Sun
+            val dateStr = currentDate.toString()
+
+            val activeRecurring = recurring.filter { appt ->
+                val apptStartDate = runCatching { LocalDate.parse(appt.date) }.getOrNull()
+                apptStartDate != null && !currentDate.isBefore(apptStartDate) && appt.recurringDays.contains(currentDayOfWeek)
+            }
+
+            activeRecurring.forEach { appt ->
+                val alreadyExists = specific.any { it.id == appt.id && it.date == dateStr }
+                if (!alreadyExists) {
+                    expandedList.add(appt.copy(date = dateStr))
+                }
+            }
+        }
+
+        expandedList.distinctBy { "${it.id}_${it.date}" }
     }
 
     suspend fun createDiaryEntry(diaryEntry: DiaryEntry): Result<Unit> = runCatching {

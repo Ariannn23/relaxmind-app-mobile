@@ -85,6 +85,8 @@ fun CreateAppointmentScreen(
     var selectedTime by remember { mutableStateOf(LocalTime.of(10, 30)) }
     var notes by remember { mutableStateOf("") }
     var reminderTimeMinutes by remember { mutableStateOf(15) }
+    var isRecurring by remember { mutableStateOf(false) }
+    var recurringDays by remember { mutableStateOf<List<Int>>(emptyList()) }
 
     var categoryDropdownExpanded by remember { mutableStateOf(false) }
     val categoriesList = listOf("Neurología", "Psicología", "Psiquiatría", "Medicina General", "Otro")
@@ -316,6 +318,96 @@ fun CreateAppointmentScreen(
                     }
                 }
 
+                // REPETIR RECORDATORIO SWITCH Y DÍAS DE LA SEMANA SELECTOR
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Repetir recordatorio",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.DarkGray
+                        )
+                        Text(
+                            text = "Recordar automáticamente ciertos días",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.Gray
+                        )
+                    }
+                    androidx.compose.material3.Switch(
+                        checked = isRecurring,
+                        onCheckedChange = { isRecurring = it },
+                        colors = androidx.compose.material3.SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = PatientGreen,
+                            uncheckedThumbColor = Color.Gray,
+                            uncheckedTrackColor = Color(0xFFE2E8F0)
+                        )
+                    )
+                }
+
+                if (isRecurring) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Días a repetir",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.DarkGray
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            val weekdaysList = listOf(
+                                Pair(1, "L"),
+                                Pair(2, "M"),
+                                Pair(3, "M"),
+                                Pair(4, "J"),
+                                Pair(5, "V"),
+                                Pair(6, "S"),
+                                Pair(7, "D")
+                            )
+                            weekdaysList.forEach { (dayVal, label) ->
+                                val isSelected = recurringDays.contains(dayVal)
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (isSelected) PatientGreen else Color(0xFFF7FAFC)
+                                        )
+                                        .border(
+                                            width = 1.dp,
+                                            color = if (isSelected) PatientGreen else Color(0xFFE2E8F0),
+                                            shape = CircleShape
+                                        )
+                                        .clickable {
+                                            recurringDays = if (isSelected) {
+                                                recurringDays - dayVal
+                                            } else {
+                                                recurringDays + dayVal
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = label,
+                                        color = if (isSelected) Color.White else Color.Gray,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // NOTAS OPCIONALES
                 Text(
                     text = "Notas",
@@ -369,6 +461,8 @@ fun CreateAppointmentScreen(
                                 time = selectedTime.toString(),
                                 reminderMinutes = reminderTimeMinutes,
                                 notes = notes,
+                                recurring = isRecurring,
+                                recurringDays = recurringDays,
                                 context = context,
                                 onSuccess = {
                                     viewModel.clearError()

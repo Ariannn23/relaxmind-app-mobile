@@ -574,6 +574,8 @@ class PatientViewModel(
         time: String,
         reminderMinutes: Int,
         notes: String,
+        recurring: Boolean = false,
+        recurringDays: List<Int> = emptyList(),
         context: Context,
         onSuccess: () -> Unit
     ) {
@@ -593,12 +595,14 @@ class PatientViewModel(
                 completed = false,
                 notificationSent = false,
                 notes = notes,
+                recurring = recurring,
+                recurringDays = recurringDays,
                 createdAt = Date()
             )
             
             val result = firestoreRepository.createAppointment(appointment)
             if (result.isSuccess) {
-                // Programar WorkManager reminder if in the future
+                // Programar WorkManager reminder
                 scheduleAppointmentReminder(context, appointment)
                 onSuccess()
             } else {
@@ -608,33 +612,85 @@ class PatientViewModel(
         }
     }
 
+    private fun getDelayForNextOccurrence(targetDayOfWeek: Int, timeStr: String, reminderMinutes: Int): Long {
+        val today = LocalDate.now()
+        val time = runCatching { LocalTime.parse(timeStr) }.getOrDefault(LocalTime.of(10, 30))
+        
+        var targetDate = today
+        val currentDayOfWeek = today.dayOfWeek.value // 1 = Mon, 7 = Sun
+        
+        val daysToAdd = (targetDayOfWeek - currentDayOfWeek + 7) % 7
+        if (daysToAdd == 0) {
+            val appointmentTimeMinusReminder = time.minusMinutes(reminderMinutes.toLong())
+            val nowTime = LocalTime.now()
+            if (nowTime.isAfter(appointmentTimeMinusReminder)) {
+                targetDate = today.plusDays(7)
+            }
+        } else {
+            targetDate = today.plusDays(daysToAdd.toLong())
+        }
+        
+        val localDateTime = java.time.LocalDateTime.of(targetDate, time)
+        val targetMs = localDateTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val reminderMs = targetMs - (reminderMinutes * 60 * 1000)
+        return reminderMs - System.currentTimeMillis()
+    }
+
     private fun scheduleAppointmentReminder(context: Context, appointment: Appointment) {
         runCatching {
-            val dateTimeStr = "${appointment.date}T${appointment.time}"
-            val formatter = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
-            val localDateTime = java.time.LocalDateTime.parse(dateTimeStr, formatter)
-            val appointmentMs = localDateTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
-            val targetMs = appointmentMs - (appointment.reminderTime * 60 * 1000)
-            val delayMs = targetMs - System.currentTimeMillis()
-            
-            if (delayMs > 0) {
-                val data = workDataOf(
-                    "appointmentId" to appointment.id,
-                    "title" to appointment.title,
-                    "type" to appointment.type
-                )
+            if (appointment.recurring) {
+                appointment.recurringDays.forEach { dayOfWeek ->
+                    val delayMs = getDelayForNextOccurrence(dayOfWeek, appointment.time, appointment.reminderTime)
+                    if (delayMs > 0) {
+                        val data = workDataOf(
+                            "appointmentId" to appointment.id,
+                            "title" to appointment.title,
+                            "type" to appointment.type,
+                            "dayOfWeek" to dayOfWeek
+                        )
+                        
+                        val request = OneTimeWorkRequestBuilder<com.relaxmind.app.utils.AppointmentReminderWorker>()
+                            .setInitialDelay(delayMs, TimeUnit.MILLISECONDS)
+                            .setInputData(data)
+                            .addTag("appointment_${appointment.id}")
+                            .addTag("appointment_${appointment.id}_$dayOfWeek")
+                            .build()
+                        
+                        WorkManager.getInstance(context).enqueueUniqueWork(
+                            "appointment_${appointment.id}_$dayOfWeek",
+                            androidx.work.ExistingWorkPolicy.REPLACE,
+                            request
+                        )
+                    }
+                }
+            } else {
+                val dateTimeStr = "${appointment.date}T${appointment.time}"
+                val formatter = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
+                val localDateTime = java.time.LocalDateTime.parse(dateTimeStr, formatter)
+                val appointmentMs = localDateTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+                val targetMs = appointmentMs - (appointment.reminderTime * 60 * 1000)
+                val delayMs = targetMs - System.currentTimeMillis()
                 
-                val request = OneTimeWorkRequestBuilder<com.relaxmind.app.utils.AppointmentReminderWorker>()
-                    .setInitialDelay(delayMs, TimeUnit.MILLISECONDS)
-                    .setInputData(data)
-                    .addTag("appointment_${appointment.id}")
-                    .build()
-                
-                WorkManager.getInstance(context).enqueueUniqueWork(
-                    "appointment_${appointment.id}",
-                    androidx.work.ExistingWorkPolicy.REPLACE,
-                    request
-                )
+                if (delayMs > 0) {
+                    val data = workDataOf(
+                        "appointmentId" to appointment.id,
+                        "title" to appointment.title,
+                        "type" to appointment.type,
+                        "dayOfWeek" to -1
+                    )
+                    
+                    val request = OneTimeWorkRequestBuilder<com.relaxmind.app.utils.AppointmentReminderWorker>()
+                        .setInitialDelay(delayMs, TimeUnit.MILLISECONDS)
+                        .setInputData(data)
+                        .addTag("appointment_${appointment.id}")
+                        .build()
+                    
+                    WorkManager.getInstance(context).enqueueUniqueWork(
+                        "appointment_${appointment.id}",
+                        androidx.work.ExistingWorkPolicy.REPLACE,
+                        request
+                    )
+                }
             }
         }
     }
@@ -658,11 +714,14 @@ class PatientViewModel(
         }
     }
 
-    fun deleteAppointment(appointmentId: String, date: String, onSuccess: () -> Unit) {
+    fun deleteAppointment(appointmentId: String, date: String, context: Context, onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
             val result = firestoreRepository.deleteAppointment(appointmentId)
             if (result.isSuccess) {
+                runCatching {
+                    WorkManager.getInstance(context).cancelAllWorkByTag("appointment_$appointmentId")
+                }
                 loadAppointmentsForDate(date)
                 val parts = date.split("-")
                 if (parts.size == 3) {

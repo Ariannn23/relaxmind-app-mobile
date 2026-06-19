@@ -15,6 +15,8 @@ data class Appointment(
     val completed: Boolean = false,
     val notificationSent: Boolean = false,
     val notes: String = "",
+    val recurring: Boolean = false,
+    val recurringDays: List<Int> = emptyList(), // 1 = Monday, ..., 7 = Sunday
     @ServerTimestamp
     val createdAt: Date? = null
 )
