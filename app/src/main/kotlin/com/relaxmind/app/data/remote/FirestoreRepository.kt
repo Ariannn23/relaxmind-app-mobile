@@ -219,12 +219,6 @@ class FirestoreRepository(
         val bindingCode = bindingSnapshot.toObject(BindingCode::class.java)
             ?: error("Código inválido o expirado")
         val patientRef = patients.document(bindingCode.patientId)
-        val patient = patientRef.get().await().toObject(Patient::class.java)
-            ?: error("Paciente no encontrado")
-
-        if (!patient.caregiverId.isNullOrBlank()) {
-            error("Este paciente ya está vinculado a un cuidador. El paciente debe desvincularse primero.")
-        }
 
         val linkedAt = LocalDate.now().toString()
         firestore.runBatch { batch ->
