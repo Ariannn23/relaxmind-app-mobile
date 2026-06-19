@@ -205,15 +205,16 @@ class FirestoreRepository(
         caregiverId: String
     ): Result<String> = runCatching {
         val now = Date()
-        val bindingSnapshot = bindingCodes
+        val docs = bindingCodes
             .whereEqualTo("code", code)
-            .whereGreaterThan("expiresAt", now)
-            .limit(1)
             .get()
             .await()
             .documents
-            .firstOrNull()
-            ?: error("Código inválido o expirado")
+
+        val bindingSnapshot = docs.firstOrNull { doc ->
+            val expiresAt = doc.getDate("expiresAt")
+            expiresAt != null && expiresAt.after(now)
+        } ?: error("Código inválido o expirado")
 
         val bindingCode = bindingSnapshot.toObject(BindingCode::class.java)
             ?: error("Código inválido o expirado")
