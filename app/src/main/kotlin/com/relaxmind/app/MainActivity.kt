@@ -103,6 +103,10 @@ class MainActivity : ComponentActivity() {
                                 onboardingSeen = onboardingSeen
                             )
                         )
+                        
+                        if (isAuthenticated && userRole == "caregiver") {
+                            com.relaxmind.app.features.caregiver.GlobalCaregiverAlertObserver(navController = navController)
+                        }
                     }
                 }
             }
