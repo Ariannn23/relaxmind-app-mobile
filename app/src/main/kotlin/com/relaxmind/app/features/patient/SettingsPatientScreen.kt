@@ -7,6 +7,7 @@ import android.net.Uri
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,9 +45,11 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.relaxmind.app.R
 import com.relaxmind.app.MainActivity
 import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.FullScreenLoadingOverlay
@@ -228,16 +231,14 @@ fun SettingsPatientScreen(
                     }
 
                     // 5. Version logo / branding
-                    Spacer(modifier = Modifier.height(16.dp))
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(
-                            imageVector = RelaxIcons.Meditation,
+                        Image(
+                            painter = painterResource(id = R.drawable.icono_plano2),
                             contentDescription = null,
-                            tint = PatientGreenLight,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
@@ -248,14 +249,24 @@ fun SettingsPatientScreen(
                             color = TextSecondary
                         )
                     }
-
-                    // Bottom spacing safe zone
-                    Spacer(modifier = Modifier.height(80.dp))
                 }
 
                 // Loading overlay
                 if (isLoading) {
-                    FullScreenLoadingOverlay()
+                    if (patient == null) {
+                        FullScreenLoadingOverlay(overlayColor = Color.Transparent)
+                    } else {
+                        // Invisible overlay to block touches during background saves without darkening or showing a spinner
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clickable(
+                                    onClick = {},
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() }
+                                )
+                        )
+                    }
                 }
             }
         }
