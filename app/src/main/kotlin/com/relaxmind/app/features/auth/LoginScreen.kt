@@ -1,6 +1,10 @@
 package com.relaxmind.app.features.auth
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,8 +29,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -205,13 +208,9 @@ fun LoginScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Switch(
+                    KeepSessionToggle(
                         checked = keepSession,
-                        onCheckedChange = { keepSession = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = PatientGreen
-                        )
+                        onCheckedChange = { keepSession = it }
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
@@ -313,6 +312,56 @@ fun LoginScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun KeepSessionToggle(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val trackColor by animateColorAsState(
+        targetValue = if (checked) PatientGreen.copy(alpha = 0.16f) else Color(0xFFF0F1F3),
+        label = "keep-session-track"
+    )
+    val borderColor by animateColorAsState(
+        targetValue = if (checked) PatientGreen else Color(0xFFCBD5E0),
+        label = "keep-session-border"
+    )
+    val thumbColor by animateColorAsState(
+        targetValue = if (checked) PatientGreen else Color(0xFF7A7480),
+        label = "keep-session-thumb"
+    )
+    val thumbOffset by animateDpAsState(
+        targetValue = if (checked) 28.dp else 4.dp,
+        label = "keep-session-thumb-offset"
+    )
+
+    Box(
+        modifier = modifier
+            .width(58.dp)
+            .height(32.dp)
+            .clip(RoundedCornerShape(50))
+            .background(trackColor)
+            .border(1.5.dp, borderColor, RoundedCornerShape(50))
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 4.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(start = thumbOffset)
+                .size(24.dp)
+                .shadow(
+                    elevation = if (checked) 5.dp else 2.dp,
+                    shape = CircleShape,
+                    ambientColor = PatientGreen.copy(alpha = 0.26f),
+                    spotColor = PatientGreen.copy(alpha = 0.22f)
+                )
+                .clip(CircleShape)
+                .background(thumbColor)
+        )
     }
 }
 
