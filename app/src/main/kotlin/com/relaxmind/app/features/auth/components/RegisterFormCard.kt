@@ -53,7 +53,8 @@ import com.relaxmind.app.ui.components.RelaxIcons
 import com.relaxmind.app.ui.components.auth.RelaxMindAuthTextField
 import com.relaxmind.app.ui.components.auth.RelaxPrimaryButton
 import com.relaxmind.app.ui.themes.BorderSoft
-import com.relaxmind.app.ui.themes.CaregiverIndigo
+import com.relaxmind.app.ui.themes.CaregiverBlue
+import com.relaxmind.app.ui.themes.SoftBlue
 import com.relaxmind.app.ui.themes.LexendFontFamily
 import com.relaxmind.app.ui.themes.PatientGreen
 import com.relaxmind.app.ui.themes.SOSCoral
@@ -99,7 +100,9 @@ fun RegisterFormCard(
     modifier: Modifier = Modifier
 ) {
     val cardShape = RoundedCornerShape(34.dp)
-    val accentColor = if (selectedRole == "caregiver") CaregiverIndigo else PatientGreen
+    val accentColor = if (selectedRole == "caregiver") CaregiverBlue else PatientGreen
+    val iconColor = accentColor
+    val iconBgColor = if (selectedRole == "caregiver") SoftBlue else SoftMint
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -123,7 +126,9 @@ fun RegisterFormCard(
                 leadingIcon = RelaxIcons.Person,
                 isError = nameError != null,
                 errorMessage = nameError,
-                contentDescription = "Campo de nombre"
+                contentDescription = "Campo de nombre",
+                iconColor = iconColor,
+                iconBgColor = iconBgColor
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -137,7 +142,9 @@ fun RegisterFormCard(
                 leadingIcon = RelaxIcons.Person,
                 isError = lastNameError != null,
                 errorMessage = lastNameError,
-                contentDescription = "Campo de apellidos"
+                contentDescription = "Campo de apellidos",
+                iconColor = iconColor,
+                iconBgColor = iconBgColor
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -157,6 +164,8 @@ fun RegisterFormCard(
                     isError = birthDateError != null,
                     errorMessage = birthDateError,
                     contentDescription = "Campo de fecha de nacimiento",
+                    iconColor = iconColor,
+                    iconBgColor = iconBgColor,
                     trailingContent = {
                         IconButton(onClick = onBirthDateClick) {
                             Icon(
@@ -188,7 +197,9 @@ fun RegisterFormCard(
                 keyboardType = KeyboardType.Email,
                 isError = emailError != null,
                 errorMessage = emailError,
-                contentDescription = "Campo de correo electrónico"
+                contentDescription = "Campo de correo electrónico",
+                iconColor = iconColor,
+                iconBgColor = iconBgColor
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -205,6 +216,8 @@ fun RegisterFormCard(
                 isError = passwordError != null,
                 errorMessage = passwordError,
                 contentDescription = "Campo de contraseña",
+                iconColor = iconColor,
+                iconBgColor = iconBgColor,
                 trailingContent = {
                     val iconScale by animateFloatAsState(
                         targetValue = if (passwordVisible) 1.05f else 1f,
@@ -249,6 +262,8 @@ fun RegisterFormCard(
                 isError = confirmPasswordError != null,
                 errorMessage = confirmPasswordError,
                 contentDescription = "Campo de confirmar contraseña",
+                iconColor = iconColor,
+                iconBgColor = iconBgColor,
                 trailingContent = {
                     val iconScale by animateFloatAsState(
                         targetValue = if (confirmPasswordVisible) 1.05f else 1f,
@@ -302,8 +317,8 @@ fun RegisterFormCard(
                     sublabel = "Acompaño el bienestar de otra persona",
                     icon = RelaxIcons.Groups,
                     isSelected = selectedRole == "caregiver",
-                    selectedBorderColor = CaregiverIndigo,
-                    selectedBgColor = SoftLavender,
+                    selectedBorderColor = CaregiverBlue,
+                    selectedBgColor = SoftBlue,
                     modifier = Modifier.weight(1f),
                     onClick = { onRoleSelected("caregiver") }
                 )

@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
@@ -50,7 +51,9 @@ fun RelaxMindAuthTextField(
     keyboardType: KeyboardType = KeyboardType.Text,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     trailingContent: @Composable (() -> Unit)? = null,
-    contentDescription: String = placeholder
+    contentDescription: String = placeholder,
+    iconColor: Color = PatientGreen,
+    iconBgColor: Color = SoftMint
 ) {
     val shape = RoundedCornerShape(22.dp)
     val borderColor = when {
@@ -88,13 +91,13 @@ fun RelaxMindAuthTextField(
                         modifier = Modifier
                             .size(40.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .background(SoftMint),
+                            .background(iconBgColor),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = leadingIcon,
                             contentDescription = null,
-                            tint = PatientGreen,
+                            tint = iconColor,
                             modifier = Modifier.size(22.dp)
                         )
                     }

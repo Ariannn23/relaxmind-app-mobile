@@ -31,3 +31,7 @@ val TextPrimary = Color(0xFF1F2430)
 val TextSecondary = Color(0xFF7A7F8F)
 val BorderSoft = Color(0xFFE6E8EF)
 val SurfaceWhite = Color(0xFFFFFFFF)
+
+// Caregiver true blue colors
+val CaregiverBlue = Color(0xFF2B6CB0)
+val SoftBlue = Color(0xFFEBF8FF)

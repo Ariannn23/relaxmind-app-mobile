@@ -32,13 +32,13 @@ fun RegisterHeader(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth(0.70f)
+                .fillMaxWidth(0.65f)
                 .align(Alignment.CenterStart)
         ) {
             Image(
                 painter = painterResource(id = R.drawable.icono_plano2),
                 contentDescription = "RelaxMind Logo",
-                modifier = Modifier.height(34.dp),
+                modifier = Modifier.height(44.dp),
                 contentScale = ContentScale.Fit
             )
             Spacer(modifier = Modifier.height(14.dp))
@@ -56,10 +56,12 @@ fun RegisterHeader(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Comienza tu espacio de bienestar",
-                style = MaterialTheme.typography.bodyMedium.copy(
+                style = MaterialTheme.typography.bodySmall.copy(
                     fontFamily = LexendFontFamily,
+                    fontSize = 13.sp,
                     color = TextSecondary
-                )
+                ),
+                maxLines = 1
             )
         }
 
