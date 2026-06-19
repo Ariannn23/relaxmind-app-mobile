@@ -55,7 +55,6 @@ import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.FullScreenLoadingOverlay
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxIcons
-import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.*
 
 private val CaregiverIndigo = Color(0xFF4338A8)
@@ -85,23 +84,37 @@ fun SettingsCaregiverScreen(
         colorScheme = MaterialTheme.colorScheme,
         typography = LexendTypography
     ) {
-        Scaffold(
-            containerColor = Color.White,
-            bottomBar = {
-                RelaxBottomNav(
-                    selectedRoute = "caregiver/settings",
-                    onNavigate = onNavigate,
-                    role = AppRole.CAREGIVER
-                )
-            }
-        ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF8F8FD))
+        ) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                // Background decoration
-                SoftGradientBackground(animateBlobs = true, role = AppRole.CAREGIVER)
+                    .fillMaxWidth()
+                    .height(260.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(CaregiverLavender, Color(0xFFF8F8FD))
+                        )
+                    )
+            )
+
+            Scaffold(
+                containerColor = Color.Transparent,
+                bottomBar = {
+                    RelaxBottomNav(
+                        selectedRoute = "caregiver/settings",
+                        onNavigate = onNavigate,
+                        role = AppRole.CAREGIVER
+                    )
+                }
+            ) { innerPadding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
 
                 Column(
                     modifier = Modifier
@@ -247,6 +260,7 @@ fun SettingsCaregiverScreen(
                 }
             }
         }
+    }
     }
 
     if (showLanguageBottomSheet) {
