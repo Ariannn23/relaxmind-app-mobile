@@ -10,17 +10,22 @@ import com.relaxmind.app.data.model.MeditationExercise
 import com.relaxmind.app.data.model.Patient
 import com.relaxmind.app.data.model.Streak
 import com.relaxmind.app.data.model.UserAchievement
+import com.relaxmind.app.data.model.CompletedMeditation
 import com.relaxmind.app.data.remote.FirebaseAuthService
 import com.relaxmind.app.data.remote.FirestoreRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.util.UUID
+import java.util.Date
 
 class PatientViewModel(
     private val authService: FirebaseAuthService = FirebaseAuthService(),
@@ -59,6 +64,15 @@ class PatientViewModel(
 
     private val _allCheckIns = MutableStateFlow<List<CheckIn>>(emptyList())
     val allCheckIns = _allCheckIns.asStateFlow()
+
+    private val _meditationExercises = MutableStateFlow<List<MeditationExercise>>(emptyList())
+    val meditationExercises = _meditationExercises.asStateFlow()
+
+    private val _selectedExercise = MutableStateFlow<MeditationExercise?>(null)
+    val selectedExercise = _selectedExercise.asStateFlow()
+
+    private val _meditationCompleteSuccess = MutableSharedFlow<Pair<String, Int>?>()
+    val meditationCompleteSuccess = _meditationCompleteSuccess.asSharedFlow()
 
     private val _selectedYear = MutableStateFlow(LocalDate.now().year)
     val selectedYear = _selectedYear.asStateFlow()
@@ -297,6 +311,112 @@ class PatientViewModel(
             _selectedYear.value += 1
         } else {
             _selectedMonth.value += 1
+        }
+    }
+
+    fun loadMeditationExercises() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            val result = firestoreRepository.getMeditationExercises()
+            if (result.isSuccess) {
+                _meditationExercises.value = result.getOrDefault(emptyList())
+            }
+            _isLoading.value = false
+        }
+    }
+
+    fun loadMeditationExercise(exerciseId: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            val result = firestoreRepository.getMeditationExercise(exerciseId)
+            if (result.isSuccess) {
+                _selectedExercise.value = result.getOrNull()
+            }
+            _isLoading.value = false
+        }
+    }
+
+    fun completeMeditation(exerciseId: String) {
+        val userId = authService.getCurrentUser()?.uid ?: return
+        viewModelScope.launch {
+            _isLoading.value = true
+            
+            // 1. Check if matches today's daily goal
+            val isGoal = _dailyGoal.value?.let { goal ->
+                goal.exerciseId == exerciseId && !goal.completed
+            } ?: false
+
+            // 2. Save CompletedMeditation
+            val completionId = UUID.randomUUID().toString()
+            val completedMeditation = CompletedMeditation(
+                id = completionId,
+                patientId = userId,
+                exerciseId = exerciseId,
+                isGoalOfTheDay = isGoal,
+                completedAt = Date()
+            )
+
+            val saveResult = firestoreRepository.createCompletedMeditation(completedMeditation)
+            if (saveResult.isSuccess) {
+                // 3. Update daily goal if matches
+                if (isGoal) {
+                    _dailyGoal.value?.let { goal ->
+                        firestoreRepository.updateDailyGoalCompletion(goal.id, true)
+                        _dailyGoal.value = goal.copy(completed = true)
+                    }
+                }
+
+                // 4. Verify achievements
+                val completionsResult = firestoreRepository.getCompletedMeditations(userId)
+                if (completionsResult.isSuccess) {
+                    val completions = completionsResult.getOrDefault(emptyList())
+                    val totalCompletions = completions.size
+                    val unlockedAchievements = _achievements.value
+
+                    suspend fun checkAndUnlock(key: String, title: String, desc: String, icon: String) {
+                        if (unlockedAchievements.none { it.achievementKey == key }) {
+                            val userAch = UserAchievement(
+                                id = UUID.randomUUID().toString(),
+                                patientId = userId,
+                                achievementKey = key,
+                                type = "meditation",
+                                title = title,
+                                description = desc,
+                                iconUrl = icon,
+                                unlockedAt = LocalDate.now().toString()
+                            )
+                            firestoreRepository.unlockAchievement(userAch)
+                            _achievements.value = _achievements.value + userAch
+                        }
+                    }
+
+                    if (totalCompletions >= 1) {
+                        checkAndUnlock(
+                            "first_meditation",
+                             "Primer respiro",
+                             "Primera meditación completada",
+                             "https://cdn-icons-png.flaticon.com/512/2913/2913520.png"
+                        )
+                    }
+                    if (totalCompletions >= 10) {
+                        checkAndUnlock(
+                            "meditations_10",
+                             "Mente en calma",
+                             "10 meditaciones completadas",
+                             "https://cdn-icons-png.flaticon.com/512/414/414927.png"
+                        )
+                    }
+                }
+
+                _meditationCompleteSuccess.emit(Pair(exerciseId, 50))
+            }
+            _isLoading.value = false
+        }
+    }
+
+    fun resetMeditationCompleteSuccess() {
+        viewModelScope.launch {
+            _meditationCompleteSuccess.emit(null)
         }
     }
 

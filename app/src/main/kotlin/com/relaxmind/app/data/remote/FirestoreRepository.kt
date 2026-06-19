@@ -6,6 +6,7 @@ import com.relaxmind.app.data.model.Caregiver
 import com.relaxmind.app.data.model.CheckIn
 import com.relaxmind.app.data.model.DailyGoal
 import com.relaxmind.app.data.model.MeditationExercise
+import com.relaxmind.app.data.model.CompletedMeditation
 import com.relaxmind.app.data.model.Patient
 import com.relaxmind.app.data.model.Streak
 import com.relaxmind.app.data.model.UserAchievement
@@ -149,6 +150,36 @@ class FirestoreRepository(
             .toObjectList(CheckIn::class.java)
     }
 
+    suspend fun getMeditationExercises(): Result<List<MeditationExercise>> = runCatching {
+        firestore.collection(MEDITATION_EXERCISES_COLLECTION)
+            .orderBy("order")
+            .get()
+            .await()
+            .toObjectList(MeditationExercise::class.java)
+    }
+
+    suspend fun createCompletedMeditation(completedMeditation: CompletedMeditation): Result<Unit> = runCatching {
+        firestore.collection(COMPLETED_MEDITATIONS_COLLECTION)
+            .document(completedMeditation.id.ifBlank { firestore.collection(COMPLETED_MEDITATIONS_COLLECTION).document().id })
+            .set(completedMeditation)
+            .await()
+    }
+
+    suspend fun getCompletedMeditations(patientId: String): Result<List<CompletedMeditation>> = runCatching {
+        firestore.collection(COMPLETED_MEDITATIONS_COLLECTION)
+            .whereEqualTo("patientId", patientId)
+            .get()
+            .await()
+            .toObjectList(CompletedMeditation::class.java)
+    }
+
+    suspend fun unlockAchievement(userAchievement: UserAchievement): Result<Unit> = runCatching {
+        firestore.collection(ACHIEVEMENTS_COLLECTION)
+            .document(userAchievement.id.ifBlank { firestore.collection(ACHIEVEMENTS_COLLECTION).document().id })
+            .set(userAchievement)
+            .await()
+    }
+
     private fun <T> com.google.firebase.firestore.QuerySnapshot.toObjectList(clazz: Class<T>): List<T> {
         return documents.mapNotNull { it.toObject(clazz) }
     }
@@ -159,6 +190,7 @@ class FirestoreRepository(
         const val CHECKINS_COLLECTION = "checkIns"
         const val DAILY_GOALS_COLLECTION = "dailyGoals"
         const val MEDITATION_EXERCISES_COLLECTION = "meditationExercises"
+        const val COMPLETED_MEDITATIONS_COLLECTION = "completedMeditations"
         const val APPOINTMENTS_COLLECTION = "appointments"
         const val STREAKS_COLLECTION = "streaks"
         const val ACHIEVEMENTS_COLLECTION = "achievements"

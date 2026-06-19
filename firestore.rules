@@ -76,6 +76,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /completedMeditations/{completionId} {
+      allow create, update: if signedIn() && request.resource.data.patientId == request.auth.uid;
+      allow read: if signedIn() && (resource.data.patientId == request.auth.uid || isPatientCaregiver(resource.data.patientId));
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

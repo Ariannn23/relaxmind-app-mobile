@@ -22,6 +22,8 @@ import com.relaxmind.app.features.common.CheckInScreen
 import com.relaxmind.app.features.patient.DashboardPatientScreen
 import com.relaxmind.app.features.patient.SettingsPatientScreen
 import com.relaxmind.app.features.patient.ProgressScreen
+import com.relaxmind.app.features.patient.MeditateScreen
+import com.relaxmind.app.features.patient.MeditationDetailScreen
 
 sealed class Screen(val route: String) {
     data object Welcome : Screen("welcome")
@@ -207,13 +209,26 @@ fun AppNavGraph(
                 }
             )
         }
-        composable(Screen.Meditate.route) { PlaceholderScreen("Pantalla Meditate") }
+        composable(Screen.Meditate.route) {
+            MeditateScreen(
+                onNavigate = { route ->
+                    navController.navigate(route) {
+                        popUpTo(Screen.PatientDashboard.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
+        }
         composable(
             route = Screen.MeditationDetail.route,
             arguments = listOf(navArgument(Screen.MeditationDetail.ExerciseIdArg) { type = NavType.StringType })
         ) { backStackEntry ->
             val exerciseId = backStackEntry.arguments?.getString(Screen.MeditationDetail.ExerciseIdArg).orEmpty()
-            PlaceholderScreen("Pantalla Meditation Detail: $exerciseId")
+            MeditationDetailScreen(
+                exerciseId = exerciseId,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
         composable(Screen.Progress.route) {
             ProgressScreen(
