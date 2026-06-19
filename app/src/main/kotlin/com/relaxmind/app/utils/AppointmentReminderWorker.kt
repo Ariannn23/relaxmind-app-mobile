@@ -14,6 +14,10 @@ import androidx.work.ExistingWorkPolicy
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import java.util.concurrent.TimeUnit
+import android.app.PendingIntent
+import android.content.Intent
+import com.relaxmind.app.MainActivity
+import com.relaxmind.app.services.NotificationUtils
 
 class AppointmentReminderWorker(
     private val context: Context,
@@ -32,7 +36,7 @@ class AppointmentReminderWorker(
             else -> "Recordatorio: $title"
         }
 
-        showNotification(title, message)
+        showNotification(title, message, appointmentId)
 
         // Mark as notificationSent in Firestore (only for non-recurring or general tracking)
         runCatching {
@@ -92,29 +96,31 @@ class AppointmentReminderWorker(
         return Result.success()
     }
 
-    private fun showNotification(title: String, message: String) {
-        val channelId = "appointments_reminder_channel"
+    private fun showNotification(title: String, message: String, appointmentId: String) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
- 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                "Recordatorios de Agenda",
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = "Notificaciones para citas, medicaciones y recordatorios."
-            }
-            notificationManager.createNotificationChannel(channel)
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra("action", "open_appointment")
+            putExtra("appointmentId", appointmentId)
         }
 
-        val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm) // System standard alarm icon
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            appointmentId.hashCode(),
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val notification = NotificationCompat.Builder(context, NotificationUtils.CHANNEL_REMINDERS)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(title)
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
 
-        notificationManager.notify(System.currentTimeMillis().toInt(), notification)
+        notificationManager.notify(appointmentId.hashCode(), notification)
     }
 }

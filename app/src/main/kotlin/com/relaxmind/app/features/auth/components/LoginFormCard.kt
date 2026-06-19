@@ -63,6 +63,7 @@ fun LoginFormCard(
     isFormValid: Boolean,
     isLoading: Boolean,
     onLogin: () -> Unit,
+    onGoogleLogin: () -> Unit,
     onForgotPassword: () -> Unit,
     onCreateAccount: () -> Unit,
     modifier: Modifier = Modifier
@@ -196,9 +197,39 @@ fun LoginFormCard(
 
         Spacer(modifier = Modifier.height(14.dp))
 
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            androidx.compose.material3.Divider(
+                modifier = Modifier.weight(1f),
+                color = BorderSoft
+            )
+            Text(
+                text = "O continuar con",
+                style = MaterialTheme.typography.labelMedium,
+                color = TextSecondary,
+                modifier = Modifier.padding(horizontal = 12.dp)
+            )
+            androidx.compose.material3.Divider(
+                modifier = Modifier.weight(1f),
+                color = BorderSoft
+            )
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
         RelaxOutlineButton(
             modifier = Modifier.fillMaxWidth(),
-            text = "Crear cuenta",
+            text = "Continuar con Google",
+            onClick = onGoogleLogin
+        )
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        RelaxOutlineButton(
+            modifier = Modifier.fillMaxWidth(),
+            text = "Crear cuenta con correo",
             onClick = onCreateAccount
         )
         }

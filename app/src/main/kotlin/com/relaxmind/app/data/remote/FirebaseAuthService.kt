@@ -2,6 +2,7 @@ package com.relaxmind.app.data.remote
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.tasks.await
 
 class FirebaseAuthService {
@@ -20,6 +21,12 @@ class FirebaseAuthService {
         password: String
     ): Result<FirebaseUser> = runCatching {
         val result = auth.signInWithEmailAndPassword(email, password).await()
+        result.user ?: error("Firebase did not return an authenticated user.")
+    }
+
+    suspend fun loginWithGoogleCredential(idToken: String): Result<FirebaseUser> = runCatching {
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+        val result = auth.signInWithCredential(credential).await()
         result.user ?: error("Firebase did not return an authenticated user.")
     }
 

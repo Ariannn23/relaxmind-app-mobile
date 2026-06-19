@@ -31,6 +31,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Initialize notification channels and schedule workers
+        com.relaxmind.app.services.NotificationUtils.createNotificationChannels(this)
+        com.relaxmind.app.services.NotificationUtils.scheduleDailyCheckInReminder(this)
+
         // Read the onboarding flag before composition so the start destination is stable.
         val onboardingSeen = OnboardingPreferences.isSeen(this)
 
@@ -103,6 +107,33 @@ class MainActivity : ComponentActivity() {
                                 onboardingSeen = onboardingSeen
                             )
                         )
+                        
+                        LaunchedEffect(intent) {
+                            val action = intent.getStringExtra("action")
+                            when (action) {
+                                "open_sos" -> {
+                                    val alertId = intent.getStringExtra("alertId")
+                                    if (alertId != null) {
+                                        navController.navigate(com.relaxmind.app.Screen.SOSAlert.createRoute(alertId))
+                                    }
+                                }
+                                "open_patient_detail" -> {
+                                    val patientId = intent.getStringExtra("patientId")
+                                    if (patientId != null) {
+                                        navController.navigate(com.relaxmind.app.Screen.PatientDetail.createRoute(patientId))
+                                    }
+                                }
+                                "open_checkin" -> {
+                                    navController.navigate(com.relaxmind.app.Screen.CheckIn.route)
+                                }
+                                "open_appointment" -> {
+                                    val appointmentId = intent.getStringExtra("appointmentId")
+                                    if (appointmentId != null) {
+                                        navController.navigate(com.relaxmind.app.Screen.AppointmentDetail.createRoute(appointmentId))
+                                    }
+                                }
+                            }
+                        }
                         
                         if (isAuthenticated && userRole == "caregiver") {
                             com.relaxmind.app.features.caregiver.GlobalCaregiverAlertObserver(navController = navController)

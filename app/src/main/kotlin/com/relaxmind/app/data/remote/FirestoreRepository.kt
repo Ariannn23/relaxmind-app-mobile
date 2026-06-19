@@ -59,6 +59,11 @@ class FirestoreRepository(
         caregivers.document(id).update(fields).await()
     }
 
+    suspend fun updateFcmToken(id: String, role: String, token: String): Result<Unit> = runCatching {
+        val collection = if (role == "caregiver") caregivers else patients
+        collection.document(id).update("fcmToken", token).await()
+    }
+
     suspend fun getRoleById(id: String): Result<String> = runCatching {
         val patientSnapshot = patients.document(id).get().await()
         if (patientSnapshot.exists()) {
@@ -432,6 +437,13 @@ class FirestoreRepository(
         firestore.collection(APPOINTMENTS_COLLECTION)
             .document(appointmentId)
             .update("completed", completed)
+            .await()
+    }
+
+    suspend fun updateAppointmentNotificationSent(appointmentId: String): Result<Unit> = runCatching {
+        firestore.collection(APPOINTMENTS_COLLECTION)
+            .document(appointmentId)
+            .update("notificationSent", true)
             .await()
     }
 

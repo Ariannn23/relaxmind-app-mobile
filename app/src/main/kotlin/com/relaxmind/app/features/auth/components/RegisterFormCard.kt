@@ -99,6 +99,7 @@ fun RegisterFormCard(
     isFormValid: Boolean,
     isLoading: Boolean,
     onSubmit: () -> Unit,
+    onGoogleRegister: () -> Unit,
     onNavigateToLogin: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -364,6 +365,36 @@ fun RegisterFormCard(
                 enabled = isFormValid && !isLoading,
                 isLoading = isLoading,
                 backgroundColor = accentColor
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                androidx.compose.material3.Divider(
+                    modifier = Modifier.weight(1f),
+                    color = BorderSoft
+                )
+                Text(
+                    text = "O regístrate con",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextSecondary,
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+                androidx.compose.material3.Divider(
+                    modifier = Modifier.weight(1f),
+                    color = BorderSoft
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            com.relaxmind.app.ui.components.auth.RelaxOutlineButton(
+                modifier = Modifier.fillMaxWidth(),
+                text = "Continuar con Google",
+                onClick = onGoogleRegister
             )
 
             Spacer(modifier = Modifier.height(20.dp))

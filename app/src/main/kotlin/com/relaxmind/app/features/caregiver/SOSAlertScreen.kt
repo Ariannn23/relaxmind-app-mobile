@@ -64,7 +64,7 @@ import com.relaxmind.app.ui.components.ButtonVariant
 import com.relaxmind.app.ui.components.LoadingIndicator
 import com.relaxmind.app.ui.components.RelaxButton
 import com.relaxmind.app.ui.components.RelaxIcons
-import com.relaxmind.app.ui.themes.SOSCoral
+import com.relaxmind.app.ui.themes.ScoreRed
 
 @Composable
 fun SOSAlertScreen(
@@ -109,7 +109,7 @@ fun SOSAlertScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SOSCoral)
+            .background(ScoreRed)
             .padding(start = 24.dp, end = 24.dp, top = 40.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -203,7 +203,7 @@ fun SOSAlertScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color.White,
-                        contentColor = SOSCoral
+                        contentColor = ScoreRed
                     )
                 ) {
                     Text(
@@ -226,7 +226,7 @@ fun SOSAlertScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color.White,
-                        contentColor = SOSCoral
+                        contentColor = ScoreRed
                     )
                 ) {
                     Text(
@@ -264,7 +264,7 @@ fun SOSAlertScreen(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.White,
-                    contentColor = SOSCoral
+                    contentColor = ScoreRed
                 )
             ) {
                 Text(
