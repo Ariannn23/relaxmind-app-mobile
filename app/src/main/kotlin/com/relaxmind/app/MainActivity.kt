@@ -22,6 +22,7 @@ import com.relaxmind.app.data.remote.FirestoreRepository
 import com.relaxmind.app.ui.themes.RelaxMindTheme
 import com.relaxmind.app.ui.themes.ThemeState
 import com.relaxmind.app.utils.OnboardingPreferences
+import kotlinx.coroutines.withTimeoutOrNull
 
 class MainActivity : ComponentActivity() {
     private val authService = FirebaseAuthService()
@@ -46,26 +47,34 @@ class MainActivity : ComponentActivity() {
 
                     LaunchedEffect(Unit) {
                         if (currentUser != null) {
-                            val patientResult = firestoreRepository.getPatientById(currentUser.uid)
-                            val patient = patientResult.getOrNull()
-                            if (patient != null) {
-                                ThemeState.darkMode.value = patient.darkMode
-                                ThemeState.language.value = patient.language
-                                updateAppLocale(patient.language)
-                                userRole = "patient"
-                                isNewPatient = !patient.onboardingCompleted
-                            } else {
-                                val caregiverResult = firestoreRepository.getCaregiverById(currentUser.uid)
-                                val caregiver = caregiverResult.getOrNull()
-                                if (caregiver != null) {
-                                    ThemeState.darkMode.value = caregiver.darkMode
-                                    ThemeState.language.value = caregiver.language
-                                    updateAppLocale(caregiver.language)
-                                    userRole = "caregiver"
-                                } else {
-                                    authService.logout()
-                                    isAuthenticated = false
+                            try {
+                                val patient = withTimeoutOrNull(5000L) {
+                                    firestoreRepository.getPatientById(currentUser.uid).getOrNull()
                                 }
+                                if (patient != null) {
+                                    ThemeState.darkMode.value = patient.darkMode
+                                    ThemeState.language.value = patient.language
+                                    updateAppLocale(patient.language)
+                                    userRole = "patient"
+                                    isNewPatient = !patient.onboardingCompleted
+                                } else {
+                                    val caregiver = withTimeoutOrNull(5000L) {
+                                        firestoreRepository.getCaregiverById(currentUser.uid).getOrNull()
+                                    }
+                                    if (caregiver != null) {
+                                        ThemeState.darkMode.value = caregiver.darkMode
+                                        ThemeState.language.value = caregiver.language
+                                        updateAppLocale(caregiver.language)
+                                        userRole = "caregiver"
+                                    } else {
+                                        authService.logout()
+                                        isAuthenticated = false
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                authService.logout()
+                                isAuthenticated = false
                             }
                             isCheckingSession = false
                         }
@@ -98,11 +107,15 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun updateAppLocale(lang: String) {
-        val locale = java.util.Locale(lang)
-        java.util.Locale.setDefault(locale)
-        val resources = this.resources
-        val configuration = resources.configuration
-        configuration.setLocale(locale)
-        resources.updateConfiguration(configuration, resources.displayMetrics)
+        try {
+            val locale = java.util.Locale(lang)
+            java.util.Locale.setDefault(locale)
+            val resources = this.resources
+            val configuration = resources.configuration
+            configuration.setLocale(locale)
+            resources.updateConfiguration(configuration, resources.displayMetrics)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }
