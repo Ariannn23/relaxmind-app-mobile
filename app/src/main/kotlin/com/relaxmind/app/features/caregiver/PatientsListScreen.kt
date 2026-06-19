@@ -23,8 +23,9 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
+import com.relaxmind.app.ui.components.RelaxToastHost
+import com.relaxmind.app.ui.components.RelaxToastState
+import com.relaxmind.app.ui.components.rememberRelaxToastState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -65,7 +66,7 @@ fun PatientsListScreen(
     val patients by viewModel.patients.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val toastState = rememberRelaxToastState()
     var query by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
@@ -74,7 +75,7 @@ fun PatientsListScreen(
 
     LaunchedEffect(error) {
         if (!error.isNullOrBlank()) {
-            snackbarHostState.showSnackbar(error.orEmpty())
+            toastState.showError(error.orEmpty())
             viewModel.consumeError()
         }
     }
@@ -95,7 +96,6 @@ fun PatientsListScreen(
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = { RelaxTopBar(title = "Mis Pacientes") },
         bottomBar = {
             RelaxBottomNav(
@@ -155,6 +155,8 @@ fun PatientsListScreen(
             if (isLoading && patients.isEmpty()) {
                 LoadingIndicator(modifier = Modifier.align(Alignment.Center))
             }
+
+            RelaxToastHost(state = toastState)
         }
     }
 }

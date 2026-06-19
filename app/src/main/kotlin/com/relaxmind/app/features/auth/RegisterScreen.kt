@@ -14,8 +14,9 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
+import com.relaxmind.app.ui.components.RelaxToastHost
+import com.relaxmind.app.ui.components.RelaxToastState
+import com.relaxmind.app.ui.components.rememberRelaxToastState
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,7 +54,7 @@ fun RegisterScreen(
     onNavigateToEmailVerification: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val toastState = rememberRelaxToastState()
     val context = LocalContext.current
 
     // ── Form state ──────────────────────────────────────────────────────────
@@ -115,15 +116,14 @@ fun RegisterScreen(
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let { msg ->
-            snackbarHostState.showSnackbar(msg)
+            toastState.showError(msg)
             viewModel.clearError()
         }
     }
 
     RegisterTheme {
         Scaffold(
-            containerColor = BackgroundWhite,
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+            containerColor = BackgroundWhite
         ) { innerPadding ->
             Box(
                 modifier = Modifier
@@ -211,6 +211,8 @@ fun RegisterScreen(
 
                     Spacer(modifier = Modifier.height(32.dp))
                 }
+
+                RelaxToastHost(state = toastState)
 
                 // Loading overlay
                 if (uiState.isLoading) {

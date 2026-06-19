@@ -30,8 +30,9 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
+import com.relaxmind.app.ui.components.RelaxToastHost
+import com.relaxmind.app.ui.components.RelaxToastState
+import com.relaxmind.app.ui.components.rememberRelaxToastState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -77,7 +78,7 @@ fun AlertsHistoryScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val message by viewModel.message.collectAsState()
     val error by viewModel.error.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val toastState = rememberRelaxToastState()
     var selectedFilter by remember { mutableStateOf(AlertFilter.ALL) }
     var selectedPatientId by remember { mutableStateOf<String?>(null) }
     var alertToResolve by remember { mutableStateOf<CaregiverAlert?>(null) }
@@ -89,14 +90,14 @@ fun AlertsHistoryScreen(
 
     LaunchedEffect(message) {
         if (!message.isNullOrBlank()) {
-            snackbarHostState.showSnackbar(message.orEmpty())
+            toastState.showSuccess(message.orEmpty())
             viewModel.consumeMessage()
         }
     }
 
     LaunchedEffect(error) {
         if (!error.isNullOrBlank()) {
-            snackbarHostState.showSnackbar(error.orEmpty())
+            toastState.showError(error.orEmpty())
             viewModel.consumeError()
         }
     }
@@ -121,7 +122,6 @@ fun AlertsHistoryScreen(
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = { RelaxTopBar(title = "Historial de Alertas") },
         bottomBar = {
             RelaxBottomNav(
@@ -229,6 +229,8 @@ fun AlertsHistoryScreen(
             if (isLoading && alerts.isEmpty()) {
                 LoadingIndicator(modifier = Modifier.align(Alignment.Center))
             }
+
+            RelaxToastHost(state = toastState)
         }
     }
 

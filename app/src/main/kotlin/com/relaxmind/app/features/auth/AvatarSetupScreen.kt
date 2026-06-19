@@ -22,8 +22,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
+import com.relaxmind.app.ui.components.RelaxToastHost
+import com.relaxmind.app.ui.components.RelaxToastState
+import com.relaxmind.app.ui.components.rememberRelaxToastState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -79,7 +80,7 @@ fun AvatarSetupScreen(
     onContinue: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val toastState = rememberRelaxToastState()
     var selectedAvatarUrl by remember { mutableStateOf(avatarOptions.first().url) }
     var submitted by remember { mutableStateOf(false) }
     var showSavingScreen by remember { mutableStateOf(false) }
@@ -101,7 +102,7 @@ fun AvatarSetupScreen(
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
             showSavingScreen = false
-            snackbarHostState.showSnackbar(it)
+            toastState.showError(it)
             viewModel.clearError()
         }
     }
@@ -116,8 +117,7 @@ fun AvatarSetupScreen(
     }
 
     Scaffold(
-        topBar = { RelaxTopBar(title = "", onBackClick = onNavigateBack) },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        topBar = { RelaxTopBar(title = "", onBackClick = onNavigateBack) }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -191,6 +191,7 @@ fun AvatarSetupScreen(
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
+            RelaxToastHost(state = toastState)
         }
     }
 }

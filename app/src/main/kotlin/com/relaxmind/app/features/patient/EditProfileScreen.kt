@@ -36,6 +36,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.relaxmind.app.ui.components.FullScreenLoadingScreen
 import com.relaxmind.app.ui.components.RelaxIcons
+import com.relaxmind.app.ui.components.RelaxToastHost
+import com.relaxmind.app.ui.components.RelaxToastState
+import com.relaxmind.app.ui.components.rememberRelaxToastState
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.*
 import java.util.Calendar
@@ -85,10 +88,8 @@ fun EditProfileScreen(
     var selectedAvatarUrl by remember(patient) { mutableStateOf(patient?.avatarUrl ?: "relaxmind://avatar/01") }
 
     var sexExpanded by remember { mutableStateOf(false) }
-    var showSuccessSnackbar by remember { mutableStateOf(false) }
-    var errorMsg by remember { mutableStateOf<String?>(null) }
 
-    val snackbarHostState = remember { SnackbarHostState() }
+    val toastState = rememberRelaxToastState()
 
     // Real-time validation
     val nameError = if (name.isNotEmpty() && name.trim().length < 2) "El nombre debe tener al menos 2 caracteres." else null
@@ -117,20 +118,6 @@ fun EditProfileScreen(
         if (patient == null) viewModel.loadDashboardData()
     }
 
-    LaunchedEffect(showSuccessSnackbar) {
-        if (showSuccessSnackbar) {
-            snackbarHostState.showSnackbar("Perfil guardado correctamente")
-            showSuccessSnackbar = false
-        }
-    }
-
-    LaunchedEffect(errorMsg) {
-        errorMsg?.let {
-            snackbarHostState.showSnackbar(it)
-            errorMsg = null
-        }
-    }
-
     // Full-screen loading during save
     if (isLoading && patient == null) {
         FullScreenLoadingScreen(text = "Cargando perfil...")
@@ -139,8 +126,7 @@ fun EditProfileScreen(
 
     MaterialTheme(colorScheme = MaterialTheme.colorScheme, typography = LexendTypography) {
         Scaffold(
-            containerColor = Color.Transparent,
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+            containerColor = Color.Transparent
         ) { innerPadding ->
             Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
                 SoftGradientBackground(animateBlobs = false)
@@ -464,8 +450,8 @@ fun EditProfileScreen(
                                     sex = sex,
                                     phone = phone,
                                     condition = condition.trim(),
-                                    onSuccess = { showSuccessSnackbar = true },
-                                    onError = { errorMsg = it }
+                                    onSuccess = { toastState.showSuccess("Perfil guardado correctamente") },
+                                    onError = { toastState.showError(it) }
                                 )
                             },
                             enabled = isFormValid && !isLoading,
@@ -498,6 +484,8 @@ fun EditProfileScreen(
 
                     Spacer(modifier = Modifier.height(32.dp))
                 }
+
+                RelaxToastHost(state = toastState)
             }
         }
     }

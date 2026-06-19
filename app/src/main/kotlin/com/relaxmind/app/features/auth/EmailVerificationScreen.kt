@@ -21,8 +21,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
+import com.relaxmind.app.ui.components.RelaxToastHost
+import com.relaxmind.app.ui.components.RelaxToastState
+import com.relaxmind.app.ui.components.rememberRelaxToastState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -71,7 +72,7 @@ fun EmailVerificationScreen(
     val uiState by viewModel.uiState.collectAsState()
     val timerSeconds by viewModel.timerSeconds.collectAsState()
     val resendCount by viewModel.resendCount.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val toastState = rememberRelaxToastState()
     val digits = remember { mutableStateListOf("", "", "", "", "", "") }
     val focusRequesters = remember { List(6) { FocusRequester() } }
     val focusStates = remember { mutableStateListOf(false, false, false, false, false, false) }
@@ -93,14 +94,13 @@ fun EmailVerificationScreen(
         uiState.error?.let {
             digits.indices.forEach { index -> digits[index] = "" }
             focusRequesters.first().requestFocus()
-            snackbarHostState.showSnackbar("Código incorrecto. Intenta de nuevo.")
+            toastState.showError("Código incorrecto. Intenta de nuevo.")
             viewModel.clearError()
         }
     }
 
     Scaffold(
-        topBar = { RelaxTopBar(title = "", onBackClick = onNavigateBack) },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        topBar = { RelaxTopBar(title = "", onBackClick = onNavigateBack) }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -189,6 +189,7 @@ fun EmailVerificationScreen(
             }
 
             if (uiState.isLoading) FullScreenLoadingOverlay()
+            RelaxToastHost(state = toastState)
         }
     }
 }

@@ -240,9 +240,9 @@ fun SettingsPatientScreen(
                         Image(
                             painter = painterResource(id = R.drawable.icono_plano2),
                             contentDescription = null,
-                            modifier = Modifier.size(40.dp)
+                            modifier = Modifier.size(130.dp)
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Versión 1.0.0",
                             fontFamily = LexendFontFamily,
@@ -1239,29 +1239,7 @@ fun DeleteAccountDialog(
                                 Text(
                                     text = "Atrás",
                                     fontFamily = LexendFontFamily,
-                                    fontWeight = FontWeight.Medium,
-                                    fontSize = 14.sp
-                                )
-                            }
-
-                            Button(
-                                onClick = {
-                                    val finalReason = if (selectedReason == "Otro") {
-                                        "Otro: $otherReasonDetail"
-                                    } else {
-                                        selectedReason
-                                    }
-                                    onConfirm(finalReason, password)
-                                },
-                                enabled = password.isNotBlank() && !isLoading,
-                                modifier = Modifier.weight(1f).height(48.dp),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = DangerRed, contentColor = Color.White)
-                            ) {
-                                Text(
-                                    text = "Eliminar",
-                                    fontFamily = LexendFontFamily,
-                                    fontWeight = FontWeight.Medium,
+                                    fontWeight = FontWeight.SemiBold,
                                     fontSize = 14.sp
                                 )
                             }
@@ -1346,15 +1324,17 @@ fun LogoutConfirmationDialog(
 
                     Button(
                         onClick = onConfirm,
-                        modifier = Modifier.weight(1f).height(48.dp),
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                         shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = DangerRed, contentColor = Color.White)
+                        colors = ButtonDefaults.buttonColors(containerColor = DangerRed, contentColor = Color.White),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
                     ) {
                         Text(
-                            text = "Cerrar sesión",
+                            text = "Cerrar sesi�n",
                             fontFamily = LexendFontFamily,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 14.sp
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                            maxLines = 1
                         )
                     }
                 }

@@ -38,10 +38,10 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.relaxmind.app.ui.components.RelaxToastHost
+import com.relaxmind.app.ui.components.rememberRelaxToastState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -100,7 +100,7 @@ fun CheckInScreen(
     val binaryAnswers by viewModel.binaryAnswers.collectAsState()
     val notes by viewModel.notes.collectAsState()
 
-    val snackbarHostState = remember { SnackbarHostState() }
+    val toastState = rememberRelaxToastState()
 
     // Resolve steps list dynamically
     val steps = remember(isInitialTest) {
@@ -134,7 +134,7 @@ fun CheckInScreen(
     // Handle VM errors
     LaunchedEffect(uiState) {
         if (uiState is CheckInUiState.Error) {
-            snackbarHostState.showSnackbar((uiState as CheckInUiState.Error).message)
+            toastState.showError((uiState as CheckInUiState.Error).message)
         }
     }
 
@@ -171,8 +171,7 @@ fun CheckInScreen(
                     }
                 }
             )
-        },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -319,6 +318,8 @@ fun CheckInScreen(
             if (uiState is CheckInUiState.Loading) {
                 FullScreenLoadingOverlay()
             }
+
+            RelaxToastHost(state = toastState)
         }
     }
 }
