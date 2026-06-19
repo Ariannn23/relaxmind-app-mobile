@@ -3,6 +3,8 @@ package com.relaxmind.app.features.patient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -159,9 +161,11 @@ fun ScheduleScreen(
 
             if (selectedTabIndex == 0) {
                 // VISTA SEMANAL
+                val selectedDateDiaryEntry = monthlyDiaryEntries.find { it.date == selectedDate.toString() }
                 WeeklyView(
                     selectedDate = selectedDate,
                     appointments = selectedDateAppointments,
+                    diaryEntry = selectedDateDiaryEntry,
                     onDateSelected = { selectedDate = it },
                     onAppointmentClick = { onNavigate(Screen.AppointmentDetail.createRoute(it.id)) }
                 )
@@ -183,6 +187,7 @@ fun ScheduleScreen(
         if (showBottomSheet) {
             val dateStr = bottomSheetDate.toString()
             val dayAppointments = monthlyAppointments.filter { it.date == dateStr }.sortedBy { it.time }
+            val dayDiary = monthlyDiaryEntries.find { it.date == dateStr }
 
             ModalBottomSheet(
                 onDismissRequest = { showBottomSheet = false },
@@ -192,7 +197,8 @@ fun ScheduleScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(24.dp)
+                        .padding(horizontal = 24.dp)
+                        .verticalScroll(rememberScrollState())
                 ) {
                     val dayName = bottomSheetDate.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("es")).replaceFirstChar { it.uppercase() }
                     val dateFormatted = "${dayName}, ${bottomSheetDate.dayOfMonth} de ${bottomSheetDate.month.getDisplayName(TextStyle.FULL, Locale("es"))}"
@@ -205,7 +211,7 @@ fun ScheduleScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    if (dayAppointments.isEmpty()) {
+                    if (dayAppointments.isEmpty() && dayDiary == null) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -221,28 +227,51 @@ fun ScheduleScreen(
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Sin eventos programados",
+                                    text = "Sin eventos ni entradas de diario",
                                     color = Color.Gray,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
                         }
                     } else {
-                        LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(dayAppointments) { appt ->
-                                AppointmentItem(
-                                    appointment = appt,
-                                    onClick = {
-                                        showBottomSheet = false
-                                        onNavigate(Screen.AppointmentDetail.createRoute(appt.id))
-                                    }
-                                )
+                        if (dayAppointments.isNotEmpty()) {
+                            Text(
+                                text = "Eventos del día",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.DarkGray,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                dayAppointments.forEach { appt ->
+                                    AppointmentItem(
+                                        appointment = appt,
+                                        onClick = {
+                                            showBottomSheet = false
+                                            onNavigate(Screen.AppointmentDetail.createRoute(appt.id))
+                                        }
+                                    )
+                                }
                             }
                         }
+
+                        if (dayDiary != null) {
+                            if (dayAppointments.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(24.dp))
+                            }
+                            Text(
+                                text = "Mi registro de bienestar",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.DarkGray,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            DiaryEntryCard(diaryEntry = dayDiary)
+                        }
                     }
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(40.dp))
                 }
             }
         }
@@ -253,6 +282,7 @@ fun ScheduleScreen(
 private fun WeeklyView(
     selectedDate: LocalDate,
     appointments: List<Appointment>,
+    diaryEntry: DiaryEntry?,
     onDateSelected: (LocalDate) -> Unit,
     onAppointmentClick: (Appointment) -> Unit
 ) {
@@ -306,7 +336,7 @@ private fun WeeklyView(
                     ) {
                         Text(
                             text = date.dayOfMonth.toString(),
-                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                            color = if (isSelected) Color.White else MaterialTheme.colorSurfaceForApp(),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal
                         )
@@ -361,8 +391,8 @@ private fun WeeklyView(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Selected Date Appointments List
-        if (appointments.isEmpty()) {
+        // Selected Date Events and Diary List
+        if (appointments.isEmpty() && diaryEntry == null) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -378,7 +408,7 @@ private fun WeeklyView(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Sin eventos para el resto del día",
+                        text = "Sin eventos ni entradas de diario",
                         color = Color.DarkGray,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Medium
@@ -393,17 +423,49 @@ private fun WeeklyView(
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(appointments) { appt ->
-                    AppointmentItem(
-                        appointment = appt,
-                        onClick = { onAppointmentClick(appt) }
-                    )
+                if (appointments.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Eventos del día",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.DarkGray,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                    }
+                    items(appointments) { appt ->
+                        AppointmentItem(
+                            appointment = appt,
+                            onClick = { onAppointmentClick(appt) }
+                        )
+                    }
+                }
+
+                if (diaryEntry != null) {
+                    item {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Mi registro de bienestar",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.DarkGray,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                    }
+                    item {
+                        DiaryEntryCard(diaryEntry = diaryEntry)
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun MaterialTheme.colorSurfaceForApp(): Color {
+    return this.colorScheme.onSurface
 }
 
 @Composable
@@ -692,6 +754,303 @@ private fun AppointmentItem(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun DiaryEntryCard(
+    diaryEntry: DiaryEntry,
+    modifier: Modifier = Modifier
+) {
+    val emoji = getEmotionEmoji(diaryEntry.emotion)
+    RelaxCard(
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(4.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(PatientGreen.copy(alpha = 0.08f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = emoji, fontSize = 20.sp)
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "Mi Diario",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = PatientGreen
+                        )
+                        Text(
+                            text = "Sintiéndome ${diaryEntry.emotion.lowercase()}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray
+                        )
+                    }
+                }
+                
+                // Tag Badge
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(PatientGreen.copy(alpha = 0.08f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = diaryEntry.category,
+                        color = PatientGreen,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            // Notes
+            if (diaryEntry.notes.isNotBlank()) {
+                Text(
+                    text = diaryEntry.notes,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.DarkGray,
+                    lineHeight = 20.sp
+                )
+            }
+
+            // Photo collage
+            if (diaryEntry.photoUrls.isNotEmpty()) {
+                DiaryCollage(photoUrls = diaryEntry.photoUrls)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DiaryCollage(
+    photoUrls: List<String>,
+    modifier: Modifier = Modifier
+) {
+    val size = photoUrls.size
+    when {
+        size == 1 -> {
+            AsyncImage(
+                model = photoUrls[0],
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .clip(RoundedCornerShape(12.dp))
+            )
+        }
+        size == 2 -> {
+            Row(
+                modifier = modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                AsyncImage(
+                    model = photoUrls[0],
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(120.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                )
+                AsyncImage(
+                    model = photoUrls[1],
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(120.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                )
+            }
+        }
+        size == 3 -> {
+            Row(
+                modifier = modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                AsyncImage(
+                    model = photoUrls[0],
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .weight(1.5f)
+                        .height(160.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AsyncImage(
+                        model = photoUrls[1],
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(76.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                    AsyncImage(
+                        model = photoUrls[2],
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(76.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                }
+            }
+        }
+        size == 4 -> {
+            Column(
+                modifier = modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AsyncImage(
+                        model = photoUrls[0],
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(100.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                    AsyncImage(
+                        model = photoUrls[1],
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(100.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AsyncImage(
+                        model = photoUrls[2],
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(100.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                    AsyncImage(
+                        model = photoUrls[3],
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(100.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                }
+            }
+        }
+        size >= 5 -> {
+            Row(
+                modifier = modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                AsyncImage(
+                    model = photoUrls[0],
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .weight(1.2f)
+                        .height(180.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        AsyncImage(
+                            model = photoUrls[1],
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(86.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                        )
+                        AsyncImage(
+                            model = photoUrls[2],
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(86.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        AsyncImage(
+                            model = photoUrls[3],
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(86.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                        )
+                        AsyncImage(
+                            model = photoUrls[4],
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(86.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun getEmotionEmoji(emotion: String): String {
+    return when (emotion) {
+        "Ansioso" -> "😟"
+        "Tranquilo" -> "😌"
+        "Feliz" -> "😊"
+        "Triste" -> "😢"
+        "Frustrado" -> "😤"
+        "Emocionado" -> "🤩"
+        else -> "📝"
     }
 }
 
