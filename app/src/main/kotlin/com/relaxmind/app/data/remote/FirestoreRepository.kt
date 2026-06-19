@@ -106,6 +106,62 @@ class FirestoreRepository(
             }
     }
 
+    fun listenPatientsForCaregiver(
+        caregiverId: String,
+        onChange: (List<Patient>) -> Unit,
+        onError: (Exception) -> Unit
+    ): ListenerRegistration {
+        return patients
+            .whereEqualTo("caregiverId", caregiverId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    onError(error)
+                    return@addSnapshotListener
+                }
+                onChange(snapshot?.toObjectList(Patient::class.java).orEmpty())
+            }
+    }
+
+    fun listenAlertsForCaregiver(
+        caregiverId: String,
+        limit: Long = 10,
+        onChange: (List<CaregiverAlert>) -> Unit,
+        onError: (Exception) -> Unit
+    ): ListenerRegistration {
+        return firestore.collection(ALERTS_COLLECTION)
+            .whereEqualTo("caregiverId", caregiverId)
+            .limit(limit)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    onError(error)
+                    return@addSnapshotListener
+                }
+                val alerts = snapshot?.toObjectList(CaregiverAlert::class.java).orEmpty()
+                    .sortedByDescending { it.createdAt?.time ?: 0L }
+                onChange(alerts)
+            }
+    }
+
+    fun listenAlertsForPatient(
+        caregiverId: String,
+        patientId: String,
+        onChange: (List<CaregiverAlert>) -> Unit,
+        onError: (Exception) -> Unit
+    ): ListenerRegistration {
+        return firestore.collection(ALERTS_COLLECTION)
+            .whereEqualTo("caregiverId", caregiverId)
+            .whereEqualTo("patientId", patientId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    onError(error)
+                    return@addSnapshotListener
+                }
+                val alerts = snapshot?.toObjectList(CaregiverAlert::class.java).orEmpty()
+                    .sortedByDescending { it.createdAt?.time ?: 0L }
+                onChange(alerts)
+            }
+    }
+
     suspend fun linkPatientWithCode(
         code: String,
         caregiverId: String
@@ -162,6 +218,13 @@ class FirestoreRepository(
             .await()
             .toObjectList(CaregiverAlert::class.java)
             .sortedByDescending { it.createdAt?.time ?: 0L }
+    }
+
+    suspend fun updateAlertResolved(alertId: String, resolved: Boolean): Result<Unit> = runCatching {
+        firestore.collection(ALERTS_COLLECTION)
+            .document(alertId)
+            .update("resolved", resolved)
+            .await()
     }
 
     suspend fun getLatestCheckIn(patientId: String): Result<CheckIn?> = runCatching {

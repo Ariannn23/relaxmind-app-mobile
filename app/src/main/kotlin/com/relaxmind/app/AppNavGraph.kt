@@ -17,7 +17,10 @@ import com.relaxmind.app.features.auth.EmailVerificationScreen
 import com.relaxmind.app.features.auth.LoginScreen
 import com.relaxmind.app.features.auth.NotificationPermissionScreen
 import com.relaxmind.app.features.auth.RegisterScreen
+import com.relaxmind.app.features.caregiver.AlertsHistoryScreen
 import com.relaxmind.app.features.caregiver.DashboardCaregiverScreen
+import com.relaxmind.app.features.caregiver.PatientDetailScreen
+import com.relaxmind.app.features.caregiver.PatientsListScreen
 import com.relaxmind.app.features.caregiver.ScanQRScreen
 import com.relaxmind.app.features.common.WelcomeScreen
 import com.relaxmind.app.features.common.CheckInScreen
@@ -338,15 +341,41 @@ fun AppNavGraph(
                 onAlertsClick = { navController.navigate(Screen.AlertsHistory.route) }
             )
         }
-        composable(Screen.PatientsList.route) { PlaceholderScreen("Pantalla Patients List") }
+        composable(Screen.PatientsList.route) {
+            PatientsListScreen(
+                onNavigate = { route ->
+                    navController.navigate(route) {
+                        popUpTo(Screen.CaregiverDashboard.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onPatientClick = { patientId -> navController.navigate(Screen.PatientDetail.createRoute(patientId)) },
+                onScanQr = { navController.navigate(Screen.ScanQR.route) }
+            )
+        }
         composable(
             route = Screen.PatientDetail.route,
             arguments = listOf(navArgument(Screen.PatientDetail.PatientIdArg) { type = NavType.StringType })
         ) { backStackEntry ->
             val patientId = backStackEntry.arguments?.getString(Screen.PatientDetail.PatientIdArg).orEmpty()
-            PlaceholderScreen("Pantalla Patient Detail: $patientId")
+            PatientDetailScreen(
+                patientId = patientId,
+                onNavigateBack = { navController.popBackStack() },
+                onSosAlertClick = { alertId -> navController.navigate(Screen.SOSAlert.createRoute(alertId)) }
+            )
         }
-        composable(Screen.AlertsHistory.route) { PlaceholderScreen("Pantalla Alerts History") }
+        composable(Screen.AlertsHistory.route) {
+            AlertsHistoryScreen(
+                onNavigate = { route ->
+                    navController.navigate(route) {
+                        popUpTo(Screen.CaregiverDashboard.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
+        }
         composable(
             route = Screen.SOSAlert.route,
             arguments = listOf(navArgument(Screen.SOSAlert.AlertIdArg) { type = NavType.StringType })

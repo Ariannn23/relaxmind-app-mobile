@@ -2,9 +2,12 @@ package com.relaxmind.app.features.caregiver
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.ListenerRegistration
 import com.relaxmind.app.data.model.Caregiver
 import com.relaxmind.app.data.model.CaregiverAlert
+import com.relaxmind.app.data.model.CheckIn
 import com.relaxmind.app.data.model.Patient
+import com.relaxmind.app.data.model.Streak
 import com.relaxmind.app.data.remote.FirebaseAuthService
 import com.relaxmind.app.data.remote.FirestoreRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,8 +16,12 @@ import kotlinx.coroutines.launch
 
 data class CaregiverPatientSummary(
     val patient: Patient,
-    val latestScore: Int? = null
-)
+    val latestCheckIn: CheckIn? = null,
+    val hasPendingAlert: Boolean = false
+) {
+    val latestScore: Int? = latestCheckIn?.score
+    val lastCheckInDate: String? = latestCheckIn?.date
+}
 
 class CaregiverViewModel(
     private val authService: FirebaseAuthService = FirebaseAuthService(),
@@ -29,6 +36,21 @@ class CaregiverViewModel(
     private val _activeAlerts = MutableStateFlow<List<CaregiverAlert>>(emptyList())
     val activeAlerts = _activeAlerts.asStateFlow()
 
+    private val _allAlerts = MutableStateFlow<List<CaregiverAlert>>(emptyList())
+    val allAlerts = _allAlerts.asStateFlow()
+
+    private val _selectedPatient = MutableStateFlow<Patient?>(null)
+    val selectedPatient = _selectedPatient.asStateFlow()
+
+    private val _selectedPatientCheckIns = MutableStateFlow<List<CheckIn>>(emptyList())
+    val selectedPatientCheckIns = _selectedPatientCheckIns.asStateFlow()
+
+    private val _selectedPatientStreak = MutableStateFlow<Streak?>(null)
+    val selectedPatientStreak = _selectedPatientStreak.asStateFlow()
+
+    private val _selectedPatientAlerts = MutableStateFlow<List<CaregiverAlert>>(emptyList())
+    val selectedPatientAlerts = _selectedPatientAlerts.asStateFlow()
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
@@ -41,8 +63,19 @@ class CaregiverViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
 
+    private var patientsListener: ListenerRegistration? = null
+    private var alertsListener: ListenerRegistration? = null
+    private var patientAlertsListener: ListenerRegistration? = null
+    private var rawPatients: List<Patient> = emptyList()
+
     fun loadDashboard() {
+        observeCaregiverData()
+    }
+
+    fun observeCaregiverData() {
         val caregiverId = authService.getCurrentUser()?.uid ?: return
+        if (patientsListener != null && alertsListener != null) return
+
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
@@ -51,20 +84,66 @@ class CaregiverViewModel(
                 .onSuccess { _caregiver.value = it }
                 .onFailure { _error.value = it.localizedMessage ?: "No se pudo cargar el cuidador." }
 
-            firestoreRepository.getPatientsForCaregiver(caregiverId)
-                .onSuccess { patientList ->
-                    _patients.value = patientList.map { patient ->
-                        val score = firestoreRepository.getLatestCheckIn(patient.id).getOrNull()?.score
-                        CaregiverPatientSummary(patient = patient, latestScore = score)
-                    }
-                }
-                .onFailure { _error.value = it.localizedMessage ?: "No se pudieron cargar los pacientes." }
+            _isLoading.value = false
+        }
 
-            firestoreRepository.getActiveCaregiverAlerts(caregiverId)
-                .onSuccess { _activeAlerts.value = it }
-                .onFailure { _error.value = it.localizedMessage ?: "No se pudieron cargar las alertas." }
+        patientsListener = firestoreRepository.listenPatientsForCaregiver(
+            caregiverId = caregiverId,
+            onChange = { patients ->
+                rawPatients = patients
+                rebuildPatientSummaries()
+            },
+            onError = { _error.value = it.localizedMessage ?: "No se pudieron escuchar los pacientes." }
+        )
+
+        alertsListener = firestoreRepository.listenAlertsForCaregiver(
+            caregiverId = caregiverId,
+            onChange = { alerts ->
+                _allAlerts.value = alerts
+                _activeAlerts.value = alerts.filter { !it.resolved }
+                rebuildPatientSummaries()
+            },
+            onError = { _error.value = it.localizedMessage ?: "No se pudieron escuchar las alertas." }
+        )
+    }
+
+    fun loadPatientDetail(patientId: String) {
+        val caregiverId = authService.getCurrentUser()?.uid ?: return
+        observeCaregiverData()
+
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+
+            firestoreRepository.getPatientById(patientId)
+                .onSuccess { _selectedPatient.value = it }
+                .onFailure { _error.value = it.localizedMessage ?: "No se pudo cargar el paciente." }
+
+            firestoreRepository.getPatientCheckIns(patientId)
+                .onSuccess { _selectedPatientCheckIns.value = it.sortedByDescending { checkIn -> checkIn.date } }
+                .onFailure { _error.value = it.localizedMessage ?: "No se pudo cargar el historial." }
+
+            firestoreRepository.getPatientStreak(patientId)
+                .onSuccess { _selectedPatientStreak.value = it }
+                .onFailure { _error.value = it.localizedMessage ?: "No se pudo cargar la racha." }
 
             _isLoading.value = false
+        }
+
+        patientAlertsListener?.remove()
+        patientAlertsListener = firestoreRepository.listenAlertsForPatient(
+            caregiverId = caregiverId,
+            patientId = patientId,
+            onChange = { _selectedPatientAlerts.value = it },
+            onError = { _error.value = it.localizedMessage ?: "No se pudieron escuchar las alertas del paciente." }
+        )
+    }
+
+    fun markAlertResolved(alertId: String) {
+        viewModelScope.launch {
+            firestoreRepository.updateAlertResolved(alertId, true)
+                .onSuccess { _message.value = "Alerta marcada como resuelta" }
+                .onFailure { _error.value = it.localizedMessage ?: "No se pudo resolver la alerta." }
         }
     }
 
@@ -105,5 +184,29 @@ class CaregiverViewModel(
 
     fun consumeError() {
         _error.value = null
+    }
+
+    private fun rebuildPatientSummaries() {
+        viewModelScope.launch {
+            val pendingPatientIds = _allAlerts.value
+                .filter { !it.resolved }
+                .map { it.patientId }
+                .toSet()
+
+            _patients.value = rawPatients.map { patient ->
+                CaregiverPatientSummary(
+                    patient = patient,
+                    latestCheckIn = firestoreRepository.getLatestCheckIn(patient.id).getOrNull(),
+                    hasPendingAlert = pendingPatientIds.contains(patient.id)
+                )
+            }.sortedBy { it.patient.name }
+        }
+    }
+
+    override fun onCleared() {
+        patientsListener?.remove()
+        alertsListener?.remove()
+        patientAlertsListener?.remove()
+        super.onCleared()
     }
 }
