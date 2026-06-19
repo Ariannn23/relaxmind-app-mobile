@@ -209,4 +209,28 @@ class CaregiverViewModel(
         patientAlertsListener?.remove()
         super.onCleared()
     }
+    fun updateDarkMode(enabled: Boolean) {
+        // Stub
+    }
+
+    fun updateLanguage(lang: String) {
+        // Stub
+    }
+
+    fun updateNotificationsEnabled(enabled: Boolean) {
+        // Stub
+    }
+
+    fun updateBiometricEnabled(enabled: Boolean) {
+        // Stub
+    }
+
+    fun deleteAccount(reason: String, passwordConfirm: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        // Stub
+        onSuccess()
+    }
+
+    fun logout() {
+        authService.logout()
+    }
 }

@@ -1,4 +1,4 @@
-package com.relaxmind.app.features.patient
+package com.relaxmind.app.features.caregiver
 
 import android.app.Activity
 import android.content.Context
@@ -22,13 +22,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -60,26 +58,27 @@ import com.relaxmind.app.ui.components.RelaxIcons
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.*
 
+private val CaregiverIndigo = Color(0xFF4338A8)
+private val CaregiverLavender = Color(0xFFF1EDFF)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsPatientScreen(
-    viewModel: PatientViewModel = viewModel(),
+fun SettingsCaregiverScreen(
+    viewModel: CaregiverViewModel = viewModel(),
     onNavigateToEditProfile: () -> Unit,
     onLogout: () -> Unit,
     onNavigate: (String) -> Unit
 ) {
     val context = LocalContext.current
     val isLoading by viewModel.isLoading.collectAsState()
-    val patient by viewModel.patient.collectAsState()
     val caregiver by viewModel.caregiver.collectAsState()
 
     var showLanguageBottomSheet by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
-    var showUnlinkDialog by remember { mutableStateOf(false) }
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        viewModel.loadDashboardData()
+        viewModel.loadDashboard()
     }
 
     MaterialTheme(
@@ -90,9 +89,9 @@ fun SettingsPatientScreen(
             containerColor = Color.White,
             bottomBar = {
                 RelaxBottomNav(
-                    selectedRoute = "patient/settings",
+                    selectedRoute = "caregiver/settings",
                     onNavigate = onNavigate,
-                    role = AppRole.PATIENT
+                    role = AppRole.CAREGIVER
                 )
             }
         ) { innerPadding ->
@@ -113,18 +112,18 @@ fun SettingsPatientScreen(
                     verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
                     // 1. Header
-                    SettingsHeader(
-                        onBackClick = { onNavigate("patient/dashboard") },
+                    CaregiverSettingsHeader(
+                        onBackClick = { onNavigate("caregiver/dashboard") },
                         onNotificationClick = { /* No-op for now */ },
                         hasNotifications = true
                     )
 
-                    patient?.let { currPatient ->
+                    caregiver?.let { currCaregiver ->
                         // 2. Profile Card
-                        SettingsProfileCard(
-                            userName = "${currPatient.name} ${currPatient.lastName}",
-                            email = currPatient.email,
-                            avatarUrl = currPatient.avatarUrl,
+                        CaregiverSettingsProfileCard(
+                            userName = "${currCaregiver.name} ${currCaregiver.lastName}",
+                            email = currCaregiver.email,
+                            avatarUrl = currCaregiver.avatarUrl,
                             onClick = onNavigateToEditProfile
                         )
 
@@ -133,51 +132,40 @@ fun SettingsPatientScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            SettingsSectionTitle("Preferencias")
-                            SettingsGroupCard {
+                            CaregiverSettingsSectionTitle("Preferencias")
+                            CaregiverSettingsGroupCard {
                                 // Modo oscuro
-                                SettingsToggleRow(
+                                CaregiverSettingsToggleRow(
                                     label = "Modo oscuro",
                                     icon = Icons.Filled.DarkMode,
-                                    checked = currPatient.darkMode,
+                                    checked = currCaregiver.darkMode,
                                     onToggle = { viewModel.updateDarkMode(it) }
                                 )
-                                SettingsDivider()
+                                CaregiverSettingsDivider()
 
                                 // Idioma
-                                SettingsNavigationRow(
+                                CaregiverSettingsNavigationRow(
                                     label = "Idioma",
                                     icon = Icons.Filled.Language,
-                                    trailingText = if (currPatient.language == "en") "English" else "Español",
+                                    trailingText = if (currCaregiver.language == "en") "English" else "Español",
                                     onClick = { showLanguageBottomSheet = true }
                                 )
-                                SettingsDivider()
+                                CaregiverSettingsDivider()
 
                                 // Notificaciones
-                                SettingsToggleRow(
+                                CaregiverSettingsToggleRow(
                                     label = "Notificaciones",
                                     icon = Icons.Filled.Notifications,
-                                    checked = currPatient.notificationsEnabled,
+                                    checked = currCaregiver.notificationsEnabled,
                                     onToggle = { viewModel.updateNotificationsEnabled(it) }
                                 )
-
-                                if (currPatient.notificationsEnabled) {
-                                    SettingsDivider()
-                                    // Recordatorio check-in
-                                    SettingsToggleRow(
-                                        label = "Recordatorio de check-in",
-                                        icon = Icons.Filled.AccessTime,
-                                        checked = currPatient.checkInReminderEnabled,
-                                        onToggle = { viewModel.updateCheckInReminderEnabled(it) }
-                                    )
-                                }
-                                SettingsDivider()
+                                CaregiverSettingsDivider()
 
                                 // Biometría
-                                SettingsToggleRow(
+                                CaregiverSettingsToggleRow(
                                     label = "Inicio con biometría",
                                     icon = Icons.Filled.Fingerprint,
-                                    checked = currPatient.biometricEnabled,
+                                    checked = currCaregiver.biometricEnabled,
                                     onToggle = { viewModel.updateBiometricEnabled(it) }
                                 )
                             }
@@ -188,40 +176,28 @@ fun SettingsPatientScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            SettingsSectionTitle("Cuenta")
-                            SettingsGroupCard {
+                            CaregiverSettingsSectionTitle("Cuenta")
+                            CaregiverSettingsGroupCard {
                                 // Términos y condiciones
-                                SettingsNavigationRow(
+                                CaregiverSettingsNavigationRow(
                                     label = "Términos y condiciones",
                                     icon = Icons.Filled.Description,
                                     onClick = { openTermsUrl(context) }
                                 )
-                                SettingsDivider()
-
-                                // Desvincular cuidador
-                                val hasCaregiver = currPatient.caregiverId != null
-                                SettingsDangerRow(
-                                    label = "Desvincular cuidador",
-                                    icon = Icons.Filled.LinkOff,
-                                    color = WarningOrange,
-                                    bgColor = Color(0xFFFFF4EB),
-                                    enabled = hasCaregiver,
-                                    onClick = { showUnlinkDialog = true }
-                                )
-                                SettingsDivider()
+                                CaregiverSettingsDivider()
 
                                 // Borrar cuenta
-                                SettingsDangerRow(
+                                CaregiverSettingsDangerRow(
                                     label = "Borrar cuenta",
                                     icon = Icons.Filled.Delete,
                                     color = DangerRed,
                                     bgColor = Color(0xFFFEECEB),
                                     onClick = { showDeleteAccountDialog = true }
                                 )
-                                SettingsDivider()
+                                CaregiverSettingsDivider()
 
                                 // Cerrar sesión
-                                SettingsDangerRow(
+                                CaregiverSettingsDangerRow(
                                     label = "Cerrar sesión",
                                     icon = Icons.AutoMirrored.Filled.ExitToApp,
                                     color = DangerRed,
@@ -255,10 +231,9 @@ fun SettingsPatientScreen(
 
                 // Loading overlay
                 if (isLoading) {
-                    if (patient == null) {
+                    if (caregiver == null) {
                         FullScreenLoadingOverlay(overlayColor = Color.Transparent)
                     } else {
-                        // Invisible overlay to block touches during background saves without darkening or showing a spinner
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -274,7 +249,6 @@ fun SettingsPatientScreen(
         }
     }
 
-    // Modal Bottom Sheet para idiomas
     if (showLanguageBottomSheet) {
         ModalBottomSheet(
             onDismissRequest = { showLanguageBottomSheet = false },
@@ -311,9 +285,9 @@ fun SettingsPatientScreen(
                     Text(
                         text = "Español (ES)",
                         fontFamily = LexendFontFamily,
-                        fontWeight = if (patient?.language == "es") FontWeight.SemiBold else FontWeight.Normal,
+                        fontWeight = if (caregiver?.language == "es") FontWeight.SemiBold else FontWeight.Normal,
                         fontSize = 16.sp,
-                        color = if (patient?.language == "es") PatientGreen else TextPrimary
+                        color = if (caregiver?.language == "es") CaregiverIndigo else TextPrimary
                     )
                 }
 
@@ -332,9 +306,9 @@ fun SettingsPatientScreen(
                     Text(
                         text = "English (EN)",
                         fontFamily = LexendFontFamily,
-                        fontWeight = if (patient?.language == "en") FontWeight.SemiBold else FontWeight.Normal,
+                        fontWeight = if (caregiver?.language == "en") FontWeight.SemiBold else FontWeight.Normal,
                         fontSize = 16.sp,
-                        color = if (patient?.language == "en") PatientGreen else TextPrimary
+                        color = if (caregiver?.language == "en") CaregiverIndigo else TextPrimary
                     )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
@@ -342,35 +316,9 @@ fun SettingsPatientScreen(
         }
     }
 
-    // Custom dialog flows
-    if (showUnlinkDialog) {
-        var unlinkErrorMessage by remember { mutableStateOf<String?>(null) }
-        UnlinkCaregiverDialog(
-            caregiverName = caregiver?.let { "${it.name} ${it.lastName}" },
-            onDismiss = {
-                showUnlinkDialog = false
-                unlinkErrorMessage = null
-            },
-            onConfirm = { password ->
-                viewModel.unlinkCaregiver(
-                    passwordConfirm = password,
-                    onSuccess = {
-                        showUnlinkDialog = false
-                        unlinkErrorMessage = null
-                    },
-                    onError = { error ->
-                        unlinkErrorMessage = error
-                    }
-                )
-            },
-            isLoading = isLoading,
-            errorMessage = unlinkErrorMessage
-        )
-    }
-
     if (showDeleteAccountDialog) {
         var deleteErrorMessage by remember { mutableStateOf<String?>(null) }
-        DeleteAccountDialog(
+        CaregiverDeleteAccountDialog(
             onDismiss = {
                 showDeleteAccountDialog = false
                 deleteErrorMessage = null
@@ -395,7 +343,7 @@ fun SettingsPatientScreen(
     }
 
     if (showLogoutDialog) {
-        LogoutConfirmationDialog(
+        CaregiverLogoutConfirmationDialog(
             onDismiss = { showLogoutDialog = false },
             onConfirm = {
                 showLogoutDialog = false
@@ -406,17 +354,13 @@ fun SettingsPatientScreen(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CUSTOM VISUAL COMPONENTS
-// ─────────────────────────────────────────────────────────────────────────────
-
 @Composable
-fun RelaxSwitch(
+private fun CaregiverRelaxSwitch(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val trackColor by animateColorAsState(if (checked) PatientGreen else Color(0xFFCBD5E0), label = "track")
+    val trackColor by animateColorAsState(if (checked) CaregiverIndigo else Color(0xFFCBD5E0), label = "track")
     val thumbOffset by animateDpAsState(if (checked) 20.dp else 2.dp, label = "thumb")
 
     Box(
@@ -439,7 +383,7 @@ fun RelaxSwitch(
 }
 
 @Composable
-fun SettingsHeader(
+private fun CaregiverSettingsHeader(
     onBackClick: () -> Unit,
     onNotificationClick: () -> Unit,
     hasNotifications: Boolean = true,
@@ -451,7 +395,6 @@ fun SettingsHeader(
             .height(56.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Back Button
         Box(
             modifier = Modifier
                 .align(Alignment.CenterStart)
@@ -473,12 +416,11 @@ fun SettingsHeader(
             Icon(
                 imageVector = RelaxIcons.ArrowBack,
                 contentDescription = "Atrás",
-                tint = PatientGreen,
+                tint = CaregiverIndigo,
                 modifier = Modifier.size(24.dp)
             )
         }
 
-        // Title
         Text(
             text = "Ajustes",
             fontFamily = LexendFontFamily,
@@ -488,7 +430,6 @@ fun SettingsHeader(
             textAlign = TextAlign.Center
         )
 
-        // Notification Bell
         Box(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
@@ -518,7 +459,7 @@ fun SettingsHeader(
                     modifier = Modifier
                         .size(8.dp)
                         .clip(CircleShape)
-                        .background(PatientGreenLight)
+                        .background(CaregiverIndigo)
                         .align(Alignment.TopEnd)
                         .offset(x = (-12).dp, y = 12.dp)
                 )
@@ -528,7 +469,7 @@ fun SettingsHeader(
 }
 
 @Composable
-fun SettingsProfileCard(
+private fun CaregiverSettingsProfileCard(
     userName: String,
     email: String,
     avatarUrl: String,
@@ -552,7 +493,15 @@ fun SettingsProfileCard(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            PatientAvatarLarge(avatarUrl = avatarUrl)
+            AsyncImage(
+                model = avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=C&background=4338A8&color=fff" },
+                contentDescription = "Perfil",
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .border(2.dp, CaregiverLavender, CircleShape),
+                contentScale = ContentScale.Crop
+            )
             Spacer(modifier = Modifier.width(20.dp))
             
             Column(modifier = Modifier.weight(1f)) {
@@ -584,48 +533,7 @@ fun SettingsProfileCard(
 }
 
 @Composable
-private fun PatientAvatarLarge(avatarUrl: String) {
-    val isCustomAvatar = avatarUrl.startsWith("relaxmind://avatar/")
-    val modifier = Modifier
-        .size(72.dp)
-        .clip(CircleShape)
-        .border(2.dp, PatientGreen.copy(alpha = 0.2f), CircleShape)
-
-    if (isCustomAvatar) {
-        val colors = getAvatarColors(avatarUrl)
-        Box(
-            modifier = modifier.background(Brush.linearGradient(colors))
-        )
-    } else {
-        AsyncImage(
-            model = avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=P&background=0F6E56&color=fff" },
-            contentDescription = "Perfil",
-            modifier = modifier,
-            contentScale = ContentScale.Crop
-        )
-    }
-}
-
-private fun getAvatarColors(url: String): List<Color> {
-    return when (url) {
-        "relaxmind://avatar/01" -> listOf(Color(0xFFA7F3D0), Color(0xFF0F6E56))
-        "relaxmind://avatar/02" -> listOf(Color(0xFFFFD6A5), Color(0xFFED8936))
-        "relaxmind://avatar/03" -> listOf(Color(0xFFD8B4FE), Color(0xFF7C3AED))
-        "relaxmind://avatar/04" -> listOf(Color(0xFFA5F3FC), Color(0xFF0891B2))
-        "relaxmind://avatar/05" -> listOf(Color(0xFFFBCFE8), Color(0xFFDB2777))
-        "relaxmind://avatar/06" -> listOf(Color(0xFFBFDBFE), Color(0xFF2563EB))
-        "relaxmind://avatar/07" -> listOf(Color(0xFFFEF3C7), Color(0xFFEAB308))
-        "relaxmind://avatar/08" -> listOf(Color(0xFFFECACA), Color(0xFFEF4444))
-        "relaxmind://avatar/09" -> listOf(Color(0xFFCCFBF1), Color(0xFF14B8A6))
-        "relaxmind://avatar/10" -> listOf(Color(0xFFFED7AA), Color(0xFFEA580C))
-        "relaxmind://avatar/11" -> listOf(Color(0xFFE9D5FF), Color(0xFFA855F7))
-        "relaxmind://avatar/12" -> listOf(Color(0xFFFDE68A), Color(0xFFB45309))
-        else -> listOf(Color(0xFFCBD5E0), Color(0xFF718096))
-    }
-}
-
-@Composable
-fun SettingsSectionTitle(title: String) {
+private fun CaregiverSettingsSectionTitle(title: String) {
     Text(
         text = title.uppercase(),
         fontFamily = LexendFontFamily,
@@ -639,7 +547,7 @@ fun SettingsSectionTitle(title: String) {
 }
 
 @Composable
-fun SettingsGroupCard(
+private fun CaregiverSettingsGroupCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -660,7 +568,7 @@ fun SettingsGroupCard(
 }
 
 @Composable
-fun SettingsToggleRow(
+private fun CaregiverSettingsToggleRow(
     label: String,
     icon: ImageVector,
     checked: Boolean,
@@ -682,13 +590,13 @@ fun SettingsToggleRow(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(MintPill),
+                    .background(CaregiverLavender),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = PatientGreen,
+                    tint = CaregiverIndigo,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -702,7 +610,7 @@ fun SettingsToggleRow(
             )
         }
         
-        RelaxSwitch(
+        CaregiverRelaxSwitch(
             checked = checked,
             onCheckedChange = onToggle
         )
@@ -710,7 +618,7 @@ fun SettingsToggleRow(
 }
 
 @Composable
-fun SettingsNavigationRow(
+private fun CaregiverSettingsNavigationRow(
     label: String,
     icon: ImageVector,
     trailingText: String? = null,
@@ -733,13 +641,13 @@ fun SettingsNavigationRow(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(MintPill),
+                    .background(CaregiverLavender),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = PatientGreen,
+                    tint = CaregiverIndigo,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -775,7 +683,7 @@ fun SettingsNavigationRow(
 }
 
 @Composable
-fun SettingsDangerRow(
+private fun CaregiverSettingsDangerRow(
     label: String,
     icon: ImageVector,
     color: Color,
@@ -813,24 +721,13 @@ fun SettingsDangerRow(
                 )
             }
             Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(
-                    text = label,
-                    fontFamily = LexendFontFamily,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 15.sp,
-                    color = color
-                )
-                if (!enabled) {
-                    Text(
-                        text = "Sin cuidador vinculado",
-                        fontFamily = LexendFontFamily,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 12.sp,
-                        color = TextSecondary
-                    )
-                }
-            }
+            Text(
+                text = label,
+                fontFamily = LexendFontFamily,
+                fontWeight = FontWeight.Medium,
+                fontSize = 15.sp,
+                color = color
+            )
         }
         
         Icon(
@@ -843,7 +740,7 @@ fun SettingsDangerRow(
 }
 
 @Composable
-fun SettingsDivider() {
+private fun CaregiverSettingsDivider() {
     HorizontalDivider(
         modifier = Modifier.padding(horizontal = 16.dp),
         thickness = 1.dp,
@@ -851,151 +748,8 @@ fun SettingsDivider() {
     )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DIALOG COMPOSABLES
-// ─────────────────────────────────────────────────────────────────────────────
-
 @Composable
-fun UnlinkCaregiverDialog(
-    caregiverName: String?,
-    onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit,
-    isLoading: Boolean,
-    errorMessage: String?
-) {
-    var password by remember { mutableStateOf("") }
-    
-    Dialog(
-        onDismissRequest = onDismiss
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(28.dp))
-                .background(Color.White)
-                .padding(24.dp)
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFFFF4EB)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.LinkOff,
-                        contentDescription = null,
-                        tint = WarningOrange,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-
-                Text(
-                    text = "Desvincular cuidador",
-                    fontFamily = LexendFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    color = TextPrimary,
-                    textAlign = TextAlign.Center
-                )
-
-                Text(
-                    text = if (caregiverName != null) {
-                        "¿Seguro que deseas desvincularte de tu cuidador $caregiverName?"
-                    } else {
-                        "¿Seguro que deseas desvincularte de tu cuidador?"
-                    },
-                    fontFamily = LexendFontFamily,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 14.sp,
-                    color = TextSecondary,
-                    textAlign = TextAlign.Center
-                )
-
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { 
-                        Text(
-                            text = "Contraseña para confirmar", 
-                            fontFamily = LexendFontFamily,
-                            fontWeight = FontWeight.Normal
-                        ) 
-                    },
-                    visualTransformation = PasswordVisualTransformation(),
-                    isError = errorMessage != null,
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PatientGreen,
-                        unfocusedBorderColor = BorderSoft,
-                        focusedLabelColor = PatientGreen
-                    )
-                )
-
-                if (errorMessage != null) {
-                    Text(
-                        text = errorMessage,
-                        fontFamily = LexendFontFamily,
-                        fontWeight = FontWeight.Normal,
-                        color = DangerRed,
-                        fontSize = 12.sp,
-                        textAlign = TextAlign.Start,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f).height(48.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        border = BorderStroke(1.dp, PatientGreen),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = PatientGreen)
-                    ) {
-                        Text(
-                            text = "Cancelar",
-                            fontFamily = LexendFontFamily,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 14.sp
-                        )
-                    }
-
-                    Button(
-                        onClick = { onConfirm(password) },
-                        enabled = password.isNotBlank() && !isLoading,
-                        modifier = Modifier.weight(1f).height(48.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = WarningOrange,
-                            contentColor = Color.White,
-                            disabledContainerColor = WarningOrange.copy(alpha = 0.5f)
-                        )
-                    ) {
-                        Text(
-                            text = "Desvincular",
-                            fontFamily = LexendFontFamily,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 14.sp
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DeleteAccountDialog(
+private fun CaregiverDeleteAccountDialog(
     onDismiss: () -> Unit,
     onConfirm: (String, String) -> Unit,
     isLoading: Boolean,
@@ -1008,9 +762,7 @@ fun DeleteAccountDialog(
     
     val reasons = listOf("Ya no uso la app", "Tengo otra cuenta", "Problemas con la app", "Otro")
     
-    Dialog(
-        onDismissRequest = onDismiss
-    ) {
+    Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1067,10 +819,10 @@ fun DeleteAccountDialog(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(12.dp))
-                                        .background(if (isSelected) MintPill else Color.White)
+                                        .background(if (isSelected) CaregiverLavender else Color.White)
                                         .border(
                                             width = 1.dp,
-                                            color = if (isSelected) PatientGreen else BorderSoft,
+                                            color = if (isSelected) CaregiverIndigo else BorderSoft,
                                             shape = RoundedCornerShape(12.dp)
                                         )
                                         .clickable { selectedReason = reason }
@@ -1083,7 +835,7 @@ fun DeleteAccountDialog(
                                             .clip(CircleShape)
                                             .border(
                                                 width = 2.dp,
-                                                color = if (isSelected) PatientGreen else Color.Gray,
+                                                color = if (isSelected) CaregiverIndigo else Color.Gray,
                                                 shape = CircleShape
                                             )
                                             .padding(3.dp)
@@ -1093,7 +845,7 @@ fun DeleteAccountDialog(
                                                 modifier = Modifier
                                                     .fillMaxSize()
                                                     .clip(CircleShape)
-                                                    .background(PatientGreen)
+                                                    .background(CaregiverIndigo)
                                             )
                                         }
                                     }
@@ -1103,7 +855,7 @@ fun DeleteAccountDialog(
                                         fontFamily = LexendFontFamily,
                                         fontWeight = FontWeight.Medium,
                                         fontSize = 14.sp,
-                                        color = if (isSelected) PatientGreen else TextPrimary
+                                        color = if (isSelected) CaregiverIndigo else TextPrimary
                                     )
                                 }
                             }
@@ -1116,9 +868,9 @@ fun DeleteAccountDialog(
                                 label = { Text("Especifica el motivo...", fontFamily = LexendFontFamily) },
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = PatientGreen,
+                                    focusedBorderColor = CaregiverIndigo,
                                     unfocusedBorderColor = BorderSoft,
-                                    focusedLabelColor = PatientGreen
+                                    focusedLabelColor = CaregiverIndigo
                                 )
                             )
                         }
@@ -1133,8 +885,8 @@ fun DeleteAccountDialog(
                                 onClick = onDismiss,
                                 modifier = Modifier.weight(1f).height(48.dp),
                                 shape = RoundedCornerShape(14.dp),
-                                border = BorderStroke(1.dp, PatientGreen),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = PatientGreen)
+                                border = BorderStroke(1.dp, CaregiverIndigo),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = CaregiverIndigo)
                             ) {
                                 Text(
                                     text = "Cancelar",
@@ -1149,7 +901,7 @@ fun DeleteAccountDialog(
                                 enabled = selectedReason != "Otro" || otherReasonDetail.isNotBlank(),
                                 modifier = Modifier.weight(1f).height(48.dp),
                                 shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = PatientGreen, contentColor = Color.White)
+                                colors = ButtonDefaults.buttonColors(containerColor = CaregiverIndigo, contentColor = Color.White)
                             ) {
                                 Text(
                                     text = "Siguiente",
@@ -1180,9 +932,9 @@ fun DeleteAccountDialog(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = PatientGreen,
+                                focusedBorderColor = CaregiverIndigo,
                                 unfocusedBorderColor = BorderSoft,
-                                focusedLabelColor = PatientGreen
+                                focusedLabelColor = CaregiverIndigo
                             )
                         )
 
@@ -1233,13 +985,35 @@ fun DeleteAccountDialog(
                                 onClick = { step = 1 },
                                 modifier = Modifier.weight(1f).height(48.dp),
                                 shape = RoundedCornerShape(14.dp),
-                                border = BorderStroke(1.dp, PatientGreen),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = PatientGreen)
+                                border = BorderStroke(1.dp, CaregiverIndigo),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = CaregiverIndigo)
                             ) {
                                 Text(
                                     text = "Atrás",
                                     fontFamily = LexendFontFamily,
                                     fontWeight = FontWeight.SemiBold,
+                                    fontSize = 14.sp
+                                )
+                            }
+
+                            Button(
+                                onClick = {
+                                    val finalReason = if (selectedReason == "Otro") {
+                                        "Otro: $otherReasonDetail"
+                                    } else {
+                                        selectedReason
+                                    }
+                                    onConfirm(finalReason, password)
+                                },
+                                enabled = password.isNotBlank() && !isLoading,
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = DangerRed, contentColor = Color.White)
+                            ) {
+                                Text(
+                                    text = "Eliminar",
+                                    fontFamily = LexendFontFamily,
+                                    fontWeight = FontWeight.Medium,
                                     fontSize = 14.sp
                                 )
                             }
@@ -1252,7 +1026,7 @@ fun DeleteAccountDialog(
 }
 
 @Composable
-fun LogoutConfirmationDialog(
+private fun CaregiverLogoutConfirmationDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
@@ -1311,8 +1085,8 @@ fun LogoutConfirmationDialog(
                         onClick = onDismiss,
                         modifier = Modifier.weight(1f).height(48.dp),
                         shape = RoundedCornerShape(14.dp),
-                        border = BorderStroke(1.dp, PatientGreen),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = PatientGreen)
+                        border = BorderStroke(1.dp, CaregiverIndigo),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = CaregiverIndigo)
                     ) {
                         Text(
                             text = "Cancelar",

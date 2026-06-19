@@ -435,7 +435,23 @@ fun AppNavGraph(
                 }
             )
         }
-        composable(Screen.CaregiverSettings.route) { PlaceholderScreen("Pantalla Caregiver Settings") }
+        composable(Screen.CaregiverSettings.route) { 
+            com.relaxmind.app.features.caregiver.SettingsCaregiverScreen(
+                onNavigateToEditProfile = { navController.navigate(Screen.EditProfile.route) },
+                onLogout = { 
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onNavigate = { route -> 
+                    navController.navigate(route) {
+                        popUpTo(navController.graph.startDestinationId) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
+        }
     }
 }
 
