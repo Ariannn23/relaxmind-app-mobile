@@ -2,66 +2,41 @@ package com.relaxmind.app.features.patient
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.relaxmind.app.ui.components.AppRole
-import com.relaxmind.app.ui.components.ButtonVariant
 import com.relaxmind.app.ui.components.FullScreenLoadingOverlay
-import com.relaxmind.app.ui.components.RelaxButton
-import com.relaxmind.app.ui.components.RelaxInputField
-import com.relaxmind.app.ui.components.RelaxTopBar
-import com.relaxmind.app.ui.themes.PatientGreen
-import com.relaxmind.app.ui.themes.SOSCoral
+import com.relaxmind.app.ui.components.auth.SoftGradientBackground
+import com.relaxmind.app.ui.themes.*
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -80,16 +55,12 @@ fun CreateAppointmentScreen(
 
     var title by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf("cita") } // "cita" | "medicacion" | "recordatorio"
-    var category by remember { mutableStateOf("Neurología") }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var selectedTime by remember { mutableStateOf(LocalTime.of(10, 30)) }
     var notes by remember { mutableStateOf("") }
     var reminderTimeMinutes by remember { mutableStateOf(15) }
     var isRecurring by remember { mutableStateOf(false) }
     var recurringDays by remember { mutableStateOf<List<Int>>(emptyList()) }
-
-    var categoryDropdownExpanded by remember { mutableStateOf(false) }
-    val categoriesList = listOf("Neurología", "Psicología", "Psiquiatría", "Medicina General", "Otro")
 
     var isTitleError by remember { mutableStateOf(false) }
 
@@ -121,361 +92,485 @@ fun CreateAppointmentScreen(
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            RelaxTopBar(
-                title = "Nuevo evento",
-                onBackClick = onNavigateBack
-            )
-        }
+        containerColor = Color.Transparent
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(Color.White)
         ) {
+            SoftGradientBackground(animateBlobs = true)
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                // TÍTULO DEL EVENTO
-                Text(
-                    text = "Título del evento",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.DarkGray
-                )
-                RelaxInputField(
-                    value = title,
-                    onValueChange = {
-                        title = it
-                        if (it.isNotBlank()) isTitleError = false
-                    },
-                    label = "Ej: Cita con neuróloga",
-                    isError = isTitleError,
-                    errorMessage = if (isTitleError) "El título es obligatorio" else null
-                )
-
-                // TIPO DE EVENTO SELECTOR
-                Text(
-                    text = "Tipo de evento",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.DarkGray
-                )
+                // Back Button & Header Area
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Cita Médica Card
-                    EventTypeCard(
-                        title = "Cita médica",
-                        icon = Icons.Default.LocalHospital,
-                        isSelected = selectedType == "cita",
-                        color = Color(0xFF38A169),
-                        onClick = { selectedType = "cita" },
-                        modifier = Modifier.weight(1f)
-                    )
-                    // Medicación Card
-                    EventTypeCard(
-                        title = "Medicación",
-                        icon = Icons.Default.Medication,
-                        isSelected = selectedType == "medicacion",
-                        color = Color(0xFF3182CE),
-                        onClick = { selectedType = "medicacion" },
-                        modifier = Modifier.weight(1f)
-                    )
-                    // Recordatorio Card
-                    EventTypeCard(
-                        title = "Recordatorio",
-                        icon = Icons.Default.PushPin,
-                        isSelected = selectedType == "recordatorio",
-                        color = Color(0xFFDD6B20),
-                        onClick = { selectedType = "recordatorio" },
-                        modifier = Modifier.weight(1f)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .shadow(
+                                elevation = 4.dp,
+                                shape = CircleShape,
+                                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.15f),
+                                spotColor = Color(0xFF8A88A6).copy(alpha = 0.15f)
+                            )
+                            .background(Color.White, CircleShape)
+                            .clickable(onClick = onNavigateBack),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = "Volver",
+                            tint = PatientGreen,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Column {
+                        Text(
+                            text = "Nuevo evento",
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 24.sp,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = "Crea un nuevo evento en tu agenda 🌿",
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 12.sp,
+                            color = TextSecondary
+                        )
+                    }
                 }
 
-                // CATEGORÍA (Sólo si es tipo Cita)
-                if (selectedType == "cita") {
-                    Text(
-                        text = "Categoría",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.DarkGray
-                    )
-                    Box(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    // TÍTULO DEL EVENTO
+                    Column {
+                        Text(
+                            text = "Título del evento",
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
-                            value = category,
-                            onValueChange = {},
-                            readOnly = true,
+                            value = title,
+                            onValueChange = {
+                                title = it
+                                if (it.isNotBlank()) isTitleError = false
+                            },
+                            placeholder = { Text("Ej: Cita con neuróloga", fontFamily = LexendFontFamily, color = Color.LightGray) },
                             shape = RoundedCornerShape(18.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .shadow(3.dp, RoundedCornerShape(18.dp))
-                                .clickable { categoryDropdownExpanded = true },
-                            enabled = false,
+                                .shadow(
+                                    elevation = 3.dp,
+                                    shape = RoundedCornerShape(18.dp),
+                                    ambientColor = Color(0xFF8A88A6).copy(alpha = 0.08f),
+                                    spotColor = Color(0xFF8A88A6).copy(alpha = 0.08f)
+                                ),
                             colors = OutlinedTextFieldDefaults.colors(
-                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                                disabledBorderColor = PatientGreen,
-                                disabledLabelColor = PatientGreen,
-                                disabledContainerColor = Color.White
+                                focusedBorderColor = PatientGreen,
+                                unfocusedBorderColor = BorderSoft,
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White,
+                                cursorColor = PatientGreen
                             ),
-                            trailingIcon = {
-                                IconButton(onClick = { categoryDropdownExpanded = true }) {
+                            singleLine = true,
+                            isError = isTitleError
+                        )
+                        if (isTitleError) {
+                            Text(
+                                text = "El título es obligatorio",
+                                fontFamily = LexendFontFamily,
+                                color = SOSCoral,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+                            )
+                        }
+                    }
+
+                    // TIPO DE EVENTO SELECTOR
+                    Column {
+                        Text(
+                            text = "Tipo de evento",
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            EventTypeCard(
+                                title = "Cita médica",
+                                icon = Icons.Default.LocalHospital,
+                                isSelected = selectedType == "cita",
+                                onClick = { selectedType = "cita" },
+                                modifier = Modifier.weight(1f)
+                            )
+                            EventTypeCard(
+                                title = "Medicación",
+                                icon = Icons.Default.Medication,
+                                isSelected = selectedType == "medicacion",
+                                onClick = { selectedType = "medicacion" },
+                                modifier = Modifier.weight(1f)
+                            )
+                            EventTypeCard(
+                                title = "Recordatorio",
+                                icon = Icons.Default.PushPin,
+                                isSelected = selectedType == "recordatorio",
+                                onClick = { selectedType = "recordatorio" },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    // FECHA Y HORA SELECTORS
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Date Button
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Fecha",
+                                fontFamily = LexendFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = TextPrimary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            val dayName = selectedDate.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("es")).replaceFirstChar { it.uppercase() }
+                            val dateFormatted = "${dayName}, ${selectedDate.dayOfMonth} ${selectedDate.month.getDisplayName(TextStyle.SHORT, Locale("es"))} ${selectedDate.year}"
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp)
+                                    .shadow(
+                                        elevation = 3.dp,
+                                        shape = RoundedCornerShape(18.dp),
+                                        ambientColor = Color(0xFF8A88A6).copy(alpha = 0.08f),
+                                        spotColor = Color(0xFF8A88A6).copy(alpha = 0.08f)
+                                    )
+                                    .background(Color.White, RoundedCornerShape(18.dp))
+                                    .border(1.dp, BorderSoft, RoundedCornerShape(18.dp))
+                                    .clickable { datePickerDialog.show() }
+                                    .padding(horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
                                     Icon(
-                                        imageVector = Icons.Default.ArrowDropDown,
-                                        contentDescription = "Desplegar",
-                                        tint = PatientGreen
+                                        imageVector = Icons.Default.CalendarToday,
+                                        contentDescription = null,
+                                        tint = PatientGreen,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Text(
+                                        text = dateFormatted,
+                                        fontFamily = LexendFontFamily,
+                                        fontSize = 13.sp,
+                                        color = TextPrimary
                                     )
                                 }
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = null,
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
-                        )
-                        DropdownMenu(
-                            expanded = categoryDropdownExpanded,
-                            onDismissRequest = { categoryDropdownExpanded = false },
-                            modifier = Modifier.fillMaxWidth(0.9f)
-                        ) {
-                            categoriesList.forEach { cat ->
-                                DropdownMenuItem(
-                                    text = { Text(cat) },
-                                    onClick = {
-                                        category = cat
-                                        categoryDropdownExpanded = false
-                                    }
+                        }
+
+                        // Time Button
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Hora",
+                                fontFamily = LexendFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = TextPrimary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            val timeFormatted = selectedTime.format(DateTimeFormatter.ofPattern("hh:mm a"))
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp)
+                                    .shadow(
+                                        elevation = 3.dp,
+                                        shape = RoundedCornerShape(18.dp),
+                                        ambientColor = Color(0xFF8A88A6).copy(alpha = 0.08f),
+                                        spotColor = Color(0xFF8A88A6).copy(alpha = 0.08f)
+                                    )
+                                    .background(Color.White, RoundedCornerShape(18.dp))
+                                    .border(1.dp, BorderSoft, RoundedCornerShape(18.dp))
+                                    .clickable { timePickerDialog.show() }
+                                    .padding(horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Schedule,
+                                        contentDescription = null,
+                                        tint = PatientGreen,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Text(
+                                        text = timeFormatted,
+                                        fontFamily = LexendFontFamily,
+                                        fontSize = 13.sp,
+                                        color = TextPrimary
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = null,
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
                     }
-                }
 
-                // FECHA Y HORA SELECTORS
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Date Button
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Fecha",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.DarkGray
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        val dayName = selectedDate.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("es")).replaceFirstChar { it.uppercase() }
-                        val dateFormatted = "${dayName}, ${selectedDate.dayOfMonth} ${selectedDate.month.getDisplayName(TextStyle.SHORT, Locale("es"))} ${selectedDate.year}"
-                        
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
-                                .border(1.dp, PatientGreen, RoundedCornerShape(18.dp))
-                                .clip(RoundedCornerShape(18.dp))
-                                .clickable { datePickerDialog.show() }
-                                .padding(horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Icon(imageVector = Icons.Default.CalendarToday, contentDescription = null, tint = PatientGreen, modifier = Modifier.size(20.dp))
-                            Text(
-                                text = dateFormatted,
-                                style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 1,
-                                fontSize = 13.sp
-                            )
-                        }
-                    }
-
-                    // Time Button
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Hora",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.DarkGray
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        val timeFormatted = selectedTime.format(DateTimeFormatter.ofPattern("hh:mm a"))
-                        
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
-                                .border(1.dp, PatientGreen, RoundedCornerShape(18.dp))
-                                .clip(RoundedCornerShape(18.dp))
-                                .clickable { timePickerDialog.show() }
-                                .padding(horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Icon(imageVector = Icons.Default.Schedule, contentDescription = null, tint = PatientGreen, modifier = Modifier.size(20.dp))
-                            Text(text = timeFormatted, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                }
-
-                // REPETIR RECORDATORIO SWITCH Y DÍAS DE LA SEMANA SELECTOR
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Repetir recordatorio",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.DarkGray
-                        )
-                        Text(
-                            text = "Recordar automáticamente ciertos días",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Gray
-                        )
-                    }
-                    androidx.compose.material3.Switch(
-                        checked = isRecurring,
-                        onCheckedChange = { isRecurring = it },
-                        colors = androidx.compose.material3.SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = PatientGreen,
-                            uncheckedThumbColor = Color.Gray,
-                            uncheckedTrackColor = Color(0xFFE2E8F0)
-                        )
-                    )
-                }
-
-                if (isRecurring) {
-                    Column(
+                    // REPETIR RECORDATORIO SWITCH
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Días a repetir",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.DarkGray
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            val weekdaysList = listOf(
-                                Pair(1, "L"),
-                                Pair(2, "M"),
-                                Pair(3, "M"),
-                                Pair(4, "J"),
-                                Pair(5, "V"),
-                                Pair(6, "S"),
-                                Pair(7, "D")
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Repetir recordatorio",
+                                fontFamily = LexendFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = TextPrimary
                             )
-                            weekdaysList.forEach { (dayVal, label) ->
-                                val isSelected = recurringDays.contains(dayVal)
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            if (isSelected) PatientGreen else Color(0xFFF7FAFC)
+                            Text(
+                                text = "Recordar automáticamente ciertos días",
+                                fontFamily = LexendFontFamily,
+                                fontSize = 12.sp,
+                                color = TextSecondary
+                            )
+                        }
+                        Switch(
+                            checked = isRecurring,
+                            onCheckedChange = { isRecurring = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = PatientGreen,
+                                uncheckedThumbColor = Color.Gray,
+                                uncheckedTrackColor = Color(0xFFE2E8F0)
+                            )
+                        )
+                    }
+
+                    if (isRecurring) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Días a repetir",
+                                fontFamily = LexendFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = TextPrimary
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                val weekdaysList = listOf(
+                                    Pair(1, "L"),
+                                    Pair(2, "M"),
+                                    Pair(3, "M"),
+                                    Pair(4, "J"),
+                                    Pair(5, "V"),
+                                    Pair(6, "S"),
+                                    Pair(7, "D")
+                                )
+                                weekdaysList.forEach { (dayVal, label) ->
+                                    val isSelected = recurringDays.contains(dayVal)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (isSelected) PatientGreen else Color(0xFFF7FAFC)
+                                            )
+                                            .border(
+                                                width = 1.dp,
+                                                color = if (isSelected) PatientGreen else BorderSoft,
+                                                shape = CircleShape
+                                            )
+                                            .clickable {
+                                                recurringDays = if (isSelected) {
+                                                    recurringDays - dayVal
+                                                } else {
+                                                    recurringDays + dayVal
+                                                }
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            fontFamily = LexendFontFamily,
+                                            color = if (isSelected) Color.White else TextSecondary,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
                                         )
-                                        .border(
-                                            width = 1.dp,
-                                            color = if (isSelected) PatientGreen else Color(0xFFE2E8F0),
-                                            shape = CircleShape
-                                        )
-                                        .clickable {
-                                            recurringDays = if (isSelected) {
-                                                recurringDays - dayVal
-                                            } else {
-                                                recurringDays + dayVal
-                                            }
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = label,
-                                        color = if (isSelected) Color.White else Color.Gray,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
-                                    )
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                // NOTAS OPCIONALES
-                Text(
-                    text = "Notas",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.DarkGray
-                )
-                OutlinedTextField(
-                    value = notes,
-                    onValueChange = { notes = it },
-                    label = { Text("Detalles opcionales...") },
-                    shape = RoundedCornerShape(18.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp)
-                        .shadow(3.dp, RoundedCornerShape(18.dp)),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PatientGreen,
-                        unfocusedBorderColor = PatientGreen.copy(alpha = 0.6f),
-                        focusedLabelColor = PatientGreen,
-                        unfocusedLabelColor = Color.Gray,
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
-                    ),
-                    maxLines = 4
-                )
-
-                if (errorMsg != null) {
-                    Text(
-                        text = errorMsg ?: "",
-                        color = SOSCoral,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(start = 4.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // GUARDAR EVENTO BUTTON
-                RelaxButton(
-                    text = "Guardar evento",
-                    onClick = {
-                        if (title.isBlank()) {
-                            isTitleError = true
-                        } else {
-                            viewModel.createAppointment(
-                                title = title,
-                                type = selectedType,
-                                category = if (selectedType == "cita") category else "",
-                                date = selectedDate.toString(),
-                                time = selectedTime.toString(),
-                                reminderMinutes = reminderTimeMinutes,
-                                notes = notes,
-                                recurring = isRecurring,
-                                recurringDays = recurringDays,
-                                context = context,
-                                onSuccess = {
-                                    viewModel.clearError()
-                                    onNavigateBack()
-                                }
+                    // NOTAS
+                    Column {
+                        Text(
+                            text = "Notas",
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Box(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedTextField(
+                                value = notes,
+                                onValueChange = { if (it.length <= 500) notes = it },
+                                placeholder = { Text("Detalles opcionales...", fontFamily = LexendFontFamily, color = Color.LightGray) },
+                                shape = RoundedCornerShape(18.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(120.dp)
+                                    .shadow(
+                                        elevation = 3.dp,
+                                        shape = RoundedCornerShape(18.dp),
+                                        ambientColor = Color(0xFF8A88A6).copy(alpha = 0.08f),
+                                        spotColor = Color(0xFF8A88A6).copy(alpha = 0.08f)
+                                    ),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = PatientGreen,
+                                    unfocusedBorderColor = BorderSoft,
+                                    focusedContainerColor = Color.White,
+                                    unfocusedContainerColor = Color.White,
+                                    cursorColor = PatientGreen
+                                ),
+                                maxLines = 4
+                            )
+                            Text(
+                                text = "${notes.length}/500",
+                                fontFamily = LexendFontFamily,
+                                fontSize = 11.sp,
+                                color = TextSecondary,
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(bottom = 8.dp, end = 12.dp)
                             )
                         }
-                    },
-                    variant = ButtonVariant.PRIMARY,
-                    role = AppRole.PATIENT,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                    }
+
+                    if (errorMsg != null) {
+                        Text(
+                            text = errorMsg ?: "",
+                            fontFamily = LexendFontFamily,
+                            color = SOSCoral,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // GUARDAR EVENTO BUTTON (Pill-shaped green with calendar icon)
+                    Button(
+                        onClick = {
+                            if (title.isBlank()) {
+                                isTitleError = true
+                            } else {
+                                viewModel.createAppointment(
+                                    title = title,
+                                    type = selectedType,
+                                    category = "", // Category is completely removed as requested
+                                    date = selectedDate.toString(),
+                                    time = selectedTime.toString(),
+                                    reminderMinutes = reminderTimeMinutes,
+                                    notes = notes,
+                                    recurring = isRecurring,
+                                    recurringDays = recurringDays,
+                                    context = context,
+                                    onNavigateBack
+                                )
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = PatientGreen),
+                        shape = RoundedCornerShape(24.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                            .shadow(
+                                elevation = 6.dp,
+                                shape = RoundedCornerShape(24.dp),
+                                ambientColor = PatientGreen.copy(alpha = 0.25f),
+                                spotColor = PatientGreen.copy(alpha = 0.25f)
+                            )
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarToday,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = "Guardar evento",
+                                fontFamily = LexendFontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 15.sp,
+                                color = Color.White
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(30.dp))
+                }
             }
 
             if (isLoading) {
@@ -488,21 +583,20 @@ fun CreateAppointmentScreen(
 @Composable
 private fun EventTypeCard(
     title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     isSelected: Boolean,
-    color: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) color.copy(alpha = 0.08f) else Color.White
+            containerColor = if (isSelected) MintPill else Color.White
         ),
-        border = androidx.compose.foundation.BorderStroke(
-            width = if (isSelected) 2.dp else 1.dp,
-            color = if (isSelected) color else Color(0xFFE2E8F0)
+        border = BorderStroke(
+            width = if (isSelected) 1.5.dp else 1.dp,
+            color = if (isSelected) PatientGreen else BorderSoft
         ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         modifier = modifier
             .height(100.dp)
             .clickable(onClick = onClick)
@@ -518,22 +612,23 @@ private fun EventTypeCard(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(if (isSelected) color.copy(alpha = 0.16f) else Color(0xFFF7FAFC)),
+                    .background(if (isSelected) PatientGreen.copy(alpha = 0.08f) else Color(0xFFF7FAFC)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = if (isSelected) color else Color.Gray,
+                    tint = if (isSelected) PatientGreen else TextSecondary,
                     modifier = Modifier.size(20.dp)
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = title,
-                fontSize = 11.sp,
+                fontFamily = LexendFontFamily,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) color else Color.Gray,
+                fontSize = 11.sp,
+                color = if (isSelected) PatientGreen else TextPrimary,
                 maxLines = 1
             )
         }

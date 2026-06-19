@@ -25,6 +25,7 @@ val SurfaceDark = Color(0xFF252536)
 // Login / soft UI palette — pastel wellness surfaces and readable text.
 val BackgroundWhite = Color(0xFFFFFFFF)
 val SoftMint = Color(0xFFF4FBF7)
+val MintPill = Color(0xFFEAF8F1)
 val SoftCream = Color(0xFFFFF9EF)
 val SoftLavender = Color(0xFFF1EDFF)
 val TextPrimary = Color(0xFF1F2430)
