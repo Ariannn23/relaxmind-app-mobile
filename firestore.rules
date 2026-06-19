@@ -31,11 +31,21 @@ service cloud.firestore {
         get(/databases/$(database)/documents/patients/$(patientId)).data.caregiverId == request.auth.uid;
     }
 
+    function caregiverLinkUpdateOnly() {
+      return signedIn()
+        && (!('caregiverId' in resource.data) || resource.data.caregiverId == null)
+        && request.resource.data.caregiverId == request.auth.uid
+        && request.resource.data.linkedCaregiverAt is string
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['caregiverId', 'linkedCaregiverAt']);
+    }
+
     match /patients/{patientId} {
       allow create: if validBaseProfile(patientId, 'patient');
       allow read: if isSelf(patientId)
         || (signedIn() && resource.data.caregiverId == request.auth.uid);
-      allow update: if isSelf(patientId) && unchangedProtectedFields();
+      allow update: if (isSelf(patientId) && unchangedProtectedFields())
+        || caregiverLinkUpdateOnly();
       allow delete: if false;
     }
 
@@ -85,6 +95,31 @@ service cloud.firestore {
     match /diaryEntries/{entryId} {
       allow create, update: if signedIn() && request.resource.data.patientId == request.auth.uid;
       allow read: if signedIn() && (resource.data.patientId == request.auth.uid || isPatientCaregiver(resource.data.patientId));
+    }
+
+    match /bindingCodes/{bindingCodeId} {
+      allow create: if signedIn()
+        && request.resource.data.patientId == request.auth.uid
+        && request.resource.data.code is string
+        && request.resource.data.expiresAt is timestamp;
+      allow read: if signedIn();
+      allow update: if signedIn()
+        && (!('caregiverId' in resource.data) || resource.data.caregiverId == null)
+        && request.resource.data.patientId == resource.data.patientId
+        && request.resource.data.code == resource.data.code
+        && request.resource.data.expiresAt == resource.data.expiresAt
+        && request.resource.data.caregiverId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['caregiverId']);
+      allow delete: if signedIn()
+        && (resource.data.patientId == request.auth.uid || resource.data.caregiverId == request.auth.uid);
+    }
+
+    match /alerts/{alertId} {
+      allow create: if signedIn()
+        && (request.resource.data.patientId == request.auth.uid || request.resource.data.caregiverId == request.auth.uid);
+      allow read, update: if signedIn()
+        && (resource.data.patientId == request.auth.uid || resource.data.caregiverId == request.auth.uid);
+      allow delete: if false;
     }
 
     match /{document=**} {

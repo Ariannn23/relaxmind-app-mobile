@@ -1,8 +1,11 @@
 package com.relaxmind.app.data.remote
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.relaxmind.app.data.model.Appointment
+import com.relaxmind.app.data.model.BindingCode
 import com.relaxmind.app.data.model.Caregiver
+import com.relaxmind.app.data.model.CaregiverAlert
 import com.relaxmind.app.data.model.CheckIn
 import com.relaxmind.app.data.model.DailyGoal
 import com.relaxmind.app.data.model.MeditationExercise
@@ -13,12 +16,14 @@ import com.relaxmind.app.data.model.Streak
 import com.relaxmind.app.data.model.UserAchievement
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
+import java.util.Date
 
 class FirestoreRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
     private val patients = firestore.collection(PATIENTS_COLLECTION)
     private val caregivers = firestore.collection(CAREGIVERS_COLLECTION)
+    private val bindingCodes = firestore.collection(BINDING_CODES_COLLECTION)
 
     suspend fun createPatient(patient: Patient): Result<Unit> = runCatching {
         require(patient.id.isNotBlank()) { "Patient id cannot be blank." }
@@ -64,6 +69,108 @@ class FirestoreRepository(
         }
 
         error("No user role found for id: $id")
+    }
+
+    suspend fun createBindingCode(
+        patientId: String,
+        code: String,
+        expiresAt: Date
+    ): Result<BindingCode> = runCatching {
+        require(patientId.isNotBlank()) { "Patient id cannot be blank." }
+        require(code.length == 6) { "Binding code must have six digits." }
+
+        val document = bindingCodes.document()
+        val bindingCode = BindingCode(
+            id = document.id,
+            code = code,
+            patientId = patientId,
+            expiresAt = expiresAt
+        )
+        document.set(bindingCode).await()
+        bindingCode
+    }
+
+    fun listenToBindingCode(
+        bindingCodeId: String,
+        onChange: (BindingCode?) -> Unit,
+        onError: (Exception) -> Unit
+    ): ListenerRegistration {
+        return bindingCodes.document(bindingCodeId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    onError(error)
+                    return@addSnapshotListener
+                }
+
+                onChange(snapshot?.toObject(BindingCode::class.java))
+            }
+    }
+
+    suspend fun linkPatientWithCode(
+        code: String,
+        caregiverId: String
+    ): Result<String> = runCatching {
+        val now = Date()
+        val bindingSnapshot = bindingCodes
+            .whereEqualTo("code", code)
+            .whereGreaterThan("expiresAt", now)
+            .limit(1)
+            .get()
+            .await()
+            .documents
+            .firstOrNull()
+            ?: error("Código inválido o expirado")
+
+        val bindingCode = bindingSnapshot.toObject(BindingCode::class.java)
+            ?: error("Código inválido o expirado")
+        val patientRef = patients.document(bindingCode.patientId)
+        val patient = patientRef.get().await().toObject(Patient::class.java)
+            ?: error("Paciente no encontrado")
+
+        if (!patient.caregiverId.isNullOrBlank()) {
+            error("Este paciente ya está vinculado a un cuidador. El paciente debe desvincularse primero.")
+        }
+
+        val linkedAt = LocalDate.now().toString()
+        firestore.runBatch { batch ->
+            batch.update(
+                patientRef,
+                mapOf(
+                    "caregiverId" to caregiverId,
+                    "linkedCaregiverAt" to linkedAt
+                )
+            )
+            batch.update(bindingSnapshot.reference, "caregiverId", caregiverId)
+        }.await()
+
+        bindingCode.patientId
+    }
+
+    suspend fun getPatientsForCaregiver(caregiverId: String): Result<List<Patient>> = runCatching {
+        patients
+            .whereEqualTo("caregiverId", caregiverId)
+            .get()
+            .await()
+            .toObjectList(Patient::class.java)
+    }
+
+    suspend fun getActiveCaregiverAlerts(caregiverId: String): Result<List<CaregiverAlert>> = runCatching {
+        firestore.collection(ALERTS_COLLECTION)
+            .whereEqualTo("caregiverId", caregiverId)
+            .whereEqualTo("resolved", false)
+            .get()
+            .await()
+            .toObjectList(CaregiverAlert::class.java)
+            .sortedByDescending { it.createdAt?.time ?: 0L }
+    }
+
+    suspend fun getLatestCheckIn(patientId: String): Result<CheckIn?> = runCatching {
+        firestore.collection(CHECKINS_COLLECTION)
+            .whereEqualTo("patientId", patientId)
+            .get()
+            .await()
+            .toObjectList(CheckIn::class.java)
+            .maxByOrNull { it.date }
     }
 
     suspend fun createCheckIn(checkIn: CheckIn): Result<Unit> = runCatching {
@@ -326,6 +433,8 @@ class FirestoreRepository(
     private companion object {
         const val PATIENTS_COLLECTION = "patients"
         const val CAREGIVERS_COLLECTION = "caregivers"
+        const val BINDING_CODES_COLLECTION = "bindingCodes"
+        const val ALERTS_COLLECTION = "alerts"
         const val CHECKINS_COLLECTION = "checkIns"
         const val DAILY_GOALS_COLLECTION = "dailyGoals"
         const val MEDITATION_EXERCISES_COLLECTION = "meditationExercises"

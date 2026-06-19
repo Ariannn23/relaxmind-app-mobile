@@ -17,6 +17,8 @@ import com.relaxmind.app.features.auth.EmailVerificationScreen
 import com.relaxmind.app.features.auth.LoginScreen
 import com.relaxmind.app.features.auth.NotificationPermissionScreen
 import com.relaxmind.app.features.auth.RegisterScreen
+import com.relaxmind.app.features.caregiver.DashboardCaregiverScreen
+import com.relaxmind.app.features.caregiver.ScanQRScreen
 import com.relaxmind.app.features.common.WelcomeScreen
 import com.relaxmind.app.features.common.CheckInScreen
 import com.relaxmind.app.features.patient.DashboardPatientScreen
@@ -29,6 +31,7 @@ import com.relaxmind.app.features.patient.CreateAppointmentScreen
 import com.relaxmind.app.features.patient.AppointmentDetailScreen
 import com.relaxmind.app.features.patient.DiaryScreen
 import com.relaxmind.app.features.patient.DiaryEntryScreen
+import com.relaxmind.app.features.patient.LinkCaregiverScreen
 
 sealed class Screen(val route: String) {
     data object Welcome : Screen("welcome")
@@ -309,10 +312,32 @@ fun AppNavGraph(
             )
         }
         composable(Screen.EditProfile.route) { PlaceholderScreen("Pantalla Edit Profile") }
-        composable(Screen.LinkCaregiver.route) { PlaceholderScreen("Pantalla Link Caregiver") }
+        composable(Screen.LinkCaregiver.route) {
+            LinkCaregiverScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onLinked = {
+                    navController.navigate(Screen.PatientDashboard.route) {
+                        popUpTo(Screen.LinkCaregiver.route) { inclusive = true }
+                    }
+                }
+            )
+        }
         composable(Screen.SOSPatient.route) { PlaceholderScreen("Pantalla SOS Paciente") }
 
-        composable(Screen.CaregiverDashboard.route) { PlaceholderScreen("Pantalla Caregiver Dashboard") }
+        composable(Screen.CaregiverDashboard.route) {
+            DashboardCaregiverScreen(
+                onNavigate = { route ->
+                    navController.navigate(route) {
+                        popUpTo(Screen.CaregiverDashboard.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onScanQr = { navController.navigate(Screen.ScanQR.route) },
+                onPatientClick = { patientId -> navController.navigate(Screen.PatientDetail.createRoute(patientId)) },
+                onAlertsClick = { navController.navigate(Screen.AlertsHistory.route) }
+            )
+        }
         composable(Screen.PatientsList.route) { PlaceholderScreen("Pantalla Patients List") }
         composable(
             route = Screen.PatientDetail.route,
@@ -329,7 +354,16 @@ fun AppNavGraph(
             val alertId = backStackEntry.arguments?.getString(Screen.SOSAlert.AlertIdArg).orEmpty()
             PlaceholderScreen("Pantalla SOS Alert: $alertId")
         }
-        composable(Screen.ScanQR.route) { PlaceholderScreen("Pantalla Scan QR") }
+        composable(Screen.ScanQR.route) {
+            ScanQRScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onLinked = {
+                    navController.navigate(Screen.CaregiverDashboard.route) {
+                        popUpTo(Screen.ScanQR.route) { inclusive = true }
+                    }
+                }
+            )
+        }
         composable(Screen.CaregiverSettings.route) { PlaceholderScreen("Pantalla Caregiver Settings") }
     }
 }
