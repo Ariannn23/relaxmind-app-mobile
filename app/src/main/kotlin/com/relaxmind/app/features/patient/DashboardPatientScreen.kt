@@ -505,7 +505,7 @@ private fun WellbeingTodayCard(
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(20.dp),
+                    .padding(horizontal = 20.dp, vertical = 14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -525,16 +525,16 @@ private fun WellbeingTodayCard(
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(text = "✦", color = Color(0xFF68D391), fontSize = 16.sp)
                     }
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Cuidar tu mente te acerca a tu mejor versión.",
+                        text = "Prioriza tu paz mental hoy.",
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Normal,
                         fontSize = 13.sp,
                         lineHeight = 17.sp,
                         color = Color(0xFF5A5E6B)
                     )
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     // Pill Button
                     Row(
@@ -596,11 +596,11 @@ private fun CircularWellbeingProgress(
         contentAlignment = Alignment.Center
     ) {
         Box(
-            modifier = Modifier.size(96.dp),
+            modifier = Modifier.size(112.dp),
             contentAlignment = Alignment.Center
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val strokeWidth = 8.dp.toPx()
+                val strokeWidth = 10.dp.toPx()
                 val diameter = size.minDimension - strokeWidth
                 val topLeft = androidx.compose.ui.geometry.Offset(
                     (size.width - diameter) / 2,
@@ -640,24 +640,24 @@ private fun CircularWellbeingProgress(
                         text = displayScore.toString(),
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 22.sp,
+                        fontSize = 26.sp,
                         color = TextPrimary
                     )
                     Text(
                         text = "/100",
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Medium,
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         color = TextSecondary,
-                        modifier = Modifier.padding(bottom = 3.dp)
+                        modifier = Modifier.padding(bottom = 4.dp)
                     )
                 }
-                Spacer(modifier = Modifier.height(1.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = if (score != null) (category ?: "Bueno") else "Bueno",
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 10.sp,
+                    fontSize = 12.sp,
                     color = PatientGreen
                 )
             }
