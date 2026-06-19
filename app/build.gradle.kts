@@ -12,6 +12,7 @@ if (localPropertiesFile.exists()) {
     localProperties.load(localPropertiesFile.inputStream())
 }
 val geminiApiKey = localProperties.getProperty("GEMINI_API_KEY") ?: "MOCK_KEY"
+val mapsApiKey = localProperties.getProperty("MAPS_API_KEY") ?: "MOCK_MAPS_KEY"
 
 android {
     namespace = "com.relaxmind.app"
@@ -29,6 +30,7 @@ android {
             useSupportLibrary = true
         }
         buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     buildTypes {
