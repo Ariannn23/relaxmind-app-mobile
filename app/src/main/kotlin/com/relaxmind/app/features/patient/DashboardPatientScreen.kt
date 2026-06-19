@@ -35,6 +35,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -203,6 +204,11 @@ fun DashboardPatientScreen(
                             caregiverName = caregiver?.let { "${it.name} ${it.lastName}" },
                             caregiverAvatar = caregiver?.avatarUrl ?: "",
                             onLinkClick = onNavigateToLinkCaregiver
+                        )
+
+                        // 8. "Centros de Salud Cercanos" Quick Access
+                        NearbyHealthCard(
+                            onNearbyClick = { onNavigate(com.relaxmind.app.Screen.NearbyHealth.route) }
                         )
 
                         // Margin safe space for the floating bottom bar
@@ -1307,7 +1313,83 @@ private fun CaregiverCard(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 7. SOS FLOATING BUTTON
+// 7. NEARBY HEALTH CARD
+// ─────────────────────────────────────────────────────────────────────────────
+@Composable
+private fun NearbyHealthCard(
+    onNearbyClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(26.dp),
+                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.2f),
+                spotColor = Color(0xFF8A88A6).copy(alpha = 0.2f)
+            )
+            .clickable(onClick = onNearbyClick),
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .background(PatientGreenLight, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = PatientGreen,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Column {
+                    Text(
+                        text = "🏥 Centros de Salud Cercanos",
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Encuentra ayuda profesional cerca de ti",
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 12.sp,
+                        color = TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = TextSecondary,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 8. SOS FLOATING BUTTON
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun SOSFloatingButton(

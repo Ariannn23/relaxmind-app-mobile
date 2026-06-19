@@ -3,6 +3,7 @@ package com.relaxmind.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import com.google.android.libraries.places.api.Places
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,6 +35,11 @@ class MainActivity : ComponentActivity() {
         // Initialize notification channels and schedule workers
         com.relaxmind.app.services.NotificationUtils.createNotificationChannels(this)
         com.relaxmind.app.services.NotificationUtils.scheduleDailyCheckInReminder(this)
+
+        // Initialize Places API
+        if (!Places.isInitialized()) {
+            Places.initialize(applicationContext, BuildConfig.MAPS_API_KEY)
+        }
 
         // Read the onboarding flag before composition so the start destination is stable.
         val onboardingSeen = OnboardingPreferences.isSeen(this)

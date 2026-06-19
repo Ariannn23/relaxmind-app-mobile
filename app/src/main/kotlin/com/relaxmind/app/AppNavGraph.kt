@@ -39,6 +39,7 @@ import com.relaxmind.app.features.patient.SOSPatientScreen
 import com.relaxmind.app.features.patient.lumi.LumiChatScreen
 import com.relaxmind.app.features.patient.lumi.LumiHistoryScreen
 import com.relaxmind.app.features.patient.EditProfileScreen
+import com.relaxmind.app.features.patient.NearbyHealthScreen
 import com.relaxmind.app.features.caregiver.SOSAlertScreen
 
 sealed class Screen(val route: String) {
@@ -79,6 +80,7 @@ sealed class Screen(val route: String) {
     data object PatientSettings : Screen("patient/settings")
     data object EditProfile : Screen("patient/profile/edit")
     data object LinkCaregiver : Screen("patient/link-caregiver")
+    data object NearbyHealth : Screen("patient/nearby-health")
     data object SOSPatient : Screen("patient/sos")
 
     data object CaregiverDashboard : Screen("caregiver/dashboard")
@@ -372,6 +374,11 @@ fun AppNavGraph(
         }
         composable(Screen.SOSPatient.route) {
             SOSPatientScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(Screen.NearbyHealth.route) {
+            NearbyHealthScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
