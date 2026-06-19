@@ -162,6 +162,42 @@ class FirestoreRepository(
             }
     }
 
+    suspend fun createAlert(alert: CaregiverAlert): Result<String> = runCatching {
+        val document = firestore.collection(ALERTS_COLLECTION).document(
+            if (alert.id.isNotBlank()) alert.id else firestore.collection(ALERTS_COLLECTION).document().id
+        )
+        document.set(alert.copy(id = document.id)).await()
+        document.id
+    }
+
+    suspend fun updateAlertLocation(alertId: String, latitude: Double, longitude: Double): Result<Unit> = runCatching {
+        firestore.collection(ALERTS_COLLECTION)
+            .document(alertId)
+            .update(
+                mapOf(
+                    "latitude" to latitude,
+                    "longitude" to longitude
+                )
+            )
+            .await()
+    }
+
+    fun listenToAlert(
+        alertId: String,
+        onChange: (CaregiverAlert?) -> Unit,
+        onError: (Exception) -> Unit
+    ): ListenerRegistration {
+        return firestore.collection(ALERTS_COLLECTION)
+            .document(alertId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    onError(error)
+                    return@addSnapshotListener
+                }
+                onChange(snapshot?.toObject(CaregiverAlert::class.java))
+            }
+    }
+
     suspend fun linkPatientWithCode(
         code: String,
         caregiverId: String

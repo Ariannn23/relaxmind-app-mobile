@@ -35,6 +35,8 @@ import com.relaxmind.app.features.patient.AppointmentDetailScreen
 import com.relaxmind.app.features.patient.DiaryScreen
 import com.relaxmind.app.features.patient.DiaryEntryScreen
 import com.relaxmind.app.features.patient.LinkCaregiverScreen
+import com.relaxmind.app.features.patient.SOSPatientScreen
+import com.relaxmind.app.features.caregiver.SOSAlertScreen
 
 sealed class Screen(val route: String) {
     data object Welcome : Screen("welcome")
@@ -325,7 +327,11 @@ fun AppNavGraph(
                 }
             )
         }
-        composable(Screen.SOSPatient.route) { PlaceholderScreen("Pantalla SOS Paciente") }
+        composable(Screen.SOSPatient.route) {
+            SOSPatientScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
 
         composable(Screen.CaregiverDashboard.route) {
             DashboardCaregiverScreen(
@@ -381,7 +387,10 @@ fun AppNavGraph(
             arguments = listOf(navArgument(Screen.SOSAlert.AlertIdArg) { type = NavType.StringType })
         ) { backStackEntry ->
             val alertId = backStackEntry.arguments?.getString(Screen.SOSAlert.AlertIdArg).orEmpty()
-            PlaceholderScreen("Pantalla SOS Alert: $alertId")
+            SOSAlertScreen(
+                alertId = alertId,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
         composable(Screen.ScanQR.route) {
             ScanQRScreen(

@@ -60,6 +60,12 @@ import com.relaxmind.app.ui.components.RelaxIcons
 import com.relaxmind.app.utils.WellnessScoreCalculator
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -164,37 +170,61 @@ fun DashboardPatientScreen(
                 }
 
                 // Floating SOS button placed inside the root Box container
+                var isSosPressed by remember { mutableStateOf(false) }
+                val progress by animateFloatAsState(
+                    targetValue = if (isSosPressed) 1f else 0f,
+                    animationSpec = tween(durationMillis = 2000, easing = LinearEasing),
+                    label = "SosProgress"
+                )
+
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(24.dp)
                         .size(64.dp)
-                        .shadow(elevation = 8.dp, shape = CircleShape)
-                        .background(Color(0xFFE8582A), CircleShape)
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onPress = {
-                                    val job = scope.launch {
-                                        delay(2000L) // 2-second hold
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        onNavigateToSOS()
-                                    }
-                                    try {
-                                        awaitRelease()
-                                    } finally {
-                                        job.cancel()
-                                    }
-                                }
-                            )
-                        },
-                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "SOS",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .shadow(elevation = 8.dp, shape = CircleShape)
+                            .background(Color(0xFFE8582A), CircleShape)
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onPress = {
+                                        isSosPressed = true
+                                        val job = scope.launch {
+                                            delay(2000L) // 2-second hold
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            isSosPressed = false
+                                            onNavigateToSOS()
+                                        }
+                                        try {
+                                            awaitRelease()
+                                        } finally {
+                                            job.cancel()
+                                            isSosPressed = false
+                                        }
+                                    }
+                                )
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "SOS",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+                    }
+
+                    if (progress > 0f) {
+                        CircularProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier.fillMaxSize(),
+                            color = Color.White,
+                            strokeWidth = 4.dp
+                        )
+                    }
                 }
             }
         }

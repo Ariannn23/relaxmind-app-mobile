@@ -13,6 +13,8 @@ data class CaregiverAlert(
     val message: String = "",
     val severity: String = "info",
     val resolved: Boolean = false,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
     val createdAtText: String = "",
     @ServerTimestamp
     val createdAt: Date? = null
