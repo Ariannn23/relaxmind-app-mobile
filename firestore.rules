@@ -105,9 +105,6 @@ service cloud.firestore {
       allow read: if signedIn();
       allow update: if signedIn()
         && (!('caregiverId' in resource.data) || resource.data.caregiverId == null)
-        && request.resource.data.patientId == resource.data.patientId
-        && request.resource.data.code == resource.data.code
-        && request.resource.data.expiresAt == resource.data.expiresAt
         && request.resource.data.caregiverId == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['caregiverId']);
       allow delete: if signedIn()
