@@ -19,16 +19,20 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.themes.BackgroundWhite
 import com.relaxmind.app.ui.themes.PatientGreenLight
 import com.relaxmind.app.ui.themes.SoftCream
 import com.relaxmind.app.ui.themes.SoftLavender
 import com.relaxmind.app.ui.themes.SoftMint
+import com.relaxmind.app.ui.themes.CaregiverIndigo
+import com.relaxmind.app.ui.themes.CaregiverBlue
 
 @Composable
 fun SoftGradientBackground(
     modifier: Modifier = Modifier,
-    animateBlobs: Boolean = true
+    animateBlobs: Boolean = true,
+    role: AppRole = AppRole.PATIENT
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "login-blobs")
     val blobOffset by infiniteTransition.animateFloat(
@@ -40,6 +44,16 @@ fun SoftGradientBackground(
         ),
         label = "blob-drift"
     )
+
+    // Colors
+    val color1 = if (role == AppRole.PATIENT) SoftMint.copy(alpha = 0.95f) else CaregiverBlue.copy(alpha = 0.6f)
+    val color1Light = if (role == AppRole.PATIENT) PatientGreenLight.copy(alpha = 0.18f) else CaregiverIndigo.copy(alpha = 0.12f)
+
+    val color2 = if (role == AppRole.PATIENT) SoftCream.copy(alpha = 0.92f) else SoftLavender.copy(alpha = 0.8f)
+    val color2Light = if (role == AppRole.PATIENT) Color(0xFFFFE8C8).copy(alpha = 0.15f) else Color.Transparent
+
+    val color3 = if (role == AppRole.PATIENT) SoftLavender.copy(alpha = 0.75f) else CaregiverIndigo.copy(alpha = 0.4f)
+    val bottomTint = if (role == AppRole.PATIENT) SoftMint.copy(alpha = 0.08f) else CaregiverIndigo.copy(alpha = 0.05f)
 
     Box(
         modifier = modifier
@@ -53,11 +67,7 @@ fun SoftGradientBackground(
                 .blur(90.dp)
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(
-                            SoftMint.copy(alpha = 0.95f),
-                            PatientGreenLight.copy(alpha = 0.18f),
-                            Color.Transparent
-                        )
+                        colors = listOf(color1, color1Light, Color.Transparent)
                     ),
                     shape = CircleShape
                 )
@@ -70,11 +80,7 @@ fun SoftGradientBackground(
                 .blur(80.dp)
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(
-                            SoftCream.copy(alpha = 0.92f),
-                            Color(0xFFFFE8C8).copy(alpha = 0.15f),
-                            Color.Transparent
-                        )
+                        colors = listOf(color2, color2Light, Color.Transparent)
                     ),
                     shape = CircleShape
                 )
@@ -87,10 +93,7 @@ fun SoftGradientBackground(
                 .blur(85.dp)
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(
-                            SoftLavender.copy(alpha = 0.75f),
-                            Color.Transparent
-                        )
+                        colors = listOf(color3, Color.Transparent)
                     ),
                     shape = CircleShape
                 )
@@ -104,7 +107,7 @@ fun SoftGradientBackground(
                         colors = listOf(
                             BackgroundWhite.copy(alpha = 0.4f),
                             BackgroundWhite,
-                            SoftMint.copy(alpha = 0.08f)
+                            bottomTint
                         )
                     )
                 )

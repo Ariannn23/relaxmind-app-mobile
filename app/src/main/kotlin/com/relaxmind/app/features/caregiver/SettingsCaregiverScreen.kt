@@ -101,7 +101,7 @@ fun SettingsCaregiverScreen(
                     .padding(innerPadding)
             ) {
                 // Background decoration
-                SoftGradientBackground(animateBlobs = true)
+                SoftGradientBackground(animateBlobs = true, role = AppRole.CAREGIVER)
 
                 Column(
                     modifier = Modifier

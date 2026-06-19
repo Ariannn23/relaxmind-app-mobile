@@ -203,6 +203,49 @@ class CaregiverViewModel(
         }
     }
 
+    fun updateProfile(
+        name: String,
+        lastName: String,
+        birthDate: String,
+        sex: String,
+        phone: String,
+        avatarUrl: String = "",
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val uid = authService.getCurrentUser()?.uid
+                if (uid != null) {
+                    val current = _caregiver.value ?: return@launch
+                    val updated = current.copy(
+                        name = name,
+                        lastName = lastName,
+                        birthDate = birthDate,
+                        sex = sex,
+                        phone = phone,
+                        avatarUrl = avatarUrl.ifBlank { current.avatarUrl }
+                    )
+                    firestoreRepository.createCaregiver(updated)
+                        .onSuccess {
+                            _caregiver.value = updated
+                            onSuccess()
+                        }
+                        .onFailure { error ->
+                            onError(error.localizedMessage ?: "Error al guardar el perfil.")
+                        }
+                } else {
+                    onError("No se encontró sesión activa.")
+                }
+            } catch (e: Exception) {
+                onError(e.localizedMessage ?: "Error inesperado.")
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     override fun onCleared() {
         patientsListener?.remove()
         alertsListener?.remove()

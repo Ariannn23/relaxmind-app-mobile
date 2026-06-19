@@ -1,4 +1,4 @@
-package com.relaxmind.app.features.caregiver
+﻿package com.relaxmind.app.features.caregiver
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,12 +17,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.ui.unit.sp
 import com.relaxmind.app.ui.components.RelaxToastHost
 import com.relaxmind.app.ui.components.RelaxToastState
 import com.relaxmind.app.ui.components.rememberRelaxToastState
@@ -54,6 +57,7 @@ import com.relaxmind.app.ui.components.RelaxInputField
 import com.relaxmind.app.ui.components.RelaxTopBar
 import com.relaxmind.app.ui.themes.CaregiverIndigo
 import com.relaxmind.app.ui.themes.SOSCoral
+import com.relaxmind.app.ui.themes.LexendFontFamily
 import com.relaxmind.app.utils.WellnessScoreCalculator
 
 @Composable
@@ -133,6 +137,7 @@ fun PatientsListScreen(
                     item {
                         Text(
                             text = "No encontramos pacientes con ese nombre.",
+                            fontFamily = LexendFontFamily,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = 28.dp),
@@ -142,6 +147,16 @@ fun PatientsListScreen(
                         )
                     }
                 } else {
+                    item {
+                        Text(
+                            text = "${filteredPatients.size} Pacientes vinculados",
+                            fontFamily = LexendFontFamily,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                            modifier = Modifier.padding(bottom = 4.dp, start = 4.dp)
+                        )
+                    }
                     items(filteredPatients, key = { it.patient.id }) { summary ->
                         PatientListCard(
                             summary = summary,
@@ -168,68 +183,93 @@ private fun PatientListCard(
 ) {
     val patient = summary.patient
     val score = summary.latestScore
-    val scoreColor = WellnessScoreCalculator.getScoreColor(score)
+    
     val fullName = "${patient.name} ${patient.lastName}".trim().ifBlank { "Paciente" }
 
     RelaxCard(
         modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
-        elevation = 3.dp
+        elevation = 0.dp // To rely on new soft shadow internally or we can add a custom subtle shadow
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AsyncImage(
-                model = patient.avatarUrl.ifBlank {
-                    "https://ui-avatars.com/api/?name=$fullName&background=4338A8&color=fff"
-                },
-                contentDescription = "Avatar de $fullName",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(CircleShape)
-                    .border(3.dp, scoreColor, CircleShape)
-            )
+            Box(contentAlignment = Alignment.BottomEnd) {
+                AsyncImage(
+                    model = patient.avatarUrl.ifBlank {
+                        "https://ui-avatars.com/api/?name=$fullName&background=4338A8&color=fff"
+                    },
+                    contentDescription = "Avatar de $fullName",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .border(2.dp, CaregiverIndigo.copy(alpha = 0.2f), CircleShape)
+                )
+                if (summary.hasPendingAlert) {
+                    Box(
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.background)
+                            .padding(2.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .background(SOSCoral)
+                        )
+                    }
+                }
+            }
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = fullName,
+                    fontFamily = LexendFontFamily,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 if (patient.condition.isNotBlank()) {
                     Text(
                         text = patient.condition,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+                        fontFamily = LexendFontFamily,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 2.dp)
                     )
                 }
                 Text(
-                    text = "Ultimo check-in: ${summary.lastCheckInDate ?: "sin registro"}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+                    text = "Últ. Check-in: ${summary.lastCheckInDate ?: "Sin registro"}",
+                    fontFamily = LexendFontFamily,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
+                    modifier = Modifier.padding(top = 4.dp)
                 )
             }
 
             Column(
                 horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.Center
             ) {
                 WellbeingChip(score = score)
-                if (summary.hasPendingAlert) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = "Alerta pendiente",
-                        tint = SOSCoral,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "Ver detalles",
+                    tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
@@ -246,16 +286,29 @@ private fun WellbeingChip(score: Int?) {
 
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(999.dp))
-            .background(color.copy(alpha = 0.18f))
+            .clip(RoundedCornerShape(8.dp))
+            .background(color.copy(alpha = 0.12f))
             .padding(horizontal = 10.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = if (score == null) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.58f) else color
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Favorite,
+                contentDescription = null,
+                tint = if (score == null) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f) else color,
+                modifier = Modifier.size(12.dp)
+            )
+            Text(
+                text = text,
+                fontFamily = LexendFontFamily,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 11.sp,
+                color = if (score == null) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.58f) else color
+            )
+        }
     }
 }
 
@@ -270,33 +323,45 @@ private fun EmptyPatientsState(onScanQr: () -> Unit) {
     ) {
         Box(
             modifier = Modifier
-                .size(96.dp)
+                .size(110.dp)
                 .clip(CircleShape)
-                .background(CaregiverIndigo.copy(alpha = 0.12f)),
+                .background(CaregiverIndigo.copy(alpha = 0.08f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.PersonAdd,
-                contentDescription = null,
-                tint = CaregiverIndigo,
-                modifier = Modifier.size(44.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(CircleShape)
+                    .background(CaregiverIndigo.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PersonAdd,
+                    contentDescription = null,
+                    tint = CaregiverIndigo,
+                    modifier = Modifier.size(38.dp)
+                )
+            }
         }
         Text(
-            text = "Aun no tienes pacientes vinculados",
+            text = "Aún no tienes pacientes",
+            fontFamily = LexendFontFamily,
             style = MaterialTheme.typography.titleLarge,
-            color = CaregiverIndigo,
+            color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.SemiBold
         )
         Text(
-            text = "Escanea el codigo que genere un paciente para comenzar a acompanarlo.",
+            text = "Escanea el código QR que genere un paciente desde su app para vincularlo a tu cuenta y comenzar a cuidarlo.",
+            fontFamily = LexendFontFamily,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.62f),
-            textAlign = TextAlign.Center
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 24.dp)
         )
+        Spacer(modifier = Modifier.height(8.dp))
         RelaxButton(
-            text = "Vincularme ahora",
+            text = "Vincular un paciente",
             onClick = onScanQr,
             role = AppRole.CAREGIVER
         )
