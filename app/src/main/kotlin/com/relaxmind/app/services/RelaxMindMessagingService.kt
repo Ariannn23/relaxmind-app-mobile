@@ -67,7 +67,7 @@ class RelaxMindMessagingService : FirebaseMessagingService() {
                 )
 
                 val builder = NotificationCompat.Builder(this, NotificationUtils.CHANNEL_SOS)
-                    .setSmallIcon(R.mipmap.ic_launcher)
+                    .setSmallIcon(R.drawable.icono_plano2)
                     .setContentTitle(title)
                     .setContentText(body)
                     .setPriority(NotificationCompat.PRIORITY_MAX)
@@ -95,7 +95,7 @@ class RelaxMindMessagingService : FirebaseMessagingService() {
                 )
 
                 val builder = NotificationCompat.Builder(this, NotificationUtils.CHANNEL_WELLNESS)
-                    .setSmallIcon(R.mipmap.ic_launcher)
+                    .setSmallIcon(R.drawable.icono_plano2)
                     .setContentTitle(title)
                     .setContentText(body)
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -120,7 +120,7 @@ class RelaxMindMessagingService : FirebaseMessagingService() {
                 )
 
                 val builder = NotificationCompat.Builder(this, NotificationUtils.CHANNEL_REMINDERS)
-                    .setSmallIcon(R.mipmap.ic_launcher)
+                    .setSmallIcon(R.drawable.icono_plano2)
                     .setContentTitle(title)
                     .setContentText(body)
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT)

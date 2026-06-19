@@ -66,7 +66,7 @@ class CheckInReminderWorker(
         )
 
         val builder = NotificationCompat.Builder(ctx, NotificationUtils.CHANNEL_REMINDERS)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.icono_plano2)
             .setContentTitle("¿Cómo te sientes hoy?")
             .setContentText("No olvides completar tu evaluación diaria (Check-in).")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

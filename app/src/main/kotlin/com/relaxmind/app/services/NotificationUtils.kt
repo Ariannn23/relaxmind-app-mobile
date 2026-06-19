@@ -12,6 +12,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.relaxmind.app.data.model.Appointment
+import com.relaxmind.app.utils.AppointmentReminderWorker
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
