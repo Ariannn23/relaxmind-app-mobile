@@ -4,9 +4,9 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.tasks.await
 
-class FirebaseAuthService(
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
-) {
+class FirebaseAuthService {
+    private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
+
     suspend fun register(
         email: String,
         password: String

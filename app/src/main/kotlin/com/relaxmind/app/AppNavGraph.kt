@@ -12,6 +12,9 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.relaxmind.app.features.auth.LoginScreen
+import com.relaxmind.app.features.auth.RegisterScreen
+import com.relaxmind.app.features.common.WelcomeScreen
 
 sealed class Screen(val route: String) {
     data object Welcome : Screen("welcome")
@@ -66,13 +69,15 @@ sealed class Screen(val route: String) {
 fun resolveStartDestination(
     isAuthenticated: Boolean,
     role: String?,
-    isNewPatient: Boolean = false
+    isNewPatient: Boolean = false,
+    onboardingSeen: Boolean = false
 ): String = when {
-    !isAuthenticated -> Screen.Welcome.route
+    !isAuthenticated && !onboardingSeen -> Screen.Welcome.route
+    !isAuthenticated -> Screen.Login.route
     role == "patient" && isNewPatient -> Screen.InitialTest.route
     role == "patient" -> Screen.PatientDashboard.route
     role == "caregiver" -> Screen.CaregiverDashboard.route
-    else -> Screen.Welcome.route
+    else -> Screen.Login.route
 }
 
 @Composable
@@ -84,9 +89,41 @@ fun AppNavGraph(
         navController = navController,
         startDestination = startDestination
     ) {
-        composable(Screen.Welcome.route) { PlaceholderScreen("Pantalla Welcome") }
-        composable(Screen.Login.route) { PlaceholderScreen("Pantalla Login") }
-        composable(Screen.Register.route) { PlaceholderScreen("Pantalla Register") }
+        composable(Screen.Welcome.route) {
+            WelcomeScreen(
+                onFinish = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Welcome.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable(Screen.Login.route) {
+            LoginScreen(
+                onNavigateToRegister = { navController.navigate(Screen.Register.route) },
+                onNavigateToForgotPassword = { navController.navigate(Screen.ForgotPassword.route) },
+                onNavigateToPatientDashboard = {
+                    navController.navigate(Screen.PatientDashboard.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                },
+                onNavigateToCaregiverDashboard = {
+                    navController.navigate(Screen.CaregiverDashboard.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable(Screen.Register.route) {
+            RegisterScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToEmailVerification = {
+                    navController.navigate(Screen.EmailVerification.route) {
+                        popUpTo(Screen.Register.route) { inclusive = true }
+                    }
+                }
+            )
+        }
         composable(Screen.EmailVerification.route) { PlaceholderScreen("Pantalla Email Verification") }
         composable(Screen.AvatarSetup.route) { PlaceholderScreen("Pantalla Avatar Setup") }
         composable(Screen.NotificationPermission.route) { PlaceholderScreen("Pantalla Notification Permission") }
