@@ -1,3 +1,9 @@
 <resources>
-    <style name="Theme.RelaxMind" parent="android:style/Theme.Material.Light.NoActionBar" />
+    <style name="Theme.RelaxMind" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#F7F7F7</item>
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:forceDarkAllowed">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+    </style>
 </resources>
