@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -42,11 +43,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.ButtonVariant
-import com.relaxmind.app.ui.components.LoadingIndicator
 import com.relaxmind.app.ui.components.RelaxButton
 import com.relaxmind.app.ui.components.RelaxTopBar
 import com.relaxmind.app.ui.themes.PatientGreen
 import com.relaxmind.app.ui.themes.RelaxMindTheme
+import kotlinx.coroutines.delay
 
 private const val DEFAULT_AVATAR_URL = "relaxmind://avatar/default"
 
@@ -80,6 +81,8 @@ fun AvatarSetupScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedAvatarUrl by remember { mutableStateOf(avatarOptions.first().url) }
     var submitted by remember { mutableStateOf(false) }
+    var showSavingScreen by remember { mutableStateOf(false) }
+    var savingStartedAt by remember { mutableStateOf(0L) }
 
     LaunchedEffect(Unit) {
         viewModel.clearSuccess()
@@ -87,6 +90,8 @@ fun AvatarSetupScreen(
 
     LaunchedEffect(uiState.success, submitted) {
         if (uiState.success && submitted) {
+            val elapsed = System.currentTimeMillis() - savingStartedAt
+            delay((1_000L - elapsed).coerceAtLeast(0L))
             viewModel.clearSuccess()
             onContinue()
         }
@@ -94,9 +99,15 @@ fun AvatarSetupScreen(
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
+            showSavingScreen = false
             snackbarHostState.showSnackbar(it)
             viewModel.clearError()
         }
+    }
+
+    if (showSavingScreen) {
+        AvatarSavingScreen()
+        return
     }
 
     Scaffold(
@@ -148,6 +159,8 @@ fun AvatarSetupScreen(
                     text = "Continuar",
                     onClick = {
                         submitted = true
+                        showSavingScreen = true
+                        savingStartedAt = System.currentTimeMillis()
                         viewModel.updateAvatar(selectedAvatarUrl)
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -160,6 +173,8 @@ fun AvatarSetupScreen(
                     enabled = !uiState.isLoading,
                     onClick = {
                         submitted = true
+                        showSavingScreen = true
+                        savingStartedAt = System.currentTimeMillis()
                         viewModel.updateAvatar(DEFAULT_AVATAR_URL)
                     }
                 ) {
@@ -171,8 +186,28 @@ fun AvatarSetupScreen(
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
+        }
+    }
+}
 
-            if (uiState.isLoading) LoadingIndicator()
+@Composable
+private fun AvatarSavingScreen() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            CircularProgressIndicator(color = PatientGreen)
+            Text(
+                text = "Guardando tu avatar...",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.62f)
+            )
         }
     }
 }
