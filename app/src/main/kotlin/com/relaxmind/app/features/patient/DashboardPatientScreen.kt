@@ -37,6 +37,10 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Card
@@ -46,6 +50,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -209,6 +216,7 @@ fun DashboardPatientScreen(
                             caregiverId = patient?.caregiverId,
                             caregiverName = caregiver?.let { "${it.name} ${it.lastName}" },
                             caregiverAvatar = caregiver?.avatarUrl ?: "",
+                            caregiver = caregiver,
                             onLinkClick = onNavigateToLinkCaregiver
                         )
 
@@ -1238,13 +1246,97 @@ private fun DiaryCard(
 // ─────────────────────────────────────────────────────────────────────────────
 // 6. CAREGIVER LINKING CARD
 // ─────────────────────────────────────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CaregiverCard(
     caregiverId: String?,
     caregiverName: String?,
     caregiverAvatar: String,
+    caregiver: com.relaxmind.app.data.model.Caregiver?,
     onLinkClick: () -> Unit
 ) {
+    var showModal by remember { mutableStateOf(false) }
+
+    // Modal de contacto del cuidador
+    if (showModal && caregiver != null) {
+        AlertDialog(
+            onDismissRequest = { showModal = false },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showModal = false }) {
+                    Text("Cerrar", fontFamily = LexendFontFamily, color = Color(0xFF4338A8))
+                }
+            },
+            shape = RoundedCornerShape(28.dp),
+            containerColor = Color.White,
+            title = null,
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Avatar
+                    AsyncImage(
+                        model = caregiver.avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=${caregiver.name}+${caregiver.lastName}&background=4338A8&color=fff" },
+                        contentDescription = "Avatar",
+                        modifier = Modifier
+                            .size(76.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, Color(0xFF4338A8).copy(alpha = 0.25f), CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "${caregiver.name} ${caregiver.lastName}",
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = Color(0xFF1A1A2E)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 4.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Color(0xFFF1EDFF))
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "Mi Cuidador",
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.sp,
+                            color = Color(0xFF4338A8)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Info rows
+                    val infoItems = buildList {
+                        if (caregiver.email.isNotBlank()) add(Pair(Icons.Default.Email, caregiver.email))
+                        if (caregiver.phone.isNotBlank()) add(Pair(Icons.Default.Phone, caregiver.phone))
+                        if (caregiver.sex.isNotBlank()) add(Pair(Icons.Default.Person, "Género: ${caregiver.sex}"))
+                        if (caregiver.birthDate.isNotBlank()) add(Pair(Icons.Default.DateRange, caregiver.birthDate))
+                    }
+                    infoItems.forEachIndexed { i, (icon, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Color(0xFFF8F7FF))
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(imageVector = icon, contentDescription = null, tint = Color(0xFF4338A8), modifier = Modifier.size(20.dp))
+                            Text(text = label, fontFamily = LexendFontFamily, fontSize = 14.sp, color = Color(0xFF2C3E50))
+                        }
+                        if (i < infoItems.lastIndex) Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            }
+        )
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -1323,6 +1415,7 @@ private fun CaregiverCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clickable { if (caregiver != null) showModal = true }
                     .padding(18.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
@@ -1336,7 +1429,7 @@ private fun CaregiverCard(
                         model = caregiverAvatar.ifBlank { "https://ui-avatars.com/api/?name=Caregiver&background=4338A8&color=fff" },
                         contentDescription = "Caregiver Avatar",
                         modifier = Modifier
-                            .size(44.dp)
+                            .size(48.dp)
                             .clip(CircleShape)
                             .border(1.5.dp, Color(0xFF4338A8).copy(alpha = 0.3f), CircleShape),
                         contentScale = ContentScale.Crop
@@ -1355,35 +1448,45 @@ private fun CaregiverCard(
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Normal,
                             fontSize = 12.sp,
-                            color = TextSecondary
+                            color = Color(0xFF4338A8)
                         )
                     }
                 }
 
-                // Checked Badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(PatientGreen.copy(alpha = 0.1f))
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(PatientGreen.copy(alpha = 0.1f))
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .background(PatientGreen, CircleShape)
-                        )
-                        Text(
-                            text = "Vinculado",
-                            fontFamily = LexendFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp,
-                            color = PatientGreen
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .background(PatientGreen, CircleShape)
+                            )
+                            Text(
+                                text = "Vinculado",
+                                fontFamily = LexendFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp,
+                                color = PatientGreen
+                            )
+                        }
                     }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = TextSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
         }
@@ -1627,7 +1730,6 @@ private fun LumiCard(
                     modifier = Modifier
                         .size(54.dp)
                         .clip(CircleShape)
-                        .shadow(elevation = 4.dp, shape = CircleShape)
                 )
                 Column {
                     Text(
