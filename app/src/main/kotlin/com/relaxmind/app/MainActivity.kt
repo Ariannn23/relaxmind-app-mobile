@@ -169,15 +169,30 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun updateFcmToken(role: String) {
-        val user = authService.getCurrentUser() ?: return
+        val user = authService.getCurrentUser()
+        if (user == null) {
+            android.util.Log.e("FCM_TOKEN", "Cannot update token: User is null")
+            return
+        }
+        
+        android.util.Log.d("FCM_TOKEN", "Fetching token for role: $role, user: ${user.uid}")
+        
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 val token = task.result
+                android.util.Log.d("FCM_TOKEN", "Token fetch successful: $token")
                 if (!token.isNullOrBlank()) {
                     kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                        firestoreRepository.updateFcmToken(user.uid, role, token)
+                        val result = firestoreRepository.updateFcmToken(user.uid, role, token)
+                        if (result.isSuccess) {
+                            android.util.Log.d("FCM_TOKEN", "Successfully updated token in Firestore!")
+                        } else {
+                            android.util.Log.e("FCM_TOKEN", "Failed to update token in Firestore", result.exceptionOrNull())
+                        }
                     }
                 }
+            } else {
+                android.util.Log.e("FCM_TOKEN", "Failed to fetch FCM token", task.exception)
             }
         }
     }
