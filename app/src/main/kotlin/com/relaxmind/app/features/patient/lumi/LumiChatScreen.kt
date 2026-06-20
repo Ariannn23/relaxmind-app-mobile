@@ -189,6 +189,25 @@ fun LumiChatScreen(
                         }
                     )
                 }
+                
+                // Error message
+                if (uiState.error != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 16.dp),
+                        contentAlignment = Alignment.BottomCenter
+                    ) {
+                        Text(
+                            text = "Error: ${uiState.error}",
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier
+                                .background(Color.White, RoundedCornerShape(8.dp))
+                                .padding(16.dp)
+                                .shadow(2.dp)
+                        )
+                    }
+                }
             }
         }
     }
