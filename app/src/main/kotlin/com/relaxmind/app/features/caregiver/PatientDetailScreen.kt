@@ -266,7 +266,7 @@ private fun PatientDetailHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 10.dp),
+            .padding(top = 20.dp, bottom = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         HeaderIconButton(
@@ -284,7 +284,7 @@ private fun PatientDetailHeader(
             text = title,
             fontFamily = LexendFontFamily,
             fontWeight = FontWeight.Bold,
-            fontSize = 26.sp,
+            fontSize = 22.sp,
             color = TextPrimary,
             textAlign = TextAlign.Center,
             maxLines = 1,
@@ -356,7 +356,7 @@ private fun PatientProfileSummary(
                 text = fullName,
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Bold,
-                fontSize = 30.sp,
+                fontSize = 24.sp,
                 color = TextPrimary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -366,7 +366,7 @@ private fun PatientProfileSummary(
                 text = patient.condition.ifBlank { "Sin condición registrada" },
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Normal,
-                fontSize = 19.sp,
+                fontSize = 16.sp,
                 color = TextSecondary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis

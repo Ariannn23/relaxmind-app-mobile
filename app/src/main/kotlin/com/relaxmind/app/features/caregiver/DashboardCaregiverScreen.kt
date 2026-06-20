@@ -200,7 +200,7 @@ private fun DashboardHeader(name: String, avatarUrl: String) {
                 text = "Hola, ${name.ifBlank { "María" }} 👋",
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Bold,
-                fontSize = 28.sp,
+                fontSize = 24.sp,
                 color = TextPrimary
             )
             Spacer(modifier = Modifier.height(4.dp))

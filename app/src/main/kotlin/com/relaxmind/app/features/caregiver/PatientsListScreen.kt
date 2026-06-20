@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
@@ -139,10 +140,7 @@ fun PatientsListScreen(
                 .background(BackgroundWhite)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                PatientsHeader(
-                    onMenuClick = { /* TODO: Open drawer */ },
-                    onSearchClick = { /* Focus search */ }
-                )
+                PatientsHeader(onBackClick = { onNavigate(Screen.CaregiverDashboard.route) })
                 
                 LazyColumn(
                     modifier = Modifier
@@ -187,43 +185,35 @@ fun PatientsListScreen(
 }
 
 @Composable
-fun PatientsHeader(
-    onMenuClick: () -> Unit,
-    onSearchClick: () -> Unit
-) {
+fun PatientsHeader(onBackClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .systemBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+            .padding(top = 20.dp, bottom = 16.dp, start = 12.dp, end = 24.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onMenuClick) {
+        IconButton(onClick = onBackClick) {
             Icon(
-                imageVector = Icons.Default.Menu,
-                contentDescription = "Menú",
-                tint = CaregiverIndigo,
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Volver",
+                tint = TextPrimary,
                 modifier = Modifier.size(28.dp)
             )
         }
+
+        Spacer(modifier = Modifier.weight(1f))
 
         Text(
             text = "Mis Pacientes",
             fontFamily = LexendFontFamily,
             fontWeight = FontWeight.ExtraBold,
-            fontSize = 24.sp,
-            color = CaregiverIndigo
+            fontSize = 22.sp,
+            color = TextPrimary
         )
 
-        IconButton(onClick = onSearchClick) {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = "Buscar",
-                tint = CaregiverIndigo,
-                modifier = Modifier.size(28.dp)
-            )
-        }
+        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.size(48.dp)) // To balance the layout
     }
 }
 

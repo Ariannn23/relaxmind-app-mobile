@@ -254,17 +254,7 @@ fun AlertsHistoryScreen(
                                 enter = fadeIn(tween(180)) + slideInVertically(initialOffsetY = { it / 5 }),
                                 exit = fadeOut()
                             ) {
-                                AlertItemCard(
-                                    alert = alert,
-                                    onOpenSosClick = {
-                                        if (alert.alertType() == AlertType.SOS && alert.id.isNotBlank()) {
-                                            onNavigate(Screen.SOSAlert.createRoute(alert.id))
-                                        }
-                                    },
-                                    onResolveClick = {
-                                        if (!alert.resolved) alertToResolve = alert
-                                    }
-                                )
+                                AlertItemCard(alert = alert)
                             }
                         }
                         item { Spacer(modifier = Modifier.height(88.dp)) }
@@ -306,7 +296,7 @@ private fun AlertsHeader(onBackClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 10.dp),
+            .padding(top = 20.dp, bottom = 16.dp, start = 12.dp, end = 24.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -331,7 +321,7 @@ private fun AlertsHeader(onBackClick: () -> Unit) {
             text = "Historial de Alertas",
             fontFamily = LexendFontFamily,
             fontWeight = FontWeight.Bold,
-            fontSize = 28.sp,
+            fontSize = 22.sp,
             color = TextPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -534,9 +524,7 @@ private fun DropdownLabel(text: String) {
 
 @Composable
 private fun AlertItemCard(
-    alert: CaregiverAlert,
-    onOpenSosClick: () -> Unit,
-    onResolveClick: () -> Unit
+    alert: CaregiverAlert
 ) {
     val scale by animateFloatAsState(targetValue = 1f, label = "alert-card-scale")
 
@@ -591,43 +579,6 @@ private fun AlertItemCard(
                     color = TextSecondary
                 )
                 Spacer(modifier = Modifier.height(10.dp))
-                if (alert.resolved) {
-                    Text(
-                        text = "Alerta resuelta",
-                        fontFamily = LexendFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp,
-                        color = NeutralPurpleGray.copy(alpha = 0.72f)
-                    )
-                } else {
-                    Text(
-                        text = "Marcar como resuelta",
-                        fontFamily = LexendFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp,
-                        color = CaregiverPurple,
-                        modifier = Modifier.clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = onResolveClick
-                        )
-                    )
-                }
-                if (alert.alertType() == AlertType.SOS && alert.id.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Ver detalle SOS",
-                        fontFamily = LexendFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp,
-                        color = CaregiverIndigo,
-                        modifier = Modifier.clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = onOpenSosClick
-                        )
-                    )
-                }
             }
 
             AlertStatusBadge(resolved = alert.resolved)
