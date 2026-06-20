@@ -23,6 +23,9 @@ import com.relaxmind.app.data.remote.FirestoreRepository
 import com.relaxmind.app.ui.themes.RelaxMindTheme
 import com.relaxmind.app.ui.themes.ThemeState
 import com.relaxmind.app.utils.OnboardingPreferences
+import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 
 class MainActivity : ComponentActivity() {
@@ -70,6 +73,7 @@ class MainActivity : ComponentActivity() {
                                     updateAppLocale(patient.language)
                                     userRole = "patient"
                                     isNewPatient = !patient.onboardingCompleted
+                                    updateFcmToken("patient")
                                 } else {
                                     val caregiver = withTimeoutOrNull(5000L) {
                                         firestoreRepository.getCaregiverById(currentUser.uid).getOrNull()
@@ -79,6 +83,7 @@ class MainActivity : ComponentActivity() {
                                         ThemeState.language.value = caregiver.language
                                         updateAppLocale(caregiver.language)
                                         userRole = "caregiver"
+                                        updateFcmToken("caregiver")
                                     } else {
                                         authService.logout()
                                         isAuthenticated = false
@@ -160,6 +165,20 @@ class MainActivity : ComponentActivity() {
             resources.updateConfiguration(configuration, resources.displayMetrics)
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    private fun updateFcmToken(role: String) {
+        val user = authService.getCurrentUser() ?: return
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val token = task.result
+                if (!token.isNullOrBlank()) {
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                        firestoreRepository.updateFcmToken(user.uid, role, token)
+                    }
+                }
+            }
         }
     }
 }
