@@ -133,7 +133,7 @@ fun DiaryEntryScreen(
                             color = TextPrimary
                         )
                         Text(
-                            text = "Guarda un momento de tu día 🌿",
+                            text = "Guarda un momento de tu día",
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Normal,
                             fontSize = 12.sp,
@@ -280,7 +280,7 @@ fun DiaryEntryScreen(
                         ) {
                             OutlinedTextField(
                                 value = notes,
-                                onValueChange = { if (it.length <= 1000) notes = it },
+                                onValueChange = { if (it.length <= 500) notes = it },
                                 placeholder = { Text("Hoy fue un día bastante tranquilo...", fontFamily = LexendFontFamily, color = Color.LightGray) },
                                 shape = RoundedCornerShape(18.dp),
                                 modifier = Modifier
@@ -302,7 +302,7 @@ fun DiaryEntryScreen(
                                 maxLines = 10
                             )
                             Text(
-                                text = "${notes.length}/1000",
+                                text = "${notes.length}/500",
                                 fontFamily = LexendFontFamily,
                                 fontSize = 11.sp,
                                 color = TextSecondary,
@@ -316,7 +316,7 @@ fun DiaryEntryScreen(
                     // SECCIÓN DE FOTOS
                     Column {
                         Text(
-                            text = "Fotos (opcional)",
+                            text = "Fotos",
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
