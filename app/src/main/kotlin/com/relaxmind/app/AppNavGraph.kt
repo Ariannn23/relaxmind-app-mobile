@@ -40,6 +40,7 @@ import com.relaxmind.app.features.patient.SOSPatientScreen
 import com.relaxmind.app.features.patient.lumi.LumiChatScreen
 import com.relaxmind.app.features.patient.lumi.LumiHistoryScreen
 import com.relaxmind.app.features.patient.EditProfileScreen
+import com.relaxmind.app.features.caregiver.EditProfileCaregiverScreen
 import com.relaxmind.app.features.patient.NearbyHealthScreen
 import com.relaxmind.app.features.caregiver.SOSAlertScreen
 
@@ -99,6 +100,7 @@ sealed class Screen(val route: String) {
     }
     data object ScanQR : Screen("caregiver/scan-qr")
     data object CaregiverSettings : Screen("caregiver/settings")
+    data object CaregiverEditProfile : Screen("caregiver/profile/edit")
 }
 
 fun resolveStartDestination(
@@ -460,7 +462,7 @@ fun AppNavGraph(
         }
         composable(Screen.CaregiverSettings.route) { 
             com.relaxmind.app.features.caregiver.SettingsCaregiverScreen(
-                onNavigateToEditProfile = { navController.navigate(Screen.EditProfile.route) },
+                onNavigateToEditProfile = { navController.navigate(Screen.CaregiverEditProfile.route) },
                 onLogout = { 
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
@@ -473,6 +475,11 @@ fun AppNavGraph(
                         restoreState = true
                     }
                 }
+            )
+        }
+        composable(Screen.CaregiverEditProfile.route) {
+            EditProfileCaregiverScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }

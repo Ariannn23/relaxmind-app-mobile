@@ -218,7 +218,11 @@ class CaregiverViewModel(
             try {
                 val uid = authService.getCurrentUser()?.uid
                 if (uid != null) {
-                    val current = _caregiver.value ?: return@launch
+                    val current = _caregiver.value
+                    if (current == null) {
+                        onError("No se pudieron cargar tus datos para editar.")
+                        return@launch
+                    }
                     val updated = current.copy(
                         name = name,
                         lastName = lastName,
@@ -227,7 +231,17 @@ class CaregiverViewModel(
                         phone = phone,
                         avatarUrl = avatarUrl.ifBlank { current.avatarUrl }
                     )
-                    firestoreRepository.createCaregiver(updated)
+                    firestoreRepository.updateCaregiver(
+                        uid,
+                        mapOf(
+                            "name" to updated.name,
+                            "lastName" to updated.lastName,
+                            "birthDate" to updated.birthDate,
+                            "sex" to updated.sex,
+                            "phone" to updated.phone,
+                            "avatarUrl" to updated.avatarUrl
+                        )
+                    )
                         .onSuccess {
                             _caregiver.value = updated
                             onSuccess()

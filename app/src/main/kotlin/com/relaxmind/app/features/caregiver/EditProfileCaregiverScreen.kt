@@ -62,9 +62,13 @@ private val avatarColorOptions = listOf(
     AvatarColorOption("relaxmind://avatar/12", listOf(Color(0xFFFDE68A), Color(0xFFB45309)))
 )
 
+private val CaregiverEditLavender = Color(0xFFEDE9FE)
+private val CaregiverEditFieldBackground = Color(0xFFFAF8FF)
+private val CaregiverEditFieldBorder = Color(0xFFE5E0F7)
+
 private fun getAvatarColorsForEdit(url: String): List<Color> {
     return avatarColorOptions.find { it.url == url }?.colors
-        ?: listOf(Color(0xFFA7F3D0), Color(0xFF0F6E56))
+        ?: listOf(Color(0xFFD8B4FE), Color(0xFF4338A8))
 }
 
 private val sexOptions = listOf("Masculino", "Femenino", "No binario", "Prefiero no decirlo")
@@ -225,7 +229,7 @@ fun EditProfileCaregiverScreen(
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .background(Color(0xFFD4F3E5))
+                                            .background(Brush.linearGradient(listOf(CaregiverEditLavender, CaregiverIndigo)))
                                     )
                                 }
                             }
@@ -360,7 +364,7 @@ fun EditProfileCaregiverScreen(
                                             modifier = Modifier
                                                 .size(36.dp)
                                                 .clip(RoundedCornerShape(10.dp))
-                                                .background(MintPill),
+                                                .background(CaregiverEditLavender),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
@@ -483,7 +487,7 @@ private fun EditProfileIcon(icon: androidx.compose.ui.graphics.vector.ImageVecto
         modifier = Modifier
             .size(36.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(MintPill),
+            .background(CaregiverEditLavender),
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -511,7 +515,7 @@ private fun ProfileTextField(
     val shape = RoundedCornerShape(18.dp)
     val borderColor = when {
         isError -> SOSCoral
-        else -> BorderSoft
+        else -> CaregiverEditFieldBorder
     }
 
     Column {
@@ -529,7 +533,7 @@ private fun ProfileTextField(
                 .fillMaxWidth()
                 .border(1.5.dp, borderColor, shape),
             shape = shape,
-            color = if (enabled) SurfaceWhite else Color(0xFFF8FAFB),
+            color = if (enabled) SurfaceWhite else CaregiverEditFieldBackground,
             tonalElevation = 0.dp
         ) {
             Row(
