@@ -5,42 +5,33 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -50,7 +41,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.location.LocationServices
-import com.relaxmind.app.ui.themes.SOSCoral
+import com.relaxmind.app.ui.components.toast.LocalRelaxToast
+import com.relaxmind.app.ui.components.toast.RelaxToastType
+import com.relaxmind.app.ui.themes.*
+import kotlinx.coroutines.launch
 
 @Composable
 fun SOSPatientScreen(
@@ -69,6 +63,8 @@ fun SOSPatientScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     var showCancelDialog by remember { mutableStateOf(false) }
+    val relaxToast = LocalRelaxToast.current
+    val coroutineScope = rememberCoroutineScope()
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -78,7 +74,8 @@ fun SOSPatientScreen(
         if (fineLocation || coarseLocation) {
             viewModel.activateSOS()
         } else {
-            // Permission denied
+            // Permission denied, but we still activate SOS (location will just not be updated)
+            viewModel.activateSOS()
         }
     }
 
@@ -93,172 +90,384 @@ fun SOSPatientScreen(
         }
     }
 
-    Column(
+    // Main layout
+    Box(
         modifier = modifier
             .fillMaxSize()
-            .background(SOSCoral)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .systemBarsPadding()
     ) {
-        Spacer(modifier = Modifier.weight(1f))
+        // Background gradient and waves
+        SOSBackground()
 
-        RadarPulseAnimation()
-
-        Spacer(modifier = Modifier.height(48.dp))
-
-        Text(
-            text = "SOS ACTIVADO",
-            style = MaterialTheme.typography.headlineLarge.copy(
-                fontWeight = FontWeight.Bold,
-                fontSize = 28.sp
-            ),
-            color = Color.White,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = "Tu cuidador ha sido notificado",
-            style = MaterialTheme.typography.bodyLarge.copy(
-                fontSize = 16.sp
-            ),
-            color = Color.White.copy(alpha = 0.8f),
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        Button(
-            onClick = {
-                val phone = uiState.caregiverPhone
-                if (phone.isNotBlank()) {
-                    val intent = Intent(Intent.ACTION_DIAL).apply {
-                        data = Uri.parse("tel:$phone")
-                    }
-                    context.startActivity(intent)
-                } else {
-                    android.widget.Toast.makeText(context, "El cuidador no tiene un número registrado", android.widget.Toast.LENGTH_SHORT).show()
-                }
-            },
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.White,
-                contentColor = SOSCoral
-            )
+                .fillMaxSize()
+                .padding(horizontal = 24.dp, vertical = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            
+            Spacer(modifier = Modifier.weight(0.5f))
+
+            // Pulse indicator
+            SOSPulseIndicator(isSending = !uiState.isSOSActive)
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Main Status Text
+            SOSStatusMessage(
+                isSOSActive = uiState.isSOSActive,
+                caregiverName = uiState.caregiverName
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Call Button
+            CallCaregiverButton(
+                onClick = {
+                    val phone = uiState.caregiverPhone
+                    if (phone.isNotBlank()) {
+                        val intent = Intent(Intent.ACTION_DIAL).apply {
+                            data = Uri.parse("tel:$phone")
+                        }
+                        context.startActivity(intent)
+                    } else {
+                        coroutineScope.launch {
+                            relaxToast.showToast(
+                                type = RelaxToastType.Error,
+                                title = "Número no disponible",
+                                message = "Tu cuidador no tiene un número registrado"
+                            )
+                        }
+                    }
+                }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Cancel Button
+            CancelSOSButton(onClick = { showCancelDialog = true })
+            
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        // Dialogs
+        if (showCancelDialog) {
+            CancelSOSDialog(
+                onConfirm = {
+                    showCancelDialog = false
+                    viewModel.cancelSOS()
+                    onNavigateBack()
+                },
+                onDismiss = { showCancelDialog = false }
+            )
+        }
+
+        uiState.error?.let { errorMessage ->
+            AlertDialog(
+                onDismissRequest = {
+                    viewModel.clearError()
+                    onNavigateBack()
+                },
+                title = { 
+                    Text(
+                        text = "Aviso", 
+                        fontFamily = LexendFontFamily, 
+                        fontWeight = FontWeight.Bold 
+                    ) 
+                },
+                text = { 
+                    Text(
+                        text = errorMessage,
+                        fontFamily = LexendFontFamily
+                    ) 
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.clearError()
+                            onNavigateBack()
+                        }
+                    ) {
+                        Text("Entendido", fontFamily = LexendFontFamily, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun SOSBackground() {
+    val infiniteTransition = rememberInfiniteTransition(label = "BgPulse")
+    val alphaAnim by infiniteTransition.animateFloat(
+        initialValue = 0.05f,
+        targetValue = 0.15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "BgAlpha"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        SOSCoral,
+                        SOSOrange
+                    )
+                )
+            )
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val center = Offset(size.width / 2, size.height * 0.4f)
+            val maxRadius = size.width
+            
+            // Draw subtle concentric background rings
+            for (i in 1..4) {
+                drawCircle(
+                    color = Color.White.copy(alpha = alphaAnim / i),
+                    radius = (maxRadius / 4) * i,
+                    center = center,
+                    style = Stroke(width = 2.dp.toPx())
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SOSPulseIndicator(isSending: Boolean) {
+    val infiniteTransition = rememberInfiniteTransition(label = "Pulse")
+    
+    val ringScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "RingScale"
+    )
+    
+    val ringAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "RingAlpha"
+    )
+
+    // Inner icon pulse
+    val iconScale by infiniteTransition.animateFloat(
+        initialValue = 0.95f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "IconScale"
+    )
+
+    Box(
+        modifier = Modifier.size(200.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        // Expanding ring
+        Box(
+            modifier = Modifier
+                .size(140.dp)
+                .scale(ringScale)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = ringAlpha))
+        )
+
+        // Main circle with white border
+        Box(
+            modifier = Modifier
+                .size(140.dp)
+                .scale(iconScale)
+                .shadow(16.dp, CircleShape, ambientColor = SOSCoralDark)
+                .clip(CircleShape)
+                .background(SOSCoralDark.copy(alpha = 0.4f))
+                .border(4.dp, Color.White, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.NotificationsActive,
+                contentDescription = "Alerta SOS activa",
+                tint = Color.White,
+                modifier = Modifier.size(64.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SOSStatusMessage(isSOSActive: Boolean, caregiverName: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Main Title
+        Text(
+            text = "SOS\nACTIVADO",
+            fontFamily = LexendFontFamily,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 42.sp,
+            color = TextOnSOS,
+            textAlign = TextAlign.Center,
+            letterSpacing = 2.sp,
+            lineHeight = 48.sp
+        )
+
+        // Status description
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn() + slideInVertically(initialOffsetY = { 20 }),
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = if (isSOSActive) "Tu cuidador ha sido notificado" else "Enviando alerta...",
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 18.sp,
+                    color = TextOnSOS,
+                    textAlign = TextAlign.Center
+                )
+
+                if (isSOSActive && caregiverName.isNotBlank()) {
+                    Text(
+                        text = "$caregiverName está en camino",
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 16.sp,
+                        color = TextOnSOSMuted,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CallCaregiverButton(onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp)
+            .shadow(8.dp, RoundedCornerShape(32.dp), spotColor = SOSCoralDark),
+        shape = RoundedCornerShape(32.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = SOSWhite,
+            contentColor = SOSCoral
+        ),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp
+        )
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Phone,
+                contentDescription = "Llamar Cuidador",
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = "LLAMAR A CUIDADOR",
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        TextButton(
-            onClick = { showCancelDialog = true }
-        ) {
-            Text(
-                text = "Cancelar",
-                color = Color.White,
-                style = MaterialTheme.typography.labelLarge
+                fontFamily = LexendFontFamily,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 16.sp,
+                letterSpacing = 0.5.sp
             )
         }
     }
+}
 
-    if (showCancelDialog) {
-        AlertDialog(
-            onDismissRequest = { showCancelDialog = false },
-            title = {
-                Text(text = "Cancelar SOS")
-            },
-            text = {
-                Text(text = "¿Estás seguro de que deseas cancelar la alerta SOS?")
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showCancelDialog = false
-                        viewModel.cancelSOS()
-                        onNavigateBack()
-                    }
-                ) {
-                    Text("Confirmar")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showCancelDialog = false }
-                ) {
-                    Text("Volver")
-                }
-            }
-        )
-    }
-
-    uiState.error?.let { errorMessage ->
-        AlertDialog(
-            onDismissRequest = { 
-                viewModel.clearError()
-                onNavigateBack()
-            },
-            title = { Text(text = "Advertencia") },
-            text = { Text(text = errorMessage) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.clearError()
-                        onNavigateBack()
-                    }
-                ) {
-                    Text("Entendido")
-                }
-            }
+@Composable
+private fun CancelSOSButton(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(24.dp))
+            .clickable(
+                onClick = onClick,
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            )
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "Cancelar",
+            fontFamily = LexendFontFamily,
+            fontWeight = FontWeight.Medium,
+            fontSize = 16.sp,
+            color = TextOnSOS.copy(alpha = 0.9f)
         )
     }
 }
 
 @Composable
-fun RadarPulseAnimation() {
-    val infiniteTransition = rememberInfiniteTransition(label = "RadarPulse")
-    val scale by infiniteTransition.animateFloat(
-        initialValue = 0.8f,
-        targetValue = 2f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "PulseScale"
+private fun CancelSOSDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Cancelar SOS",
+                fontFamily = LexendFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = TextPrimary
+            )
+        },
+        text = {
+            Text(
+                text = "¿Estás seguro de que deseas cancelar la alerta de emergencia? Tu cuidador recibirá un aviso de que estás bien.",
+                fontFamily = LexendFontFamily,
+                fontSize = 15.sp,
+                color = TextSecondary
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = SOSCoral),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = "Sí, cancelar",
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = "No, mantener activa",
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    color = TextSecondary
+                )
+            }
+        },
+        containerColor = Color.White,
+        shape = RoundedCornerShape(20.dp)
     )
-    val alpha by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "PulseAlpha"
-    )
-
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier.size(160.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .scale(scale)
-                .alpha(alpha)
-                .background(Color.White.copy(alpha = 0.5f), shape = CircleShape)
-        )
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .background(Color.White, shape = CircleShape)
-        )
-    }
 }

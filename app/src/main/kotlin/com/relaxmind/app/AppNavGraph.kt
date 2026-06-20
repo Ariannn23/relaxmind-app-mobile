@@ -14,6 +14,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.relaxmind.app.features.auth.AvatarSetupScreen
 import com.relaxmind.app.features.auth.EmailVerificationScreen
+import com.relaxmind.app.features.auth.ForgotPasswordScreen
 import com.relaxmind.app.features.auth.LoginScreen
 import com.relaxmind.app.features.auth.NotificationPermissionScreen
 import com.relaxmind.app.features.auth.RegisterScreen
@@ -207,10 +208,10 @@ fun AppNavGraph(
                 }
             )
         }
-        composable(Screen.ForgotPassword.route) { 
+        composable(Screen.ForgotPassword.route) {
             ForgotPasswordScreen(
                 onNavigateBack = { navController.popBackStack() }
-            ) 
+            )
         }
 
         composable(Screen.PatientDashboard.route) {

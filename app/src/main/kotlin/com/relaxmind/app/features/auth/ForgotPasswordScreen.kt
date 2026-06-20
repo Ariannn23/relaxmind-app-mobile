@@ -12,9 +12,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.LockReset
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -31,6 +39,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
@@ -42,10 +52,12 @@ import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.ButtonVariant
 import com.relaxmind.app.ui.components.FullScreenLoadingOverlay
 import com.relaxmind.app.ui.components.RelaxButton
-import com.relaxmind.app.ui.components.auth.RelaxMindAuthTextField
+import com.relaxmind.app.ui.components.RelaxIcons
 import com.relaxmind.app.ui.components.RelaxTopBar
+import com.relaxmind.app.ui.components.auth.RelaxMindAuthTextField
 import com.relaxmind.app.ui.themes.PatientGreen
 import com.relaxmind.app.ui.themes.RelaxMindTheme
+import kotlinx.coroutines.delay
 
 @Composable
 fun ForgotPasswordScreen(
@@ -55,19 +67,26 @@ fun ForgotPasswordScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var email by remember { mutableStateOf("") }
-    var emailSent by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(uiState.success) {
-        if (uiState.success) {
-            viewModel.clearSuccess()
-            emailSent = true
-        }
+    LaunchedEffect(Unit) {
+        viewModel.clearSuccess()
+        viewModel.clearError()
+        focusRequester.requestFocus()
     }
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearError()
+        }
+    }
+
+    LaunchedEffect(uiState.success) {
+        if (uiState.success) {
+            delay(5000)
+            viewModel.clearSuccess()
+            onNavigateBack()
         }
     }
 
@@ -88,56 +107,83 @@ fun ForgotPasswordScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(modifier = Modifier.height(48.dp))
-                ForgotPasswordHero()
+                PasswordHero()
                 Spacer(modifier = Modifier.height(30.dp))
                 Text(
-                    text = "Recuperar Contraseña",
+                    text = "Recuperar contraseña",
                     style = MaterialTheme.typography.headlineLarge,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                
-                if (emailSent) {
-                    Text(
-                        text = "Te hemos enviado un enlace de recuperación a $email. Revisa tu bandeja de entrada o spam.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.62f),
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(34.dp))
-                    RelaxButton(
-                        text = "Volver al inicio",
-                        onClick = onNavigateBack,
-                        modifier = Modifier.fillMaxWidth(),
-                        variant = ButtonVariant.PRIMARY,
-                        role = AppRole.PATIENT
-                    )
-                } else {
-                    Text(
-                        text = "Ingresa tu correo electrónico registrado y te enviaremos un enlace para restablecer tu contraseña.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.62f),
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(34.dp))
-                    RelaxMindAuthTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        placeholder = "Correo electrónico",
-                        leadingIcon = Icons.Default.Email,
-                        keyboardType = KeyboardType.Email,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    RelaxButton(
-                        text = "Enviar enlace",
-                        onClick = { viewModel.sendPasswordResetEmail(email.trim()) },
-                        modifier = Modifier.fillMaxWidth(),
-                        variant = ButtonVariant.PRIMARY,
-                        role = AppRole.PATIENT,
-                        enabled = email.isNotBlank() && !uiState.isLoading
-                    )
+                Text(
+                    text = "Ingresa tu correo electrónico registrado y te enviaremos un enlace para restablecer tu contraseña.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.62f),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(34.dp))
+
+                RelaxMindAuthTextField(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester),
+                    value = email,
+                    onValueChange = { 
+                        email = it 
+                        viewModel.clearError()
+                        viewModel.clearSuccess()
+                    },
+                    placeholder = "Correo electrónico",
+                    leadingIcon = RelaxIcons.Email,
+                    keyboardType = KeyboardType.Email,
+                    isError = uiState.emailError != null,
+                    errorMessage = uiState.emailError,
+                    contentDescription = "Campo de correo para recuperar contraseña"
+                )
+
+                AnimatedVisibility(
+                    visible = uiState.success,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = PatientGreen.copy(alpha = 0.1f)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Info,
+                                contentDescription = "Info",
+                                tint = PatientGreen,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Revisa tu bandeja de entrada o de spam para encontrar el enlace de recuperación.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
                 }
+
+                Spacer(modifier = Modifier.weight(1f))
+                RelaxButton(
+                    text = "Enviar enlace",
+                    onClick = { viewModel.resetPassword(email.trim()) },
+                    modifier = Modifier.fillMaxWidth(),
+                    variant = ButtonVariant.PRIMARY,
+                    role = AppRole.PATIENT,
+                    enabled = !uiState.isLoading
+                )
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
@@ -147,7 +193,7 @@ fun ForgotPasswordScreen(
 }
 
 @Composable
-private fun ForgotPasswordHero() {
+private fun PasswordHero() {
     Box(modifier = Modifier.size(176.dp), contentAlignment = Alignment.Center) {
         Box(
             modifier = Modifier
@@ -163,7 +209,7 @@ private fun ForgotPasswordHero() {
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.LockReset,
+                imageVector = RelaxIcons.Email, // Using Email icon for sending reset link
                 contentDescription = null,
                 tint = Color.White,
                 modifier = Modifier.size(58.dp)

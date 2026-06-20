@@ -698,6 +698,23 @@ class FirestoreRepository(
         return documents.mapNotNull { it.toObject(clazz) }
     }
 
+    suspend fun checkEmailExists(email: String): Result<Boolean> = runCatching {
+        // First check patients collection
+        val patientSnapshot = patients.whereEqualTo("email", email).limit(1).get().await()
+        if (!patientSnapshot.isEmpty) {
+            return@runCatching true
+        }
+        
+        // If not found, check caregivers collection
+        val caregiverSnapshot = caregivers.whereEqualTo("email", email).limit(1).get().await()
+        if (!caregiverSnapshot.isEmpty) {
+            return@runCatching true
+        }
+        
+        // Not found in either collection
+        false
+    }
+
     private companion object {
         const val PATIENTS_COLLECTION = "patients"
         const val CAREGIVERS_COLLECTION = "caregivers"

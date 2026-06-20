@@ -37,6 +37,9 @@ import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.FullScreenLoadingScreen
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxToastHost
+import com.relaxmind.app.ui.components.getAvatarDrawableRes
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 import com.relaxmind.app.ui.components.rememberRelaxToastState
 import com.relaxmind.app.ui.themes.*
 
@@ -224,12 +227,22 @@ private fun DashboardHeader(name: String, avatarUrl: String) {
                 .clip(CircleShape)
                 .border(3.dp, CaregiverLavender, CircleShape)
         ) {
-            AsyncImage(
-                model = avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=M&background=4338A8&color=fff&size=144" },
-                contentDescription = "Avatar cuidadora",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
+            val isCustomAvatar = avatarUrl.startsWith("relaxmind://avatar/")
+            if (isCustomAvatar) {
+                Image(
+                    painter = painterResource(id = getAvatarDrawableRes(avatarUrl)),
+                    contentDescription = "Avatar cuidadora",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().background(Color(0xFFF3F4F6))
+                )
+            } else {
+                AsyncImage(
+                    model = avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=M&background=4338A8&color=fff&size=144" },
+                    contentDescription = "Avatar cuidadora",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
     }
 }
@@ -628,18 +641,33 @@ private fun PatientCard(
     ) {
         // Avatar with colored border + status dot
         Box(modifier = Modifier.size(72.dp)) {
-            AsyncImage(
-                model = patient.avatarUrl.ifBlank {
-                    "https://ui-avatars.com/api/?name=${patient.name.take(2)}&background=4338A8&color=fff&size=144"
-                },
-                contentDescription = "Avatar ${patient.name}",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(70.dp)
-                    .border(3.dp, borderColor, CircleShape)
-                    .padding(3.dp)
-                    .clip(CircleShape)
-            )
+            val isCustomAvatar = patient.avatarUrl.startsWith("relaxmind://avatar/")
+            if (isCustomAvatar) {
+                Image(
+                    painter = painterResource(id = getAvatarDrawableRes(patient.avatarUrl)),
+                    contentDescription = "Avatar ${patient.name}",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(70.dp)
+                        .border(3.dp, borderColor, CircleShape)
+                        .padding(3.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFF3F4F6))
+                )
+            } else {
+                AsyncImage(
+                    model = patient.avatarUrl.ifBlank {
+                        "https://ui-avatars.com/api/?name=${patient.name.take(2)}&background=4338A8&color=fff&size=144"
+                    },
+                    contentDescription = "Avatar ${patient.name}",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(70.dp)
+                        .border(3.dp, borderColor, CircleShape)
+                        .padding(3.dp)
+                        .clip(CircleShape)
+                )
+            }
             // Status indicator dot
             Box(
                 modifier = Modifier

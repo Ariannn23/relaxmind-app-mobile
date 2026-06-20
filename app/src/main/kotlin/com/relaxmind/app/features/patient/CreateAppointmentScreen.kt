@@ -36,8 +36,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.relaxmind.app.ui.components.FullScreenLoadingOverlay
+import com.relaxmind.app.ui.components.toast.LocalRelaxToast
+import com.relaxmind.app.ui.components.toast.RelaxToastType
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.*
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -64,6 +67,9 @@ fun CreateAppointmentScreen(
     var recurringDays by remember { mutableStateOf<List<Int>>(emptyList()) }
 
     var isTitleError by remember { mutableStateOf(false) }
+    
+    val relaxToast = LocalRelaxToast.current
+    val coroutineScope = rememberCoroutineScope()
 
     // DatePickerDialog launcher
     val datePickerDialog = remember {
@@ -535,7 +541,13 @@ fun CreateAppointmentScreen(
                                     recurringDays = recurringDays,
                                     context = context,
                                     onSuccess = {
-                                        Toast.makeText(context, "Evento creado correctamente", Toast.LENGTH_SHORT).show()
+                                        coroutineScope.launch {
+                                            relaxToast.showToast(
+                                                type = RelaxToastType.Success,
+                                                title = "¡Listo!",
+                                                message = "Evento creado correctamente"
+                                            )
+                                        }
                                         onNavigateBack()
                                     }
                                 )

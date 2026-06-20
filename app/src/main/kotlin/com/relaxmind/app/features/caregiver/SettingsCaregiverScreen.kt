@@ -56,6 +56,7 @@ import com.relaxmind.app.ui.components.FullScreenLoadingOverlay
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxIcons
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
+import com.relaxmind.app.ui.components.getAvatarDrawableRes
 import com.relaxmind.app.ui.themes.*
 
 private val CaregiverIndigo = Color(0xFF4338A8)
@@ -496,15 +497,29 @@ private fun CaregiverSettingsProfileCard(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            AsyncImage(
-                model = avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=C&background=4338A8&color=fff" },
-                contentDescription = "Perfil",
-                modifier = Modifier
-                    .size(72.dp)
-                    .clip(CircleShape)
-                    .border(2.dp, CaregiverLavender, CircleShape),
-                contentScale = ContentScale.Crop
-            )
+            val isCustomAvatar = avatarUrl.startsWith("relaxmind://avatar/")
+            if (isCustomAvatar) {
+                Image(
+                    painter = painterResource(id = getAvatarDrawableRes(avatarUrl)),
+                    contentDescription = "Perfil",
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(CircleShape)
+                        .border(2.dp, CaregiverLavender, CircleShape)
+                        .background(Color(0xFFF3F4F6)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                AsyncImage(
+                    model = avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=C&background=4338A8&color=fff" },
+                    contentDescription = "Perfil",
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(CircleShape)
+                        .border(2.dp, CaregiverLavender, CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
             Spacer(modifier = Modifier.width(20.dp))
             
             Column(modifier = Modifier.weight(1f)) {

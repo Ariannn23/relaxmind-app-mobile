@@ -25,6 +25,7 @@ import java.time.Instant
 data class AuthUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
+    val emailError: String? = null,
     val success: Boolean = false
 )
 
@@ -471,21 +472,27 @@ class AuthViewModel(
     fun resetPassword(email: String) {
         val emailError = ValidationUtils.validateEmail(email)
         if (emailError != null) {
-            _uiState.update { it.copy(error = emailError) }
+            _uiState.update { it.copy(emailError = emailError) }
             return
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null, success = false) }
+            _uiState.update { it.copy(isLoading = true, error = null, success = false, emailError = null) }
 
             val result = authService.resetPassword(email)
             _uiState.update {
                 if (result.isFailure) {
-                    it.copy(
-                        isLoading = false,
-                        error = result.exceptionOrNull()?.localizedMessage
-                            ?: "Error al enviar el correo de recuperación."
-                    )
+                    val exception = result.exceptionOrNull()
+                    val message = exception?.localizedMessage.orEmpty()
+                    
+                    val finalError = if (exception is com.google.firebase.auth.FirebaseAuthInvalidUserException || 
+                        "There is no user record" in message || "ERROR_USER_NOT_FOUND" in message) {
+                        "El correo no está registrado."
+                    } else {
+                        exception?.localizedMessage ?: "Error al enviar el correo de recuperación."
+                    }
+                    
+                    it.copy(isLoading = false, error = finalError)
                 } else {
                     it.copy(isLoading = false, success = true)
                 }
@@ -495,7 +502,7 @@ class AuthViewModel(
 
     /** Clears any active error from the UI state. */
     fun clearError() {
-        _uiState.update { it.copy(error = null) }
+        _uiState.update { it.copy(error = null, emailError = null) }
     }
 
     fun clearSuccess() {
