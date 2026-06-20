@@ -28,8 +28,8 @@ object ValidationUtils {
     }
 
     fun validateEmail(value: String): String? = when {
-        value.isBlank() -> "El correo electrónico es obligatorio."
-        !EMAIL_REGEX.matches(value) -> "Correo electrónico no válido."
+        value.isBlank() -> "El correo no puede estar vacío"
+        !android.util.Patterns.EMAIL_ADDRESS.matcher(value.trim()).matches() -> "Ingresa un correo electrónico válido"
         else -> null
     }
 
