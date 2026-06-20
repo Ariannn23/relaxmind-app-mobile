@@ -164,8 +164,8 @@ fun PatientDetailScreen(
                     .fillMaxSize()
                     .systemBarsPadding()
                     .imePadding()
-                    .padding(horizontal = 22.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp)
+                    .padding(horizontal = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item {
                     PatientDetailHeader(
@@ -430,7 +430,7 @@ private fun PatientProgressTab(
     var selectedMonth by remember { mutableStateOf(YearMonth.now()) }
     var selectedDay by remember { mutableIntStateOf(LocalDate.now().dayOfMonth) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         PatientMonthlyCalendarCard(
             month = selectedMonth,
             checkIns = checkIns,
@@ -459,7 +459,7 @@ private fun PatientMonthlyCalendarCard(
         }.toMap()
     }
 
-    SoftCard {
+    SoftCard(contentPadding = 16.dp) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -470,13 +470,13 @@ private fun PatientMonthlyCalendarCard(
                 text = monthTitle(month),
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Bold,
-                fontSize = 21.sp,
+                fontSize = 19.sp,
                 color = TextPrimary
             )
             MonthNavButton(label = nextMonthName(month), isPrevious = false, onClick = onNextMonth)
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
         val dayLabels: List<String> = listOf("Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom")
         Row(modifier = Modifier.fillMaxWidth()) {
@@ -484,21 +484,21 @@ private fun PatientMonthlyCalendarCard(
                 Text(
                     text = label,
                     fontFamily = LexendFontFamily,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 12.sp,
                     color = TextSecondary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f)
                 )
             }
         }
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         val firstDayOffset = month.atDay(1).dayOfWeek.value - 1
         val totalSlots = firstDayOffset + month.lengthOfMonth()
         val rows = (totalSlots + 6) / 7
 
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
             repeat(rows) { row: Int ->
                 Row(modifier = Modifier.fillMaxWidth()) {
                     repeat(7) { column: Int ->
@@ -522,7 +522,7 @@ private fun PatientMonthlyCalendarCard(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(18.dp))
         PatientScoreLegend()
     }
 }
@@ -535,7 +535,7 @@ private fun MonthNavButton(
 ) {
     Row(
         modifier = Modifier
-            .height(48.dp)
+            .height(40.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -549,15 +549,15 @@ private fun MonthNavButton(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Mes anterior",
                 tint = CaregiverPurple,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(19.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
         }
         Text(
             text = label,
             fontFamily = LexendFontFamily,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            fontSize = 15.sp,
             color = CaregiverPurple
         )
         if (!isPrevious) {
@@ -566,7 +566,7 @@ private fun MonthNavButton(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = "Mes siguiente",
                 tint = CaregiverPurple,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(21.dp)
             )
         }
     }
@@ -588,12 +588,12 @@ private fun PatientScoreDayCircle(
 
     Box(
         modifier = Modifier
-            .size(46.dp)
+            .size(38.dp)
             .scale(scale)
             .clip(CircleShape)
             .background(if (score == null) status.color.copy(alpha = 0.65f) else status.color)
             .border(
-                width = if (selected) 2.5.dp else 0.dp,
+                width = if (selected) 2.dp else 0.dp,
                 color = if (selected) CaregiverPurple else Color.Transparent,
                 shape = CircleShape
             )
@@ -608,8 +608,8 @@ private fun PatientScoreDayCircle(
         Text(
             text = day.toString(),
             fontFamily = LexendFontFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 13.sp,
             color = if (score == null) Color(0xFF8B90A0) else Color.White
         )
     }
@@ -619,13 +619,13 @@ private fun PatientScoreDayCircle(
 private fun PatientScoreLegend() {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(16.dp),
         color = Color.White,
         border = androidx.compose.foundation.BorderStroke(1.dp, BorderSoft)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             listOf(
                 PatientScoreStatus.GOOD,
@@ -635,21 +635,23 @@ private fun PatientScoreLegend() {
             ).forEach { status ->
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(modifier = Modifier.size(12.dp).background(status.color, CircleShape))
-                        Spacer(modifier = Modifier.width(7.dp))
+                        Box(modifier = Modifier.size(9.dp).background(status.color, CircleShape))
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = status.label.removePrefix("Muy "),
                             fontFamily = LexendFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            color = TextPrimary
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 10.sp,
+                            color = TextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
                     Text(
                         text = status.range,
                         fontFamily = LexendFontFamily,
-                        fontSize = 12.sp,
+                        fontSize = 10.sp,
                         color = TextSecondary
                     )
                 }
@@ -662,23 +664,23 @@ private fun PatientScoreLegend() {
 private fun PatientStreakCard(streakDays: Int) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(22.dp),
         color = Color(0xFFF6F4FF)
     ) {
         Row(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(18.dp)
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Box(
-                modifier = Modifier.size(58.dp).background(Color(0xFFFFE8EA), CircleShape),
+                modifier = Modifier.size(48.dp).background(Color(0xFFFFE8EA), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.LocalFireDepartment,
                     contentDescription = null,
                     tint = Color(0xFFFF7A1A),
-                    modifier = Modifier.size(34.dp)
+                    modifier = Modifier.size(28.dp)
                 )
             }
             Column {
@@ -687,22 +689,22 @@ private fun PatientStreakCard(streakDays: Int) {
                         text = "Racha actual: ",
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
+                        fontSize = 17.sp,
                         color = TextPrimary
                     )
                     Text(
                         text = "$streakDays días",
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
+                        fontSize = 17.sp,
                         color = CaregiverPurple
                     )
                 }
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Sigue así, cada día cuenta.",
                     fontFamily = LexendFontFamily,
-                    fontSize = 15.sp,
+                    fontSize = 13.sp,
                     color = TextSecondary
                 )
             }
@@ -756,46 +758,46 @@ private fun PatientHistoryItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 22.dp, vertical = 22.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Box(
-            modifier = Modifier.size(44.dp).background(LavenderPill, CircleShape),
+            modifier = Modifier.size(36.dp).background(LavenderPill, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.CalendarMonth,
                 contentDescription = null,
                 tint = CaregiverPurple,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(20.dp)
             )
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "${checkIn.relativeDateLabel()} · ${checkIn.timeLabel()}",
                 fontFamily = LexendFontFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
                 color = TextPrimary
             )
             AnimatedVisibility(visible = generatedAlert || checkIn.score < 25, enter = fadeIn(), exit = fadeOut()) {
                 Row(
-                    modifier = Modifier.padding(top = 10.dp),
+                    modifier = Modifier.padding(top = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Default.ReportProblem,
                         contentDescription = null,
                         tint = PatientScoreStatus.CRITICAL.color,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(15.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "Alerta enviada",
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 13.sp,
+                        fontSize = 11.sp,
                         color = PatientScoreStatus.CRITICAL.color
                     )
                 }
@@ -815,14 +817,14 @@ private fun PatientHistoryItem(
                 text = "Ver detalle",
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 14.sp,
+                fontSize = 12.sp,
                 color = CaregiverPurple
             )
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
                 tint = CaregiverPurple,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(18.dp)
             )
         }
     }
@@ -832,20 +834,20 @@ private fun PatientHistoryItem(
 private fun PatientScoreChip(score: Int) {
     val status = scoreStatus(score)
     Surface(
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         color = status.softColor
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(7.dp)
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
-            Box(modifier = Modifier.size(10.dp).background(status.color, CircleShape))
+            Box(modifier = Modifier.size(8.dp).background(status.color, CircleShape))
             Text(
                 text = "$score/100 ${status.label}",
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 14.sp,
+                fontSize = 12.sp,
                 color = status.color
             )
         }
