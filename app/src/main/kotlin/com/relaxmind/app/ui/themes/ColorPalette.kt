@@ -38,4 +38,10 @@ val DangerRed = Color(0xFFE8582A)
 // Caregiver true blue colors
 val CaregiverBlue = Color(0xFF2B6CB0)
 val SoftBlue = Color(0xFFEBF8FF)
-
+val CaregiverPurple = Color(0xFF4F2DE8)
+val LavenderPill = Color(0xFFEDE9FE)
+val AlertRed = Color(0xFFE8582A)
+val AlertRedSoft = Color(0xFFFFEEEE)
+val WarningOrangeSoft = Color(0xFFFFF4E5)
+val NeutralPurpleGray = Color(0xFF7A7895)
+val NeutralSoft = Color(0xFFF4F3FA)
