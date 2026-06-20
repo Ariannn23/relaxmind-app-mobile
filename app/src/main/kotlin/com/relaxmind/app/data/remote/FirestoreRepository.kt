@@ -461,20 +461,18 @@ class FirestoreRepository(
         val startLocalDate = LocalDate.of(year, month, 1)
         val daysInMonth = startLocalDate.lengthOfMonth()
 
-        val specific = firestore.collection(APPOINTMENTS_COLLECTION)
+        val patientAppointments = firestore.collection(APPOINTMENTS_COLLECTION)
             .whereEqualTo("patientId", patientId)
-            .whereGreaterThanOrEqualTo("date", "$yearMonth-01")
-            .whereLessThanOrEqualTo("date", "$yearMonth-31")
             .get()
             .await()
             .toObjectList(Appointment::class.java)
 
-        val recurring = firestore.collection(APPOINTMENTS_COLLECTION)
-            .whereEqualTo("patientId", patientId)
-            .whereEqualTo("recurring", true)
-            .get()
-            .await()
-            .toObjectList(Appointment::class.java)
+        val specific = patientAppointments.filter { appt ->
+            val apptDate = runCatching { LocalDate.parse(appt.date) }.getOrNull()
+            apptDate != null && apptDate.year == year && apptDate.monthValue == month
+        }
+
+        val recurring = patientAppointments.filter { it.recurring }
 
         val expandedList = mutableListOf<Appointment>()
         expandedList.addAll(specific)

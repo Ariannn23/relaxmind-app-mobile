@@ -2,6 +2,7 @@ package com.relaxmind.app.features.patient
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -145,7 +146,7 @@ fun CreateAppointmentScreen(
                             color = TextPrimary
                         )
                         Text(
-                            text = "Crea un nuevo evento en tu agenda 🌿",
+                            text = "Crea un nuevo evento en tu agenda",
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Normal,
                             fontSize = 12.sp,
@@ -533,7 +534,10 @@ fun CreateAppointmentScreen(
                                     recurring = isRecurring,
                                     recurringDays = recurringDays,
                                     context = context,
-                                    onNavigateBack
+                                    onSuccess = {
+                                        Toast.makeText(context, "Evento creado correctamente", Toast.LENGTH_SHORT).show()
+                                        onNavigateBack()
+                                    }
                                 )
                             }
                         },
