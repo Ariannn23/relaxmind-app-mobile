@@ -424,8 +424,11 @@ fun RelaxSwitch(
             .size(width = 44.dp, height = 24.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(trackColor)
-            .pointerInput(Unit) {
-                detectTapGestures { onCheckedChange(!checked) }
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                onCheckedChange(!checked)
             },
         contentAlignment = Alignment.CenterStart
     ) {

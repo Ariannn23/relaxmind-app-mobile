@@ -1,7 +1,11 @@
-﻿package com.relaxmind.app.features.caregiver
+package com.relaxmind.app.features.caregiver
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,25 +14,29 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.ui.unit.sp
-import com.relaxmind.app.ui.components.RelaxToastHost
-import com.relaxmind.app.ui.components.RelaxToastState
-import com.relaxmind.app.ui.components.rememberRelaxToastState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,25 +48,41 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.relaxmind.app.Screen
 import com.relaxmind.app.ui.components.AppRole
-import com.relaxmind.app.ui.components.LoadingIndicator
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxButton
-import com.relaxmind.app.ui.components.RelaxCard
-import com.relaxmind.app.ui.components.RelaxInputField
-import com.relaxmind.app.ui.components.RelaxTopBar
-import com.relaxmind.app.ui.themes.CaregiverIndigo
-import com.relaxmind.app.ui.themes.SOSCoral
-import com.relaxmind.app.ui.themes.LexendFontFamily
-import com.relaxmind.app.utils.WellnessScoreCalculator
+import com.relaxmind.app.ui.components.RelaxToastHost
+import com.relaxmind.app.ui.components.rememberRelaxToastState
+import com.relaxmind.app.ui.themes.*
+
+enum class WellbeingStatus { Good, Moderate, Low, Critical, NoData }
+
+fun getWellbeingStatus(score: Int?): WellbeingStatus {
+    return when {
+        score == null -> WellbeingStatus.NoData
+        score <= 20 -> WellbeingStatus.Critical
+        score <= 40 -> WellbeingStatus.Low
+        score <= 60 -> WellbeingStatus.Moderate
+        else -> WellbeingStatus.Good
+    }
+}
 
 @Composable
 fun PatientsListScreen(
@@ -72,6 +96,7 @@ fun PatientsListScreen(
     val error by viewModel.error.collectAsState()
     val toastState = rememberRelaxToastState()
     var query by remember { mutableStateOf("") }
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(Unit) {
         viewModel.observeCaregiverData()
@@ -90,17 +115,15 @@ fun PatientsListScreen(
             patients
         } else {
             patients.filter { summary ->
-                "${summary.patient.name} ${summary.patient.lastName}"
-                    .trim()
-                    .lowercase()
-                    .contains(normalizedQuery)
+                val fullName = "${summary.patient.name} ${summary.patient.lastName}".trim().lowercase()
+                val condition = summary.patient.condition.lowercase()
+                fullName.contains(normalizedQuery) || condition.contains(normalizedQuery)
             }
         }
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = { RelaxTopBar(title = "Mis Pacientes") },
+        containerColor = BackgroundWhite,
         bottomBar = {
             RelaxBottomNav(
                 selectedRoute = Screen.PatientsList.route,
@@ -113,62 +136,49 @@ fun PatientsListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.background)
+                .background(BackgroundWhite)
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                item {
-                    RelaxInputField(
-                        value = query,
-                        onValueChange = { query = it },
-                        label = "Buscar paciente",
-                        role = AppRole.CAREGIVER,
-                        leadingIcon = Icons.Default.Search
-                    )
-                }
-
-                if (patients.isEmpty()) {
-                    item { EmptyPatientsState(onScanQr = onScanQr) }
-                } else if (filteredPatients.isEmpty()) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                PatientsHeader(
+                    onMenuClick = { /* TODO: Open drawer */ },
+                    onSearchClick = { /* Focus search */ }
+                )
+                
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item { Spacer(modifier = Modifier.height(8.dp)) }
+                    
                     item {
-                        Text(
-                            text = "No encontramos pacientes con ese nombre.",
-                            fontFamily = LexendFontFamily,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 28.dp),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.62f),
-                            textAlign = TextAlign.Center
+                        PatientSearchBar(
+                            query = query,
+                            onQueryChange = { query = it },
+                            onSearch = { focusManager.clearFocus() }
                         )
                     }
-                } else {
-                    item {
-                        Text(
-                            text = "${filteredPatients.size} Pacientes vinculados",
-                            fontFamily = LexendFontFamily,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                            modifier = Modifier.padding(bottom = 4.dp, start = 4.dp)
-                        )
-                    }
-                    items(filteredPatients, key = { it.patient.id }) { summary ->
-                        PatientListCard(
-                            summary = summary,
-                            onClick = { onPatientClick(summary.patient.id) }
-                        )
-                    }
-                    item { Spacer(modifier = Modifier.height(82.dp)) }
-                }
-            }
 
-            if (isLoading && patients.isEmpty()) {
-                LoadingIndicator(modifier = Modifier.align(Alignment.Center))
+                    item { Spacer(modifier = Modifier.height(16.dp)) }
+
+                    if (isLoading && patients.isEmpty()) {
+                        item { PatientsLoadingSkeleton() }
+                    } else if (patients.isEmpty()) {
+                        item { EmptyPatientsState(onScanQr = onScanQr) }
+                    } else if (filteredPatients.isEmpty()) {
+                        item { NoPatientResultsState() }
+                    } else {
+                        items(filteredPatients, key = { it.patient.id }) { summary ->
+                            PatientCard(
+                                summary = summary,
+                                onClick = { onPatientClick(summary.patient.id) },
+                                onAlertClick = { onNavigate(Screen.AlertsHistory.route) }
+                            )
+                        }
+                        item { Spacer(modifier = Modifier.height(82.dp)) }
+                    }
+                }
             }
 
             RelaxToastHost(state = toastState)
@@ -177,193 +187,393 @@ fun PatientsListScreen(
 }
 
 @Composable
-private fun PatientListCard(
+fun PatientsHeader(
+    onMenuClick: () -> Unit,
+    onSearchClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .systemBarsPadding()
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        IconButton(onClick = onMenuClick) {
+            Icon(
+                imageVector = Icons.Default.Menu,
+                contentDescription = "Menú",
+                tint = CaregiverIndigo,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+
+        Text(
+            text = "Mis Pacientes",
+            fontFamily = LexendFontFamily,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 24.sp,
+            color = CaregiverIndigo
+        )
+
+        IconButton(onClick = onSearchClick) {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "Buscar",
+                tint = CaregiverIndigo,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun PatientSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onSearch: () -> Unit
+) {
+    val focusRequester = remember { FocusRequester() }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp)
+            .shadow(4.dp, RoundedCornerShape(32.dp), spotColor = SoftLavender)
+            .background(SoftLavender, RoundedCornerShape(32.dp))
+            .padding(horizontal = 20.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "Icono buscar",
+                tint = TextSecondary,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Box(modifier = Modifier.weight(1f)) {
+                if (query.isEmpty()) {
+                    Text(
+                        text = "Buscar paciente...",
+                        fontFamily = LexendFontFamily,
+                        color = TextSecondary.copy(alpha = 0.7f),
+                        fontSize = 16.sp
+                    )
+                }
+                BasicTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester),
+                    textStyle = TextStyle(
+                        fontFamily = LexendFontFamily,
+                        fontSize = 16.sp,
+                        color = TextPrimary
+                    ),
+                    singleLine = true,
+                    cursorBrush = SolidColor(CaregiverIndigo),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { onSearch() })
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PatientCard(
     summary: CaregiverPatientSummary,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onAlertClick: () -> Unit
 ) {
     val patient = summary.patient
     val score = summary.latestScore
-    
+    val status = getWellbeingStatus(score)
     val fullName = "${patient.name} ${patient.lastName}".trim().ifBlank { "Paciente" }
 
-    RelaxCard(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onClick,
-        elevation = 0.dp // To rely on new soft shadow internally or we can add a custom subtle shadow
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(16.dp, RoundedCornerShape(28.dp), spotColor = CaregiverIndigo.copy(alpha = 0.08f), ambientColor = CaregiverIndigo.copy(alpha = 0.04f))
+            .background(Color.White, RoundedCornerShape(28.dp))
+            .clickable(onClick = onClick)
+            .padding(16.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(contentAlignment = Alignment.BottomEnd) {
-                AsyncImage(
-                    model = patient.avatarUrl.ifBlank {
-                        "https://ui-avatars.com/api/?name=$fullName&background=4338A8&color=fff"
-                    },
-                    contentDescription = "Avatar de $fullName",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .border(2.dp, CaregiverIndigo.copy(alpha = 0.2f), CircleShape)
+            PatientAvatarWithStatus(
+                avatarUrl = patient.avatarUrl,
+                name = fullName,
+                status = status
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = fullName,
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = summary.lastCheckInDate ?: "Sin registro",
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 12.sp,
+                        color = TextSecondary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = patient.condition.ifBlank { "Sin condición registrada" },
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 14.sp,
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                if (summary.hasPendingAlert) {
-                    Box(
-                        modifier = Modifier
-                            .size(18.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.background)
-                            .padding(2.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(CircleShape)
-                                .background(SOSCoral)
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    WellbeingScoreChip(score = score, status = status)
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (summary.hasPendingAlert) {
+                            IconButton(
+                                onClick = onAlertClick,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Notifications,
+                                        contentDescription = "Alerta activa",
+                                        tint = AlertRed,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    // Red dot indicator
+                                    Box(
+                                        modifier = Modifier
+                                            .size(10.dp)
+                                            .   align(Alignment.TopEnd)
+                                            .offset(x = (-4).dp, y = 4.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.White)
+                                            .padding(2.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize().background(AlertRed, CircleShape)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Ver detalle",
+                            tint = CaregiverIndigo,
+                            modifier = Modifier.size(28.dp)
                         )
                     }
                 }
             }
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = fullName,
-                    fontFamily = LexendFontFamily,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (patient.condition.isNotBlank()) {
-                    Text(
-                        text = patient.condition,
-                        fontFamily = LexendFontFamily,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-                }
-                Text(
-                    text = "Últ. Check-in: ${summary.lastCheckInDate ?: "Sin registro"}",
-                    fontFamily = LexendFontFamily,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.Center
-            ) {
-                WellbeingChip(score = score)
-                Spacer(modifier = Modifier.height(12.dp))
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = "Ver detalles",
-                    tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
-                    modifier = Modifier.size(20.dp)
-                )
-            }
         }
     }
 }
 
 @Composable
-private fun WellbeingChip(score: Int?) {
-    val color = WellnessScoreCalculator.getScoreColor(score)
-    val text = if (score == null) {
-        "Sin puntaje"
-    } else {
-        "${WellnessScoreCalculator.getCategory(score)} $score/100"
+fun PatientAvatarWithStatus(
+    avatarUrl: String,
+    name: String,
+    status: WellbeingStatus
+) {
+    val borderColor = when (status) {
+        WellbeingStatus.Good -> GoodGreen
+        WellbeingStatus.Moderate -> ModerateYellow
+        WellbeingStatus.Low -> LowOrange
+        WellbeingStatus.Critical -> CriticalRed
+        WellbeingStatus.NoData -> BorderSoft
     }
 
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(color.copy(alpha = 0.12f))
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center
+            .size(88.dp)
+            .clip(CircleShape)
+            .border(3.dp, borderColor, CircleShape)
+            .background(SoftLavender)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Favorite,
-                contentDescription = null,
-                tint = if (score == null) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f) else color,
-                modifier = Modifier.size(12.dp)
-            )
-            Text(
-                text = text,
-                fontFamily = LexendFontFamily,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 11.sp,
-                color = if (score == null) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.58f) else color
-            )
-        }
+        AsyncImage(
+            model = avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=$name&background=F1EDFF&color=4338A8&size=200" },
+            contentDescription = "Avatar de $name",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize().clip(CircleShape)
+        )
     }
 }
 
 @Composable
-private fun EmptyPatientsState(onScanQr: () -> Unit) {
-    Column(
+fun WellbeingScoreChip(score: Int?, status: WellbeingStatus) {
+    val (bgColor, textColor) = when (status) {
+        WellbeingStatus.Good -> GoodGreenSoft to GoodGreen
+        WellbeingStatus.Moderate -> ModerateYellowSoft to ModerateYellow
+        WellbeingStatus.Low -> LowOrangeSoft to LowOrange
+        WellbeingStatus.Critical -> CriticalRedSoft to CriticalRed
+        WellbeingStatus.NoData -> BorderSoft to TextSecondary
+    }
+
+    val text = if (score != null) {
+        val category = when (status) {
+            WellbeingStatus.Good -> "Bueno"
+            WellbeingStatus.Moderate -> "Moderado"
+            WellbeingStatus.Low -> "Bajo"
+            WellbeingStatus.Critical -> "Crítico"
+            WellbeingStatus.NoData -> ""
+        }
+        "$category $score/100"
+    } else {
+        "Sin datos"
+    }
+
+    Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 42.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+            .background(bgColor, RoundedCornerShape(16.dp))
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(110.dp)
-                .clip(CircleShape)
-                .background(CaregiverIndigo.copy(alpha = 0.08f)),
-            contentAlignment = Alignment.Center
+                .size(8.dp)
+                .background(textColor, CircleShape)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = text,
+            fontFamily = LexendFontFamily,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 12.sp,
+            color = textColor
+        )
+    }
+}
+
+@Composable
+fun EmptyPatientsState(onScanQr: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 40.dp)
+            .shadow(16.dp, RoundedCornerShape(28.dp), spotColor = CaregiverIndigo.copy(alpha = 0.08f), ambientColor = CaregiverIndigo.copy(alpha = 0.04f))
+            .background(Color.White, RoundedCornerShape(28.dp))
+            .padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Box(
                 modifier = Modifier
                     .size(80.dp)
-                    .clip(CircleShape)
-                    .background(CaregiverIndigo.copy(alpha = 0.15f)),
+                    .background(SoftLavender, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.PersonAdd,
                     contentDescription = null,
                     tint = CaregiverIndigo,
-                    modifier = Modifier.size(38.dp)
+                    modifier = Modifier.size(36.dp)
                 )
             }
+            Text(
+                text = "Aún no tienes pacientes vinculados",
+                fontFamily = LexendFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = TextPrimary,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "Pide al paciente que genere un código QR o un código de 6 dígitos para vincularse contigo.",
+                fontFamily = LexendFontFamily,
+                fontSize = 14.sp,
+                color = TextSecondary,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            RelaxButton(
+                text = "Vincular paciente",
+                onClick = onScanQr,
+                role = AppRole.CAREGIVER
+            )
         }
+    }
+}
+
+@Composable
+fun NoPatientResultsState() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 60.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Text(
-            text = "Aún no tienes pacientes",
+            text = "No encontramos pacientes con ese nombre",
             fontFamily = LexendFontFamily,
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-            textAlign = TextAlign.Center,
-            fontWeight = FontWeight.SemiBold
-        )
-        Text(
-            text = "Escanea el código QR que genere un paciente desde su app para vincularlo a tu cuenta y comenzar a cuidarlo.",
-            fontFamily = LexendFontFamily,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 24.dp)
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 16.sp,
+            color = TextPrimary,
+            textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(8.dp))
-        RelaxButton(
-            text = "Vincular un paciente",
-            onClick = onScanQr,
-            role = AppRole.CAREGIVER
+        Text(
+            text = "Intenta buscar por nombre o condición.",
+            fontFamily = LexendFontFamily,
+            fontSize = 14.sp,
+            color = TextSecondary,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+fun PatientsLoadingSkeleton() {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(40.dp))
+        CircularProgressIndicator(color = CaregiverIndigo)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Cargando pacientes...",
+            fontFamily = LexendFontFamily,
+            color = CaregiverIndigo,
+            fontWeight = FontWeight.Medium
         )
     }
 }

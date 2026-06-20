@@ -45,3 +45,13 @@ val AlertRedSoft = Color(0xFFFFEEEE)
 val WarningOrangeSoft = Color(0xFFFFF4E5)
 val NeutralPurpleGray = Color(0xFF7A7895)
 val NeutralSoft = Color(0xFFF4F3FA)
+
+// Caregiver Wellbeing Status Colors
+val GoodGreen = Color(0xFF38C172)
+val GoodGreenSoft = Color(0xFFE8F8EF)
+val ModerateYellow = Color(0xFFFACC15)
+val ModerateYellowSoft = Color(0xFFFFF8D8)
+val LowOrange = Color(0xFFFF7A1A)
+val LowOrangeSoft = Color(0xFFFFEBD8)
+val CriticalRed = Color(0xFFFF4D5A)
+val CriticalRedSoft = Color(0xFFFFE8EA)
