@@ -34,11 +34,9 @@ class LumiChatViewModel(
     val uiState: StateFlow<LumiChatUiState> = _uiState.asStateFlow()
 
     private var messagesListener: ListenerRegistration? = null
-    var isReadOnly: Boolean = false
 
     fun initSession(providedSessionId: String? = null) {
         if (providedSessionId != null) {
-            isReadOnly = true
             loadSessionMessages(providedSessionId)
         } else {
             viewModelScope.launch {
@@ -76,16 +74,25 @@ class LumiChatViewModel(
     }
 
     fun sendMessage(text: String) {
-        if (text.isBlank() || isReadOnly) return
+        if (text.isBlank()) return
         val sessionId = _uiState.value.sessionId ?: return
 
         viewModelScope.launch {
+            val isFirstMessage = _uiState.value.messages.isEmpty()
             val userMsg = LumiMessage(role = "user", text = text)
             // Capture history before adding the new message to avoid race conditions with the Firestore listener
             val historyToSend = _uiState.value.messages.toList() + userMsg
 
             // Firebase local cache allows immediate optimistic update via snapshot
             firestoreRepository.addLumiMessage(sessionId, userMsg)
+
+            if (isFirstMessage) {
+                val newTitle = text.split(" ").take(5).joinToString(" ") + if (text.split(" ").size > 5) "..." else ""
+                firestoreRepository.updateLumiSessionTitle(sessionId, newTitle)
+            } else {
+                // Also update title if it's an old chat and the title is still default
+                firestoreRepository.updateLumiSessionTitleIfDefault(sessionId, text)
+            }
 
             _uiState.value = _uiState.value.copy(isTyping = true, currentStreamingText = "", error = null)
 
@@ -112,7 +119,6 @@ class LumiChatViewModel(
     }
 
     fun startNewChat() {
-        if (isReadOnly) return
         val currentSessionId = _uiState.value.sessionId ?: return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, messages = emptyList())

@@ -1621,19 +1621,14 @@ private fun LumiCard(
                 modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Box(
+                Image(
+                    painter = painterResource(id = com.relaxmind.app.R.drawable.lumi),
+                    contentDescription = "Lumi",
                     modifier = Modifier
-                        .size(42.dp)
-                        .background(SoftLavender, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AutoAwesome,
-                        contentDescription = "Lumi AI",
-                        tint = CaregiverIndigo,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                        .size(54.dp)
+                        .clip(CircleShape)
+                        .shadow(elevation = 4.dp, shape = CircleShape)
+                )
                 Column {
                     Text(
                         text = "Hablar con Lumi",

@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,7 +46,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.filled.AddComment
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.AlertDialog
@@ -84,6 +85,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.res.painterResource
 import com.relaxmind.app.data.model.LumiMessage
 import com.relaxmind.app.ui.components.FullScreenLoadingScreen
 import com.relaxmind.app.ui.themes.BorderSoft
@@ -129,7 +131,7 @@ fun LumiChatScreen(
 
     fun sendCurrentMessage() {
         val message = inputText.trim()
-        if (message.isNotBlank() && !uiState.isTyping && !viewModel.isReadOnly) {
+        if (message.isNotBlank() && !uiState.isTyping) {
             viewModel.sendMessage(message)
             inputText = ""
             focusManager.clearFocus()
@@ -157,18 +159,16 @@ fun LumiChatScreen(
                     onNavigateBack = onNavigateBack,
                     onNewChatClick = { showNewChatDialog = true },
                     onHistoryClick = onNavigateToHistory,
-                    showNewChat = !viewModel.isReadOnly
+                    showNewChat = true
                 )
             },
             bottomBar = {
-                if (!viewModel.isReadOnly) {
-                    LumiChatInputBar(
-                        text = inputText,
-                        onTextChange = { inputText = it },
-                        onSendClick = ::sendCurrentMessage,
-                        enabled = !uiState.isTyping
-                    )
-                }
+                LumiChatInputBar(
+                    text = inputText,
+                    onTextChange = { inputText = it },
+                    onSendClick = ::sendCurrentMessage,
+                    enabled = !uiState.isTyping
+                )
             }
         ) { innerPadding ->
             Box(
@@ -246,8 +246,8 @@ private fun LumiChatHeader(
     showNewChat: Boolean
 ) {
     Surface(
-        color = Color.White.copy(alpha = 0.72f),
-        shadowElevation = 4.dp
+        color = Color.Transparent,
+        shadowElevation = 0.dp
     ) {
         Row(
             modifier = Modifier
@@ -294,34 +294,27 @@ private fun LumiChatHeader(
             }
 
             if (showNewChat) {
-                IconButton(
-                    onClick = onNewChatClick,
-                    modifier = Modifier
-                        .size(52.dp)
-                        .semantics { contentDescription = "Nuevo chat" }
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Edit,
-                        contentDescription = null,
-                        tint = LumiBlueDark,
-                        modifier = Modifier.size(29.dp)
-                    )
-                }
+                CircularIconButton(
+                    icon = Icons.Default.AddComment,
+                    contentDescription = "Nuevo chat",
+                    backgroundColor = Color.White,
+                    iconColor = LumiBlueDark,
+                    shadow = true,
+                    modifier = Modifier.size(46.dp),
+                    onClick = onNewChatClick
+                )
+                Spacer(modifier = Modifier.width(10.dp))
             }
 
-            IconButton(
-                onClick = onHistoryClick,
-                modifier = Modifier
-                    .size(52.dp)
-                    .semantics { contentDescription = "Historial de chats" }
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.History,
-                    contentDescription = null,
-                    tint = LumiBlueDark,
-                    modifier = Modifier.size(31.dp)
-                )
-            }
+            CircularIconButton(
+                icon = Icons.Outlined.History,
+                contentDescription = "Historial de chats",
+                backgroundColor = Color.White,
+                iconColor = LumiBlueDark,
+                shadow = true,
+                modifier = Modifier.size(46.dp),
+                onClick = onHistoryClick
+            )
         }
     }
 }
@@ -331,51 +324,19 @@ fun LumiAvatar(
     modifier: Modifier = Modifier,
     size: Int = 56
 ) {
-    val orbSize = size.dp
-    Box(
+    Image(
+        painter = painterResource(id = com.relaxmind.app.R.drawable.lumi),
+        contentDescription = "Avatar de Lumi",
         modifier = modifier
-            .size(orbSize)
+            .size(size.dp)
             .shadow(
-                elevation = 10.dp,
+                elevation = 6.dp,
                 shape = CircleShape,
-                ambientColor = LumiBlue.copy(alpha = 0.20f),
-                spotColor = LumiBlue.copy(alpha = 0.26f)
+                ambientColor = LumiBlueDark.copy(alpha = 0.12f),
+                spotColor = LumiBlueDark.copy(alpha = 0.16f)
             )
             .clip(CircleShape)
-            .background(
-                Brush.radialGradient(
-                    colors = listOf(Color.White, Color(0xFFBDE8FF), LumiBlue.copy(alpha = 0.62f)),
-                    center = Offset(0.35f, 0.24f),
-                    radius = size * 0.92f
-                )
-            )
-            .semantics { contentDescription = "Avatar de Lumi" },
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(modifier = Modifier.size((size * 0.58f).dp)) {
-            val eyeRadius = this.size.minDimension * 0.075f
-            val mouthStroke = this.size.minDimension * 0.055f
-            drawCircle(
-                color = LumiBlueDark,
-                radius = eyeRadius,
-                center = Offset(this.size.width * 0.34f, this.size.height * 0.40f)
-            )
-            drawCircle(
-                color = LumiBlueDark,
-                radius = eyeRadius,
-                center = Offset(this.size.width * 0.66f, this.size.height * 0.40f)
-            )
-            drawArc(
-                color = LumiBlueDark,
-                startAngle = 20f,
-                sweepAngle = 140f,
-                useCenter = false,
-                topLeft = Offset(this.size.width * 0.32f, this.size.height * 0.42f),
-                size = androidx.compose.ui.geometry.Size(this.size.width * 0.36f, this.size.height * 0.30f),
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = mouthStroke)
-            )
-        }
-    }
+    )
 }
 
 @Composable
@@ -624,8 +585,8 @@ private fun LumiChatInputBar(
     )
 
     Surface(
-        color = Color.White.copy(alpha = 0.72f),
-        shadowElevation = 8.dp
+        color = Color.Transparent,
+        shadowElevation = 0.dp
     ) {
         Row(
             modifier = Modifier
@@ -636,26 +597,18 @@ private fun LumiChatInputBar(
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            CircularIconButton(
-                icon = Icons.Outlined.Add,
-                contentDescription = "Agregar adjunto",
-                backgroundColor = LumiBlueSoft,
-                iconColor = LumiBlueDark,
-                onClick = {}
-            )
-
             Surface(
                 modifier = Modifier
                     .weight(1f)
                     .height(58.dp)
                     .shadow(
-                        elevation = 7.dp,
-                        shape = RoundedCornerShape(999.dp),
-                        ambientColor = Color(0xFF7EB9DF).copy(alpha = 0.10f),
-                        spotColor = Color(0xFF7EB9DF).copy(alpha = 0.10f)
+                        elevation = 8.dp,
+                        shape = RoundedCornerShape(24.dp),
+                        ambientColor = LumiBlueDark.copy(alpha = 0.12f),
+                        spotColor = LumiBlueDark.copy(alpha = 0.16f)
                     ),
-                shape = RoundedCornerShape(999.dp),
-                color = SurfaceWhite
+                shape = RoundedCornerShape(24.dp),
+                color = Color.White
             ) {
                 TextField(
                     value = text,
@@ -679,9 +632,9 @@ private fun LumiChatInputBar(
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(onSend = { onSendClick() }),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = SurfaceWhite,
-                        unfocusedContainerColor = SurfaceWhite,
-                        disabledContainerColor = SurfaceWhite,
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent,

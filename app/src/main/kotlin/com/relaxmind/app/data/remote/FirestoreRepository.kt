@@ -599,6 +599,25 @@ class FirestoreRepository(
             ).await()
     }
 
+    suspend fun updateLumiSessionTitle(sessionId: String, title: String): Result<Unit> = runCatching {
+        firestore.collection(LUMI_SESSIONS_COLLECTION)
+            .document(sessionId)
+            .update("title", title)
+            .await()
+    }
+
+    suspend fun updateLumiSessionTitleIfDefault(sessionId: String, text: String): Result<Unit> = runCatching {
+        val doc = firestore.collection(LUMI_SESSIONS_COLLECTION).document(sessionId).get().await()
+        val currentTitle = doc.getString("title") ?: "Chat con Lumi"
+        if (currentTitle == "Chat con Lumi") {
+            val newTitle = text.split(" ").take(5).joinToString(" ") + if (text.split(" ").size > 5) "..." else ""
+            firestore.collection(LUMI_SESSIONS_COLLECTION)
+                .document(sessionId)
+                .update("title", newTitle)
+                .await()
+        }
+    }
+
     private fun <T> com.google.firebase.firestore.QuerySnapshot.toObjectList(clazz: Class<T>): List<T> {
         return documents.mapNotNull { it.toObject(clazz) }
     }
