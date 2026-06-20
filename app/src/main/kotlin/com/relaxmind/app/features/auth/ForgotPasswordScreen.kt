@@ -12,6 +12,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -73,12 +84,8 @@ fun ForgotPasswordScreen(
 
     LaunchedEffect(uiState.success) {
         if (uiState.success) {
+            delay(5000)
             viewModel.clearSuccess()
-            snackbarHostState.showSnackbar(
-                message = "Revisa tu bandeja de entrada o carpeta de spam para encontrar el enlace de recuperación.",
-                duration = androidx.compose.material3.SnackbarDuration.Long
-            )
-            delay(3500)
             onNavigateBack()
         }
     }
@@ -124,6 +131,7 @@ fun ForgotPasswordScreen(
                     onValueChange = { 
                         email = it 
                         viewModel.clearError()
+                        viewModel.clearSuccess()
                     },
                     placeholder = "Correo electrónico",
                     leadingIcon = RelaxIcons.Email,
@@ -132,6 +140,40 @@ fun ForgotPasswordScreen(
                     errorMessage = uiState.emailError,
                     contentDescription = "Campo de correo para recuperar contraseña"
                 )
+
+                AnimatedVisibility(
+                    visible = uiState.success,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = PatientGreen.copy(alpha = 0.1f)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Info,
+                                contentDescription = "Info",
+                                tint = PatientGreen,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Revisa tu bandeja de entrada o de spam para encontrar el enlace de recuperación.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.weight(1f))
                 RelaxButton(
