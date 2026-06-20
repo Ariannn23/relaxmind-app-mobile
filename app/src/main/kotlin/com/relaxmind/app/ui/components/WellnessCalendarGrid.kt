@@ -1,7 +1,6 @@
 package com.relaxmind.app.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,7 +56,6 @@ fun WellnessCalendarGrid(
     val firstDayOfWeek = remember(year, month) { firstDayOfMonth.dayOfWeek.value } // 1 = Monday, ..., 7 = Sunday
     val emptyCellsBefore = firstDayOfWeek - 1
 
-    val today = remember { LocalDate.now() }
     var selectedDayInfo by remember { mutableStateOf<Pair<Int, Int>?>(null) } // day to score
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -99,8 +97,6 @@ fun WellnessCalendarGrid(
                 } else {
                     val dayNumber = index - emptyCellsBefore + 1
                     val score = checkIns[dayNumber]
-                    val isCellToday = today.year == year && today.monthValue == month && today.dayOfMonth == dayNumber
-
                     val cellColor = WellnessScoreCalculator.getScoreColor(score)
 
                     Box(
@@ -108,11 +104,6 @@ fun WellnessCalendarGrid(
                             .size(36.dp)
                             .clip(CircleShape)
                             .background(cellColor)
-                            .then(
-                                if (isCellToday) {
-                                    Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
-                                } else Modifier
-                            )
                             .clickable(enabled = score != null) {
                                 score?.let { selectedDayInfo = Pair(dayNumber, it) }
                             },
@@ -121,8 +112,8 @@ fun WellnessCalendarGrid(
                         Text(
                             text = dayNumber.toString(),
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = if (isCellToday) FontWeight.Bold else FontWeight.Normal,
-                                color = if (score != null && cellColor != ScoreYellow && cellColor != ScoreGray && cellColor != ScoreGreenLight) Color.White else Color.Black
+                                fontWeight = if (score != null) FontWeight.Bold else FontWeight.Normal,
+                                color = if (score != null && cellColor != ScoreYellow && cellColor != ScoreGray && cellColor != ScoreGreenLight) Color.White else MaterialTheme.colorScheme.onSurface
                             ),
                             fontSize = 13.sp
                         )
