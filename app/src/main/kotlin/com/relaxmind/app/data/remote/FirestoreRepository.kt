@@ -2,6 +2,7 @@ package com.relaxmind.app.data.remote
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
 import com.relaxmind.app.data.model.Appointment
 import com.relaxmind.app.data.model.BindingCode
 import com.relaxmind.app.data.model.Caregiver
@@ -204,6 +205,7 @@ class FirestoreRepository(
     ): ListenerRegistration {
         return firestore.collection(ALERTS_COLLECTION)
             .whereEqualTo("caregiverId", caregiverId)
+            .orderBy("createdAt", Query.Direction.DESCENDING)
             .limit(limit)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {

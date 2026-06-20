@@ -1,4 +1,19 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "alerts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "caregiverId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }

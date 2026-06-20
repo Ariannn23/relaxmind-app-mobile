@@ -85,6 +85,8 @@ import com.relaxmind.app.ui.themes.TextPrimary
 import com.relaxmind.app.ui.themes.TextSecondary
 import com.relaxmind.app.ui.themes.WarningOrange
 import com.relaxmind.app.ui.themes.WarningOrangeSoft
+import java.util.Calendar
+import java.util.Date
 
 private enum class AlertFilter(val label: String) {
     ALL("Todos"),
@@ -97,6 +99,13 @@ private enum class AlertType {
     SOS,
     LOW_CHECKIN,
     NO_CHECKIN
+}
+
+private enum class AlertDateRange(val label: String) {
+    LAST_10("Últimas 10"),
+    TODAY("Hoy"),
+    LAST_7_DAYS("7 días"),
+    LAST_30_DAYS("30 días")
 }
 
 @Composable
@@ -113,6 +122,7 @@ fun AlertsHistoryScreen(
     val toastState = rememberRelaxToastState()
     var selectedFilter by remember { mutableStateOf(AlertFilter.ALL) }
     var selectedPatientId by remember { mutableStateOf<String?>(null) }
+    var selectedDateRange by remember { mutableStateOf(AlertDateRange.LAST_10) }
     var alertToResolve by remember { mutableStateOf<CaregiverAlert?>(null) }
     var patientMenuExpanded by remember { mutableStateOf(false) }
 
@@ -140,10 +150,11 @@ fun AlertsHistoryScreen(
         ?.ifBlank { "Paciente" }
         ?: "Todos"
 
-    val filteredAlerts = remember(alerts, selectedFilter, selectedPatientId) {
+    val filteredAlerts = remember(alerts, selectedFilter, selectedPatientId, selectedDateRange) {
         alerts
             .asSequence()
             .filter { selectedPatientId == null || it.patientId == selectedPatientId }
+            .filter { selectedDateRange == AlertDateRange.LAST_10 || it.isWithinDateRange(selectedDateRange) }
             .filter { alert ->
                 when (selectedFilter) {
                     AlertFilter.ALL -> true
@@ -207,6 +218,12 @@ fun AlertsHistoryScreen(
                         }
                     )
                 }
+                item {
+                    AlertDateRangeChips(
+                        selectedRange = selectedDateRange,
+                        onRangeChange = { selectedDateRange = it }
+                    )
+                }
 
                 when {
                     isLoading && alerts.isEmpty() -> {
@@ -239,8 +256,8 @@ fun AlertsHistoryScreen(
                             ) {
                                 AlertItemCard(
                                     alert = alert,
-                                    onClick = {
-                                        if (alert.alertType() == AlertType.SOS) {
+                                    onOpenSosClick = {
+                                        if (alert.alertType() == AlertType.SOS && alert.id.isNotBlank()) {
                                             onNavigate(Screen.SOSAlert.createRoute(alert.id))
                                         }
                                     },
@@ -459,6 +476,53 @@ private fun PatientFilterDropdown(
 }
 
 @Composable
+private fun AlertDateRangeChips(
+    selectedRange: AlertDateRange,
+    onRangeChange: (AlertDateRange) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+            text = "Rango de fechas",
+            fontFamily = LexendFontFamily,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 13.sp,
+            color = TextSecondary,
+            modifier = Modifier.padding(start = 4.dp)
+        )
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(AlertDateRange.entries) { range ->
+                val selected = selectedRange == range
+                Surface(
+                    modifier = Modifier
+                        .height(40.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { onRangeChange(range) }
+                        ),
+                    shape = RoundedCornerShape(50),
+                    color = if (selected) LavenderPill else Color.White,
+                    border = BorderStroke(1.dp, if (selected) CaregiverIndigo else BorderSoft)
+                ) {
+                    Box(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = range.label,
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                            color = if (selected) CaregiverIndigo else TextPrimary
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun DropdownLabel(text: String) {
     Text(
         text = text,
@@ -471,7 +535,7 @@ private fun DropdownLabel(text: String) {
 @Composable
 private fun AlertItemCard(
     alert: CaregiverAlert,
-    onClick: () -> Unit,
+    onOpenSosClick: () -> Unit,
     onResolveClick: () -> Unit
 ) {
     val scale by animateFloatAsState(targetValue = 1f, label = "alert-card-scale")
@@ -485,11 +549,6 @@ private fun AlertItemCard(
                 shape = RoundedCornerShape(26.dp),
                 ambientColor = Color.Black.copy(alpha = 0.06f),
                 spotColor = Color.Black.copy(alpha = 0.06f)
-            )
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
             ),
         shape = RoundedCornerShape(26.dp),
         color = Color.White
@@ -551,6 +610,21 @@ private fun AlertItemCard(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                             onClick = onResolveClick
+                        )
+                    )
+                }
+                if (alert.alertType() == AlertType.SOS && alert.id.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Ver detalle SOS",
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        color = CaregiverIndigo,
+                        modifier = Modifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onOpenSosClick
                         )
                     )
                 }
@@ -805,4 +879,28 @@ private fun CaregiverAlert.displayTitle(): String {
             .replace("Check-in bajo", "Bienestar bajo", ignoreCase = true)
         AlertType.NO_CHECKIN -> "Sin check-in"
     }
+}
+
+private fun CaregiverAlert.isWithinDateRange(range: AlertDateRange): Boolean {
+    val createdDate = createdAt ?: return false
+    if (range == AlertDateRange.LAST_10) return true
+
+    val now = Calendar.getInstance()
+    val created = Calendar.getInstance().apply { time = createdDate }
+
+    return when (range) {
+        AlertDateRange.TODAY ->
+            now.get(Calendar.YEAR) == created.get(Calendar.YEAR) &&
+                now.get(Calendar.DAY_OF_YEAR) == created.get(Calendar.DAY_OF_YEAR)
+        AlertDateRange.LAST_7_DAYS -> createdDate.isAfterDaysAgo(7)
+        AlertDateRange.LAST_30_DAYS -> createdDate.isAfterDaysAgo(30)
+        AlertDateRange.LAST_10 -> true
+    }
+}
+
+private fun Date.isAfterDaysAgo(days: Int): Boolean {
+    val cutoff = Calendar.getInstance().apply {
+        add(Calendar.DAY_OF_YEAR, -days)
+    }.time
+    return !before(cutoff)
 }
