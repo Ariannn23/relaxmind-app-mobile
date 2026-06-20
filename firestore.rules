@@ -119,6 +119,16 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /lumiSessions/{sessionId} {
+      allow create, update: if signedIn() && request.resource.data.patientId == request.auth.uid;
+      allow read: if signedIn() && (resource.data.patientId == request.auth.uid || isPatientCaregiver(resource.data.patientId));
+      allow delete: if signedIn() && request.resource.data.patientId == request.auth.uid;
+      
+      match /messages/{messageId} {
+        allow read, write: if signedIn();
+      }
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

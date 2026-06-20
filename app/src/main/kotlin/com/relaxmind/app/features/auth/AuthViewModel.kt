@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.time.Instant
 
 // ---------------------------------------------------------------------------
@@ -82,7 +83,8 @@ class AuthViewModel(
         email: String,
         password: String,
         confirmPassword: String,
-        role: String
+        role: String,
+        phone: String
     ) {
         // Field validation
         val validationError =
@@ -92,6 +94,7 @@ class AuthViewModel(
                 ?: ValidationUtils.validateEmail(email)
                 ?: ValidationUtils.validatePassword(password)
                 ?: ValidationUtils.validateConfirmPassword(password, confirmPassword)
+                ?: ValidationUtils.validatePhone(phone)
                 ?: ValidationUtils.validateRole(role)
 
         if (validationError != null) {
@@ -129,6 +132,7 @@ class AuthViewModel(
                         lastName = lastName,
                         birthDate = birthDate,
                         email = email,
+                        phone = phone,
                         createdAt = createdAt
                     )
                 )
@@ -139,6 +143,7 @@ class AuthViewModel(
                         lastName = lastName,
                         birthDate = birthDate,
                         email = email,
+                        phone = phone,
                         createdAt = createdAt
                     )
                 )
@@ -158,6 +163,66 @@ class AuthViewModel(
 
             // 3. Send verification e-mail (non-blocking; ignore failure to keep UX smooth)
             authService.sendVerificationEmail()
+
+            _userRole.value = role
+            _uiState.update { it.copy(isLoading = false, success = true) }
+        }
+    }
+
+    /**
+     * Finishes the registration of a new Google user by saving their chosen role.
+     */
+    fun finishGoogleRegistration(role: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null, success = false) }
+
+            val firebaseUser = authService.getCurrentUser()
+            if (firebaseUser == null) {
+                _uiState.update { it.copy(isLoading = false, error = "Usuario no autenticado.") }
+                return@launch
+            }
+
+            val userId = firebaseUser.uid
+            val nameParts = firebaseUser.displayName?.split(" ") ?: listOf("Usuario")
+            val name = nameParts.firstOrNull() ?: "Usuario"
+            val lastName = if (nameParts.size > 1) nameParts.drop(1).joinToString(" ") else ""
+            val email = firebaseUser.email ?: ""
+            val createdAt = Instant.now().toString()
+
+            val firestoreResult = when (role) {
+                "patient" -> firestoreRepository.createPatient(
+                    Patient(
+                        id = userId,
+                        name = name,
+                        lastName = lastName,
+                        birthDate = "",
+                        email = email,
+                        createdAt = createdAt
+                    )
+                )
+                "caregiver" -> firestoreRepository.createCaregiver(
+                    Caregiver(
+                        id = userId,
+                        name = name,
+                        lastName = lastName,
+                        birthDate = "",
+                        email = email,
+                        createdAt = createdAt
+                    )
+                )
+                else -> Result.failure(IllegalArgumentException("Rol desconocido: $role"))
+            }
+
+            if (firestoreResult.isFailure) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = firestoreResult.exceptionOrNull()?.localizedMessage
+                            ?: "Error al guardar el perfil."
+                    )
+                }
+                return@launch
+            }
 
             _userRole.value = role
             _uiState.update { it.copy(isLoading = false, success = true) }
@@ -209,75 +274,87 @@ class AuthViewModel(
         }
     }
 
-    // ── OTP / Verification ─────────────────────────────────────────────────
-
     /**
-     * Simulates sending a 6-digit OTP. In production this would be replaced
-     * by a real SMS/OTP backend call; Firebase itself uses email deep-links.
-     *
-     * The function generates a random code, starts the 120-second countdown,
-     * and (in debug builds) logs the code so it can be tested manually.
+     * Signs the user in using Google credentials.
+     * If the user doesn't have a role yet (new account), success is true but userRole is null.
      */
-    fun sendVerificationCode() {
-        pendingOtp = (100_000..999_999).random().toString()
-        Log.d("RelaxMindOtp", "Verification OTP: $pendingOtp")
-        _resendCount.value = 0
-        startTimer()
-
+    fun loginWithGoogle(idToken: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            _uiState.update { it.copy(isLoading = true, error = null, success = false) }
 
-            // Reuse Firebase email verification as the real delivery mechanism.
-            val result = authService.sendVerificationEmail()
-
-            _uiState.update {
-                if (result.isFailure) {
+            val loginResult = authService.loginWithGoogleCredential(idToken)
+            if (loginResult.isFailure) {
+                _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = result.exceptionOrNull()?.localizedMessage
-                            ?: "Error al enviar el código."
+                        error = loginResult.exceptionOrNull()?.localizedMessage
+                            ?: "Error al iniciar sesión con Google."
                     )
-                } else {
-                    it.copy(isLoading = false)
+                }
+                return@launch
+            }
+
+            val userId = loginResult.getOrNull()!!.uid
+            val roleResult = firestoreRepository.getRoleById(userId)
+
+            // If it's a new Google user, roleResult will fail/be null, which is expected
+            _userRole.value = roleResult.getOrNull()
+            _uiState.update { it.copy(isLoading = false, success = true) }
+        }
+    }
+
+    // ── OTP / Verification ─────────────────────────────────────────────────
+
+    fun sendVerificationLink() {
+        viewModelScope.launch {
+            val result = authService.sendVerificationEmail()
+            if (result.isFailure) {
+                _uiState.update {
+                    it.copy(
+                        error = result.exceptionOrNull()?.localizedMessage
+                            ?: "Error al enviar enlace de verificación."
+                    )
                 }
             }
         }
     }
 
-    /** Validates the 6-digit OTP entered by the user. */
-    fun verifyCode(code: String) {
-        val codeError = ValidationUtils.validateOtpCode(code)
-        if (codeError != null) {
-            _uiState.update { it.copy(error = codeError) }
-            return
+    /**
+     * Checks if the user's email is verified.
+     */
+    fun checkEmailVerified() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            val user = authService.getCurrentUser()
+            if (user == null) {
+                _uiState.update { it.copy(isLoading = false, error = "No hay usuario en sesión.") }
+                return@launch
+            }
+            
+            try {
+                user.reload().await()
+                if (user.isEmailVerified) {
+                    val role = resolveCurrentRole(user.uid).getOrNull()
+                    if (role == "caregiver") {
+                        firestoreRepository.updateCaregiver(user.uid, mapOf("emailVerified" to true))
+                    } else {
+                        firestoreRepository.updatePatient(user.uid, mapOf("emailVerified" to true))
+                    }
+                    
+                    _uiState.update { it.copy(isLoading = false, success = true) }
+                } else {
+                    _uiState.update { it.copy(isLoading = false, error = "Aún no has verificado tu correo. Revisa tu bandeja de entrada.") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = "Error al verificar el correo.") }
+            }
         }
-
-        if (code != pendingOtp) {
-            _uiState.update { it.copy(error = "El código ingresado no es correcto.") }
-            return
-        }
-
-        // Code is valid
-        timerJob?.cancel()
-        _timerSeconds.value = 0
-        _uiState.update { it.copy(success = true, error = null) }
     }
 
     /**
-     * Resends the verification code up to [RESEND_MAX] times.
-     * Resets the countdown on each successful resend.
+     * Resends the verification link.
      */
-    fun resendCode() {
-        if (_resendCount.value >= RESEND_MAX) {
-            _uiState.update {
-                it.copy(error = "Has alcanzado el límite máximo de reenvíos ($RESEND_MAX).")
-            }
-            return
-        }
-
-        _resendCount.update { it + 1 }
-        pendingOtp = (100_000..999_999).random().toString()
-        Log.d("RelaxMindOtp", "Verification OTP: $pendingOtp")
+    fun resendVerificationLink() {
         startTimer()
 
         viewModelScope.launch {
@@ -288,10 +365,36 @@ class AuthViewModel(
                     it.copy(
                         isLoading = false,
                         error = result.exceptionOrNull()?.localizedMessage
-                            ?: "Error al reenviar el código."
+                            ?: "Error al reenviar el enlace."
                     )
                 } else {
-                    it.copy(isLoading = false)
+                    it.copy(isLoading = false, success = true)
+                }
+            }
+        }
+    }
+
+    /**
+     * Sends a password reset email.
+     */
+    fun sendPasswordResetEmail(email: String) {
+        if (email.isBlank()) {
+            _uiState.update { it.copy(error = "Ingresa un correo electrónico.") }
+            return
+        }
+        
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            val result = authService.resetPassword(email)
+            _uiState.update {
+                if (result.isFailure) {
+                    it.copy(
+                        isLoading = false,
+                        error = result.exceptionOrNull()?.localizedMessage
+                            ?: "Error al enviar el correo de recuperación."
+                    )
+                } else {
+                    it.copy(isLoading = false, success = true)
                 }
             }
         }

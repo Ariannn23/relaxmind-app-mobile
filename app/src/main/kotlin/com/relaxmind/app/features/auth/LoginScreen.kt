@@ -17,11 +17,18 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
+import com.relaxmind.app.ui.components.RelaxToastHost
+import com.relaxmind.app.ui.components.RelaxToastState
+import com.relaxmind.app.ui.components.rememberRelaxToastState
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +53,7 @@ import com.relaxmind.app.ui.themes.PatientGreen
 import com.relaxmind.app.ui.themes.TextPrimary
 import com.relaxmind.app.ui.themes.TextSecondary
 import com.relaxmind.app.utils.ValidationUtils
+import com.relaxmind.app.utils.GoogleAuthHelper
 
 @Composable
 fun LoginScreen(
@@ -59,13 +67,16 @@ fun LoginScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val userRole by viewModel.userRole.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val toastState = rememberRelaxToastState()
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var keepSession by remember { mutableStateOf(false) }
     var displayError by remember { mutableStateOf<String?>(null) }
+    var showRoleDialog by remember { mutableStateOf(false) }
 
     val emailError = when {
         email.isEmpty() -> null
@@ -77,7 +88,13 @@ fun LoginScreen(
         if (uiState.success) {
             when (userRole) {
                 "caregiver" -> onNavigateToCaregiverDashboard()
-                else -> onNavigateToPatientDashboard()
+                "patient" -> onNavigateToPatientDashboard()
+                null -> {
+                    // This happens when a new user signs in with Google
+                    // We must ask them to pick a role.
+                    showRoleDialog = true
+                }
+                else -> {}
             }
         }
     }
@@ -85,7 +102,7 @@ fun LoginScreen(
     LaunchedEffect(uiState.error) {
         uiState.error?.let { msg ->
             displayError = msg
-            snackbarHostState.showSnackbar(msg)
+            toastState.showError(msg)
             viewModel.clearError()
         }
     }
@@ -96,8 +113,7 @@ fun LoginScreen(
 
     LoginTheme {
         Scaffold(
-            containerColor = BackgroundWhite,
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+            containerColor = BackgroundWhite
         ) { innerPadding ->
             Box(
                 modifier = Modifier
@@ -152,6 +168,16 @@ fun LoginScreen(
                                 isFormValid = isFormValid,
                                 isLoading = uiState.isLoading,
                                 onLogin = { viewModel.login(email, password) },
+                                onGoogleLogin = {
+                                    scope.launch {
+                                        val result = GoogleAuthHelper.getGoogleIdToken(context)
+                                        result.onSuccess { token ->
+                                            viewModel.loginWithGoogle(token)
+                                        }.onFailure { error ->
+                                            displayError = error.message
+                                        }
+                                    }
+                                },
                                 onForgotPassword = onNavigateToForgotPassword,
                                 onCreateAccount = onNavigateToRegister
                             )
@@ -167,6 +193,32 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(32.dp))
                 }
+                RelaxToastHost(state = toastState)
+            }
+
+            if (showRoleDialog) {
+                AlertDialog(
+                    onDismissRequest = { /* Must select */ },
+                    title = { Text("Configuración de Cuenta", color = TextPrimary) },
+                    text = { Text("Hemos creado tu cuenta con Google. ¿Deseas usar la aplicación como Paciente o como Cuidador?", color = TextSecondary) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showRoleDialog = false
+                            viewModel.finishGoogleRegistration("patient")
+                        }) {
+                            Text("Soy Paciente", color = PatientGreen)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = {
+                            showRoleDialog = false
+                            viewModel.finishGoogleRegistration("caregiver")
+                        }) {
+                            Text("Soy Cuidador", color = PatientGreen)
+                        }
+                    },
+                    containerColor = BackgroundWhite
+                )
             }
         }
     }

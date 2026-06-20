@@ -251,6 +251,38 @@ class PatientViewModel(
         updatePatientField("biometricEnabled", enabled) { it.copy(biometricEnabled = enabled) }
     }
 
+    fun updateProfile(
+        name: String,
+        lastName: String,
+        birthDate: String,
+        sex: String,
+        phone: String,
+        condition: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val userId = authService.getCurrentUser()?.uid ?: run {
+            onError("No hay sesión activa.")
+            return
+        }
+        viewModelScope.launch {
+            _isLoading.value = true
+            val fields = mapOf(
+                "name" to name,
+                "lastName" to lastName,
+                "birthDate" to birthDate,
+                "sex" to sex,
+                "phone" to phone,
+                "condition" to condition
+            )
+            _patient.update { it?.copy(name = name, lastName = lastName, birthDate = birthDate, sex = sex, phone = phone, condition = condition) }
+            val result = firestoreRepository.updatePatient(userId, fields)
+            _isLoading.value = false
+            if (result.isSuccess) onSuccess()
+            else onError(result.exceptionOrNull()?.localizedMessage ?: "Error al guardar el perfil.")
+        }
+    }
+
     fun unlinkCaregiver(passwordConfirm: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         val userId = authService.getCurrentUser()?.uid ?: return
         viewModelScope.launch {

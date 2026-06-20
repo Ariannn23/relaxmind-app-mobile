@@ -21,8 +21,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
+import com.relaxmind.app.ui.components.RelaxToastHost
+import com.relaxmind.app.ui.components.RelaxToastState
+import com.relaxmind.app.ui.components.rememberRelaxToastState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -70,16 +71,11 @@ fun EmailVerificationScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val timerSeconds by viewModel.timerSeconds.collectAsState()
-    val resendCount by viewModel.resendCount.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-    val digits = remember { mutableStateListOf("", "", "", "", "", "") }
-    val focusRequesters = remember { List(6) { FocusRequester() } }
-    val focusStates = remember { mutableStateListOf(false, false, false, false, false, false) }
+    val toastState = rememberRelaxToastState()
 
     LaunchedEffect(Unit) {
         viewModel.clearSuccess()
-        if (autoSendCode) viewModel.sendVerificationCode()
-        focusRequesters.first().requestFocus()
+        if (autoSendCode) viewModel.sendVerificationLink()
     }
 
     LaunchedEffect(uiState.success) {
@@ -91,16 +87,13 @@ fun EmailVerificationScreen(
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
-            digits.indices.forEach { index -> digits[index] = "" }
-            focusRequesters.first().requestFocus()
-            snackbarHostState.showSnackbar("Código incorrecto. Intenta de nuevo.")
+            toastState.showError(it)
             viewModel.clearError()
         }
     }
 
     Scaffold(
-        topBar = { RelaxTopBar(title = "", onBackClick = onNavigateBack) },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        topBar = { RelaxTopBar(title = "", onBackClick = onNavigateBack) }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -124,71 +117,37 @@ fun EmailVerificationScreen(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Ingresa el código de 6 dígitos enviado a $email",
+                    text = "Te hemos enviado un enlace de confirmación a $email. Haz clic en él para verificar tu cuenta.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.62f),
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(34.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    digits.forEachIndexed { index, digit ->
-                        OtpBox(
-                            value = digit,
-                            focused = focusStates[index],
-                            requester = focusRequesters[index],
-                            onFocusChanged = { focusStates[index] = it },
-                            onValueChange = { newValue ->
-                                val nextDigit = newValue.filter(Char::isDigit).takeLast(1)
-                                if (nextDigit.isNotEmpty()) {
-                                    digits[index] = nextDigit
-                                    if (index < digits.lastIndex) focusRequesters[index + 1].requestFocus()
-                                } else {
-                                    digits[index] = ""
-                                }
-                            },
-                            onBackspace = {
-                                if (digits[index].isBlank() && index > 0) {
-                                    digits[index - 1] = ""
-                                    focusRequesters[index - 1].requestFocus()
-                                }
-                            }
-                        )
-                    }
-                }
                 Spacer(modifier = Modifier.height(34.dp))
-                TimerText(timerSeconds = timerSeconds)
-                Spacer(modifier = Modifier.height(18.dp))
-                val resendLimitReached = resendCount >= 5
-                val resendEnabled = timerSeconds == 0 && !resendLimitReached && !uiState.isLoading
+                val resendEnabled = timerSeconds == 0 && !uiState.isLoading
                 TextButton(
                     enabled = resendEnabled,
-                    onClick = { viewModel.resendCode() }
+                    onClick = { viewModel.resendVerificationLink() }
                 ) {
                     Text(
-                        text = if (resendLimitReached) {
-                            "Límite de reenvíos alcanzado."
-                        } else {
-                            "Reenviar código (${max(0, 5 - resendCount)}/5 intentos restantes)"
-                        },
+                        text = "Reenviar enlace de verificación",
                         style = MaterialTheme.typography.labelLarge
                     )
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 RelaxButton(
-                    text = "Verificar",
-                    onClick = { viewModel.verifyCode(digits.joinToString("")) },
+                    text = "Ya hice clic en el enlace",
+                    onClick = { viewModel.checkEmailVerified() },
                     modifier = Modifier.fillMaxWidth(),
                     variant = ButtonVariant.PRIMARY,
                     role = AppRole.PATIENT,
-                    enabled = digits.all { it.isNotBlank() } && !uiState.isLoading
+                    enabled = !uiState.isLoading
                 )
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
             if (uiState.isLoading) FullScreenLoadingOverlay()
+            RelaxToastHost(state = toastState)
         }
     }
 }
@@ -219,47 +178,7 @@ private fun EmailHero() {
     }
 }
 
-@Composable
-private fun OtpBox(
-    value: String,
-    focused: Boolean,
-    requester: FocusRequester,
-    onFocusChanged: (Boolean) -> Unit,
-    onValueChange: (String) -> Unit,
-    onBackspace: () -> Unit
-) {
-    val borderColor = if (focused || value.isNotBlank()) PatientGreen else Color(0xFFCBD5E0)
-    BasicTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = Modifier
-            .size(52.dp)
-            .focusRequester(requester)
-            .onFocusChanged { onFocusChanged(it.isFocused) }
-            .onPreviewKeyEvent {
-                if (it.key == Key.Backspace) {
-                    onBackspace()
-                    false
-                } else {
-                    false
-                }
-            }
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border(BorderStroke(1.5.dp, borderColor), RoundedCornerShape(12.dp)),
-        textStyle = MaterialTheme.typography.headlineMedium.copy(
-            color = MaterialTheme.colorScheme.onBackground,
-            textAlign = TextAlign.Center
-        ),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-        singleLine = true,
-        decorationBox = { innerTextField ->
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                innerTextField()
-            }
-        }
-    )
-}
+// Removed OtpBox
 
 @Composable
 private fun TimerText(timerSeconds: Int) {

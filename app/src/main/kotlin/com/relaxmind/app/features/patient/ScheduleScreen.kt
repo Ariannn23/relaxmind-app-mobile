@@ -1,21 +1,10 @@
 package com.relaxmind.app.features.patient
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -27,34 +16,22 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.material.icons.filled.LocalHospital
+import androidx.compose.material.icons.filled.Medication
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -62,19 +39,29 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.relaxmind.app.R
 import com.relaxmind.app.Screen
 import com.relaxmind.app.data.model.Appointment
 import com.relaxmind.app.data.model.DiaryEntry
 import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.RelaxBottomNav
-import com.relaxmind.app.ui.components.RelaxCard
-import com.relaxmind.app.ui.components.RelaxTopBar
-import com.relaxmind.app.ui.themes.PatientGreen
+import com.relaxmind.app.ui.components.auth.SoftGradientBackground
+import com.relaxmind.app.ui.themes.*
 import java.time.LocalDate
 import java.time.format.TextStyle
+import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+// Event colors
+private val MedicalGreen = Color(0xFF0F6E56)
+private val MedicationBlue = Color(0xFF1E88E5)
+private val ReminderOrange = Color(0xFFFF9800)
+private val DiaryPurple = Color(0xFF8B5CF6)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,105 +73,132 @@ fun ScheduleScreen(
     val monthlyAppointments by viewModel.monthlyAppointments.collectAsState()
     val monthlyDiaryEntries by viewModel.monthlyDiaryEntries.collectAsState()
 
-    var selectedTabIndex by remember { mutableStateOf(0) } // 0 = Semana, 1 = Mes
+    var selectedTabIndex by remember { mutableStateOf(0) } // 0 = Semana, 1 = Calendario
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var calendarYearMonth by remember { mutableStateOf(LocalDate.now()) }
 
-    // Bottom sheet state for Month View
+    // Bottom sheet state for Month Views
     var showBottomSheet by remember { mutableStateOf(false) }
     var bottomSheetDate by remember { mutableStateOf(LocalDate.now()) }
     val bottomSheetState = rememberModalBottomSheetState()
 
     LaunchedEffect(selectedDate) {
         viewModel.loadAppointmentsForDate(selectedDate.toString())
+        if (selectedDate.year != calendarYearMonth.year || selectedDate.monthValue != calendarYearMonth.monthValue) {
+            calendarYearMonth = selectedDate.withDayOfMonth(1)
+        }
     }
 
     LaunchedEffect(calendarYearMonth) {
         viewModel.loadMonthlyEvents(calendarYearMonth.year, calendarYearMonth.monthValue)
     }
 
-    val tabs = listOf("Semana", "Mes")
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, selectedDate, calendarYearMonth) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.loadAppointmentsForDate(selectedDate.toString())
+                viewModel.loadMonthlyEvents(calendarYearMonth.year, calendarYearMonth.monthValue)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val tabs = listOf("Semana", "Calendario")
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            RelaxTopBar(title = "Agenda")
-        },
+        containerColor = Color.Transparent,
         bottomBar = {
             RelaxBottomNav(
                 selectedRoute = "patient/schedule",
                 onNavigate = onNavigate,
                 role = AppRole.PATIENT
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { onNavigate(Screen.CreateAppointment.route) },
-                containerColor = PatientGreen,
-                contentColor = Color.White,
-                shape = CircleShape
-            ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Nuevo evento")
-            }
         }
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(Color(0xFFF7FAFC))
         ) {
-            TabRow(
-                selectedTabIndex = selectedTabIndex,
-                containerColor = Color.White,
-                contentColor = PatientGreen,
-                indicator = { tabPositions ->
-                    TabRowDefaults.SecondaryIndicator(
-                        Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
-                        color = PatientGreen
-                    )
-                }
+            SoftGradientBackground(animateBlobs = true)
+
+            Column(
+                modifier = Modifier.fillMaxSize()
             ) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTabIndex == index,
-                        onClick = { selectedTabIndex = index },
-                        text = {
+                // Header area with "+" button
+                ScheduleHeader(
+                    selectedTabIndex = selectedTabIndex,
+                    onAddClick = { onNavigate(Screen.CreateAppointment.route) }
+                )
+
+                // Custom Pill-shaped Tab Selector (Soft UI)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 8.dp)
+                        .background(Color(0xFFE6E8EF).copy(alpha = 0.5f), RoundedCornerShape(18.dp))
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    tabs.forEachIndexed { index, title ->
+                        val isSelected = selectedTabIndex == index
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(if (isSelected) Color.White else Color.Transparent)
+                                .clickable { selectedTabIndex = index },
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
                                 text = title,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal
+                                fontFamily = LexendFontFamily,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 13.sp,
+                                color = if (isSelected) PatientGreen else TextSecondary
                             )
                         }
-                    )
-                }
-            }
-
-            if (selectedTabIndex == 0) {
-                // VISTA SEMANAL
-                val selectedDateDiaryEntry = monthlyDiaryEntries.find { it.date == selectedDate.toString() }
-                WeeklyView(
-                    selectedDate = selectedDate,
-                    appointments = selectedDateAppointments,
-                    diaryEntry = selectedDateDiaryEntry,
-                    onDateSelected = { selectedDate = it },
-                    onAppointmentClick = { onNavigate(Screen.AppointmentDetail.createRoute(it.id)) }
-                )
-            } else {
-                // VISTA MENSUAL
-                MonthlyView(
-                    currentMonth = calendarYearMonth,
-                    appointments = monthlyAppointments,
-                    diaryEntries = monthlyDiaryEntries,
-                    onMonthChange = { calendarYearMonth = it },
-                    onDayClick = { day ->
-                        bottomSheetDate = calendarYearMonth.withDayOfMonth(day)
-                        showBottomSheet = true
                     }
-                )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Content switching
+                when (selectedTabIndex) {
+                    0 -> {
+                        // WEEKLY VIEW
+                        val selectedDateDiaryEntry = monthlyDiaryEntries.find { it.date == selectedDate.toString() }
+                        WeeklyView(
+                            selectedDate = selectedDate,
+                            appointments = selectedDateAppointments,
+                            monthlyAppointments = monthlyAppointments,
+                            diaryEntry = selectedDateDiaryEntry,
+                            monthlyDiaryEntries = monthlyDiaryEntries,
+                            onDateSelected = { selectedDate = it },
+                            onAppointmentClick = { onNavigate(Screen.AppointmentDetail.createRoute(it.id)) }
+                        )
+                    }
+                    1 -> {
+                        // MONTHLY VIEW WITH DIARY COLLAGE
+                        MonthlyViewCollage(
+                            currentMonth = calendarYearMonth,
+                            appointments = monthlyAppointments,
+                            diaryEntries = monthlyDiaryEntries,
+                            onMonthChange = { calendarYearMonth = it },
+                            onDayClick = { day ->
+                                bottomSheetDate = calendarYearMonth.withDayOfMonth(day)
+                                showBottomSheet = true
+                            }
+                        )
+                    }
+                }
             }
         }
 
+        // Bottom Sheet showing events & diary entry for selected day in month views
         if (showBottomSheet) {
             val dateStr = bottomSheetDate.toString()
             val dayAppointments = monthlyAppointments.filter { it.date == dateStr }.sortedBy { it.time }
@@ -193,7 +207,8 @@ fun ScheduleScreen(
             ModalBottomSheet(
                 onDismissRequest = { showBottomSheet = false },
                 sheetState = bottomSheetState,
-                containerColor = Color.White
+                containerColor = Color.White,
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -203,12 +218,14 @@ fun ScheduleScreen(
                 ) {
                     val dayName = bottomSheetDate.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("es")).replaceFirstChar { it.uppercase() }
                     val dateFormatted = "${dayName}, ${bottomSheetDate.dayOfMonth} de ${bottomSheetDate.month.getDisplayName(TextStyle.FULL, Locale("es"))}"
-                    
+
                     Text(
                         text = dateFormatted,
-                        style = MaterialTheme.typography.titleLarge,
+                        fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        fontSize = 20.sp,
+                        color = TextPrimary,
+                        modifier = Modifier.padding(vertical = 8.dp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -229,8 +246,9 @@ fun ScheduleScreen(
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = "Sin eventos ni entradas de diario",
-                                    color = Color.Gray,
-                                    style = MaterialTheme.typography.bodyMedium
+                                    fontFamily = LexendFontFamily,
+                                    color = TextSecondary,
+                                    fontSize = 14.sp
                                 )
                             }
                         }
@@ -238,10 +256,11 @@ fun ScheduleScreen(
                         if (dayAppointments.isNotEmpty()) {
                             Text(
                                 text = "Eventos del día",
-                                style = MaterialTheme.typography.titleMedium,
+                                fontFamily = LexendFontFamily,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.DarkGray,
-                                modifier = Modifier.padding(bottom = 8.dp)
+                                fontSize = 16.sp,
+                                color = TextPrimary,
+                                modifier = Modifier.padding(bottom = 12.dp)
                             )
                             Column(
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -264,10 +283,11 @@ fun ScheduleScreen(
                             }
                             Text(
                                 text = "Mi registro de bienestar",
-                                style = MaterialTheme.typography.titleMedium,
+                                fontFamily = LexendFontFamily,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.DarkGray,
-                                modifier = Modifier.padding(bottom = 8.dp)
+                                fontSize = 16.sp,
+                                color = TextPrimary,
+                                modifier = Modifier.padding(bottom = 12.dp)
                             )
                             DiaryEntryCard(diaryEntry = dayDiary)
                         }
@@ -280,162 +300,238 @@ fun ScheduleScreen(
 }
 
 @Composable
+private fun ScheduleHeader(
+    selectedTabIndex: Int,
+    onAddClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Agenda",
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 32.sp,
+                    color = TextPrimary
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = when (selectedTabIndex) {
+                        0 -> "Tu semana, organizada y en calma"
+                        else -> "Tus eventos, hábitos y momentos importantes"
+                    },
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 13.sp,
+                    color = TextSecondary
+                )
+            }
+            
+            // Circular Add Button (FAB styled, Soft UI green gradient)
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .shadow(
+                        elevation = 8.dp,
+                        shape = CircleShape,
+                        ambientColor = PatientGreen.copy(alpha = 0.35f),
+                        spotColor = PatientGreen.copy(alpha = 0.35f)
+                    )
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(PatientGreenLight, PatientGreen)
+                        ),
+                        shape = CircleShape
+                    )
+                    .clickable(onClick = onAddClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Nuevo evento",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun WeeklyView(
     selectedDate: LocalDate,
     appointments: List<Appointment>,
+    monthlyAppointments: List<Appointment>,
     diaryEntry: DiaryEntry?,
+    monthlyDiaryEntries: List<DiaryEntry>,
     onDateSelected: (LocalDate) -> Unit,
     onAppointmentClick: (Appointment) -> Unit
 ) {
     val today = LocalDate.now()
     val monday = selectedDate.with(java.time.DayOfWeek.MONDAY)
     val weekDays = remember(monday) { (0..6).map { monday.plusDays(it.toLong()) } }
+    val eventDates = remember(monthlyAppointments) {
+        monthlyAppointments.mapNotNull { appointment ->
+            runCatching { LocalDate.parse(appointment.date) }.getOrNull()
+        }.toSet()
+    }
+    val diaryDates = remember(monthlyDiaryEntries) {
+        monthlyDiaryEntries.mapNotNull { entry ->
+            runCatching { LocalDate.parse(entry.date) }.getOrNull()
+        }.toSet()
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // Week days selector row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+        // Week days selector card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(
+                    elevation = 6.dp,
+                    shape = RoundedCornerShape(26.dp),
+                    ambientColor = Color(0xFF8A88A6).copy(alpha = 0.15f),
+                    spotColor = Color(0xFF8A88A6).copy(alpha = 0.15f)
+                ),
+            shape = RoundedCornerShape(26.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
-            val weekdaysLabels = listOf("L", "M", "X", "J", "V", "S", "D")
-            weekDays.forEachIndexed { index, date ->
-                val isSelected = date == selectedDate
-                val isToday = date == today
-
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = weekdaysLabels[index],
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                        color = Color.Gray,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(
-                                when {
-                                    isSelected -> PatientGreen
-                                    else -> Color.Transparent
-                                }
-                            )
-                            .border(
-                                width = if (isToday && !isSelected) 1.dp else 0.dp,
-                                color = if (isToday && !isSelected) PatientGreen else Color.Transparent,
-                                shape = CircleShape
-                            )
-                            .clickable { onDateSelected(date) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = date.dayOfMonth.toString(),
-                            color = if (isSelected) Color.White else MaterialTheme.colorSurfaceForApp(),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Selected Date Summary Block
-        val dayName = selectedDate.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("es")).replaceFirstChar { it.uppercase() }
-        val dateFormatted = "${dayName}, ${selectedDate.dayOfMonth} de ${selectedDate.month.getDisplayName(TextStyle.FULL, Locale("es"))}"
-
-        RelaxCard(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(vertical = 18.dp, horizontal = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFE8F5F0)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CalendarToday,
-                        contentDescription = null,
-                        tint = PatientGreen,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = dateFormatted,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = PatientGreen
-                    )
-                    Text(
-                        text = if (appointments.isEmpty()) "No tienes eventos programados" else "Tienes ${appointments.size} eventos programados",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray
-                    )
+                val weekdaysLabels = listOf("L", "M", "X", "J", "V", "S", "D")
+                weekDays.forEachIndexed { index, date ->
+                    val isSelected = date == selectedDate
+                    val isToday = date == today
+                    val hasEvents = eventDates.contains(date)
+                    val hasDiary = diaryDates.contains(date)
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { onDateSelected(date) }
+                    ) {
+                        Text(
+                            text = weekdaysLabels[index],
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 12.sp,
+                            color = if (isSelected) TextPrimary else TextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .background(
+                                    color = if (isSelected) PatientGreen else Color.Transparent,
+                                    shape = CircleShape
+                                )
+                                .border(
+                                    width = if (isToday && !isSelected) 1.5.dp else 0.dp,
+                                    color = if (isToday && !isSelected) PatientGreen else Color.Transparent,
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = date.dayOfMonth.toString(),
+                                fontFamily = LexendFontFamily,
+                                fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 14.sp,
+                                color = if (isSelected) Color.White else TextPrimary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(if (hasEvents || hasDiary) 6.dp else 4.dp)
+                                .background(
+                                    color = when {
+                                        hasEvents -> PatientGreen
+                                        hasDiary -> DiaryPurple
+                                        isSelected -> PatientGreen.copy(alpha = 0.45f)
+                                        else -> Color.Transparent
+                                    },
+                                    shape = CircleShape
+                                )
+                        )
+                    }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        // Selected Date Summary Block
+        val dayName = selectedDate.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("es")).replaceFirstChar { it.uppercase() }
+        val monthName = selectedDate.month.getDisplayName(TextStyle.FULL, Locale("es"))
+        val dateFormatted = "${dayName} ${selectedDate.dayOfMonth} de ${monthName}"
 
-        // Selected Date Events and Diary List
-        if (appointments.isEmpty() && diaryEntry == null) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
+                    .size(40.dp)
+                    .background(SoftMint, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.CalendarToday,
-                        contentDescription = null,
-                        tint = Color.LightGray,
-                        modifier = Modifier.size(64.dp)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "Sin eventos ni entradas de diario",
-                        color = Color.DarkGray,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = "¡Disfruta tu día!",
-                        color = Color.Gray,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.CalendarToday,
+                    contentDescription = null,
+                    tint = PatientGreen,
+                    modifier = Modifier.size(20.dp)
+                )
             }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column {
+                Text(
+                    text = dateFormatted,
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = TextPrimary
+                )
+                Text(
+                    text = if (appointments.isEmpty()) "Sin eventos programados" else "${appointments.size} eventos programados",
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.sp,
+                    color = PatientGreen
+                )
+            }
+        }
+
+        // Events list or placeholder empty state
+        if (appointments.isEmpty() && diaryEntry == null) {
+            EmptyEventsPlaceholder()
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(bottom = 16.dp)
             ) {
                 if (appointments.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = "Eventos del día",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.DarkGray,
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
-                    }
                     items(appointments) { appt ->
                         AppointmentItem(
                             appointment = appt,
@@ -449,9 +545,10 @@ private fun WeeklyView(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "Mi registro de bienestar",
-                            style = MaterialTheme.typography.titleMedium,
+                            fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Bold,
-                            color = Color.DarkGray,
+                            fontSize = 16.sp,
+                            color = TextPrimary,
                             modifier = Modifier.padding(bottom = 4.dp)
                         )
                     }
@@ -465,12 +562,85 @@ private fun WeeklyView(
 }
 
 @Composable
-private fun MaterialTheme.colorSurfaceForApp(): Color {
-    return this.colorScheme.onSurface
+private fun EmptyEventsPlaceholder() {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 2.dp,
+                shape = RoundedCornerShape(26.dp),
+                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.05f),
+                spotColor = Color(0xFF8A88A6).copy(alpha = 0.05f)
+            ),
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 40.dp, horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier.size(72.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val sizePx = size.width
+                    drawRoundRect(
+                        color = PatientGreen.copy(alpha = 0.2f),
+                        size = androidx.compose.ui.geometry.Size(sizePx * 0.6f, sizePx * 0.6f),
+                        topLeft = androidx.compose.ui.geometry.Offset(sizePx * 0.2f, sizePx * 0.25f),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(12.dp.toPx(), 12.dp.toPx()),
+                        style = Stroke(width = 3.dp.toPx())
+                    )
+                    drawCircle(
+                        color = PatientGreen.copy(alpha = 0.3f),
+                        radius = 3.dp.toPx(),
+                        center = androidx.compose.ui.geometry.Offset(sizePx * 0.35f, sizePx * 0.22f)
+                    )
+                    drawCircle(
+                        color = PatientGreen.copy(alpha = 0.3f),
+                        radius = 3.dp.toPx(),
+                        center = androidx.compose.ui.geometry.Offset(sizePx * 0.65f, sizePx * 0.22f)
+                    )
+                    val path = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(sizePx * 0.4f, sizePx * 0.55f)
+                        lineTo(sizePx * 0.48f, sizePx * 0.63f)
+                        lineTo(sizePx * 0.62f, sizePx * 0.45f)
+                    }
+                    drawPath(
+                        path = path,
+                        color = PatientGreen.copy(alpha = 0.4f),
+                        style = Stroke(width = 3.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Sin eventos para el resto del día",
+                fontFamily = LexendFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                color = TextPrimary,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "Disfruta tu día",
+                fontFamily = LexendFontFamily,
+                fontWeight = FontWeight.Medium,
+                fontSize = 12.sp,
+                color = TextSecondary,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
 }
 
 @Composable
-private fun MonthlyView(
+private fun MonthlyViewSimple(
     currentMonth: LocalDate,
     appointments: List<Appointment>,
     diaryEntries: List<DiaryEntry>,
@@ -487,7 +657,178 @@ private fun MonthlyView(
 
     val today = remember { LocalDate.now() }
 
-    // Map events and diaries by day
+    val appointmentsByDay = remember(appointments) {
+        appointments.groupBy { LocalDate.parse(it.date).dayOfMonth }
+    }
+    val diaryHasEntryByDay = remember(diaryEntries) {
+        diaryEntries.associate { LocalDate.parse(it.date).dayOfMonth to true }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(
+                    elevation = 6.dp,
+                    shape = RoundedCornerShape(26.dp),
+                    ambientColor = Color(0xFF8A88A6).copy(alpha = 0.15f),
+                    spotColor = Color(0xFF8A88A6).copy(alpha = 0.15f)
+                ),
+            shape = RoundedCornerShape(26.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp)
+            ) {
+                // Month Selector
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { onMonthChange(currentMonth.minusMonths(1)) }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = "Mes anterior",
+                            tint = PatientGreen,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Text(
+                        text = "${currentMonth.month.getDisplayName(TextStyle.FULL, Locale("es")).replaceFirstChar { it.uppercase() }} $year",
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = TextPrimary
+                    )
+                    IconButton(onClick = { onMonthChange(currentMonth.plusMonths(1)) }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Siguiente mes",
+                            tint = PatientGreen,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Weekdays headers
+                val weekdays = listOf("L", "M", "X", "J", "V", "S", "D")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    weekdays.forEach { day ->
+                        Text(
+                            text = day,
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = TextSecondary,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Calendar Grid
+                val totalCells = emptyCellsBefore + daysInMonth
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(7),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(280.dp),
+                    userScrollEnabled = false,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(totalCells) { index ->
+                        if (index < emptyCellsBefore) {
+                            Box(modifier = Modifier.aspectRatio(1f))
+                        } else {
+                            val dayNumber = index - emptyCellsBefore + 1
+                            val dayAppointments = appointmentsByDay[dayNumber] ?: emptyList()
+                            val hasDiary = diaryHasEntryByDay[dayNumber] == true
+                            val isCellToday = today.year == year && today.monthValue == month && today.dayOfMonth == dayNumber
+
+                            Box(
+                                modifier = Modifier
+                                    .aspectRatio(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(
+                                        color = if (isCellToday) PatientGreen else Color(0xFFF7FAFC)
+                                    )
+                                    .clickable { onDayClick(dayNumber) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    Text(
+                                        text = dayNumber.toString(),
+                                        fontFamily = LexendFontFamily,
+                                        fontWeight = if (isCellToday) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 14.sp,
+                                        color = if (isCellToday) Color.White else TextPrimary
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    // Dots row
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        val hasCita = dayAppointments.any { it.type == "cita" }
+                                        val hasMed = dayAppointments.any { it.type == "medicacion" }
+                                        val hasRec = dayAppointments.any { it.type == "recordatorio" }
+
+                                        if (hasCita) Box(modifier = Modifier.size(4.dp).background(MedicalGreen, CircleShape))
+                                        if (hasMed) Box(modifier = Modifier.size(4.dp).background(MedicationBlue, CircleShape))
+                                        if (hasRec) Box(modifier = Modifier.size(4.dp).background(ReminderOrange, CircleShape))
+                                        if (hasDiary) Box(modifier = Modifier.size(4.dp).background(DiaryPurple, CircleShape))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Toca un día hint & Legend
+        CalendarInfoAndLegend()
+    }
+}
+
+@Composable
+private fun MonthlyViewCollage(
+    currentMonth: LocalDate,
+    appointments: List<Appointment>,
+    diaryEntries: List<DiaryEntry>,
+    onMonthChange: (LocalDate) -> Unit,
+    onDayClick: (Int) -> Unit
+) {
+    val year = currentMonth.year
+    val month = currentMonth.monthValue
+
+    val firstDayOfMonth = remember(year, month) { LocalDate.of(year, month, 1) }
+    val daysInMonth = remember(year, month) { firstDayOfMonth.lengthOfMonth() }
+    val firstDayOfWeek = remember(year, month) { firstDayOfMonth.dayOfWeek.value } // 1 = Lunes, ..., 7 = Domingo
+    val emptyCellsBefore = firstDayOfWeek - 1
+
+    val today = remember { LocalDate.now() }
+
     val appointmentsByDay = remember(appointments) {
         appointments.groupBy { LocalDate.parse(it.date).dayOfMonth }
     }
@@ -503,118 +844,151 @@ private fun MonthlyView(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // Month Selector Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(
+                    elevation = 6.dp,
+                    shape = RoundedCornerShape(26.dp),
+                    ambientColor = Color(0xFF8A88A6).copy(alpha = 0.15f),
+                    spotColor = Color(0xFF8A88A6).copy(alpha = 0.15f)
+                ),
+            shape = RoundedCornerShape(26.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
-            IconButton(onClick = { onMonthChange(currentMonth.minusMonths(1)) }) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Mes anterior", tint = PatientGreen)
-            }
-            Text(
-                text = "${currentMonth.month.getDisplayName(TextStyle.FULL, Locale("es")).replaceFirstChar { it.uppercase() }} $year",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = PatientGreen
-            )
-            IconButton(onClick = { onMonthChange(currentMonth.plusMonths(1)) }) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Siguiente mes", tint = PatientGreen)
-            }
-        }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp)
+            ) {
+                // Month Selector
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { onMonthChange(currentMonth.minusMonths(1)) }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = "Mes anterior",
+                            tint = PatientGreen,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Text(
+                        text = "${currentMonth.month.getDisplayName(TextStyle.FULL, Locale("es")).replaceFirstChar { it.uppercase() }} $year",
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = TextPrimary
+                    )
+                    IconButton(onClick = { onMonthChange(currentMonth.plusMonths(1)) }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Siguiente mes",
+                            tint = PatientGreen,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
 
-        Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-        // Calendar Weekdays Headers L M X J V S D
-        val weekdays = listOf("L", "M", "X", "J", "V", "S", "D")
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            weekdays.forEach { day ->
-                Text(
-                    text = day,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                    color = Color.Gray,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
+                // Weekdays headers
+                val weekdays = listOf("L", "M", "X", "J", "V", "S", "D")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    weekdays.forEach { day ->
+                        Text(
+                            text = day,
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = TextSecondary,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
 
-        Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-        // Calendar Grid
-        val totalCells = emptyCellsBefore + daysInMonth
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(7),
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(totalCells) { index ->
-                if (index < emptyCellsBefore) {
-                    Box(modifier = Modifier.aspectRatio(1f))
-                } else {
-                    val dayNumber = index - emptyCellsBefore + 1
-                    val dayAppointments = appointmentsByDay[dayNumber] ?: emptyList()
-                    val diaryPhoto = diaryPhotoByDay[dayNumber]
-                    val hasDiary = diaryHasEntryByDay[dayNumber] == true
-                    val isCellToday = today.year == year && today.monthValue == month && today.dayOfMonth == dayNumber
+                // Calendar Grid with Collage background images
+                val totalCells = emptyCellsBefore + daysInMonth
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(7),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(280.dp),
+                    userScrollEnabled = false,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(totalCells) { index ->
+                        if (index < emptyCellsBefore) {
+                            Box(modifier = Modifier.aspectRatio(1f))
+                        } else {
+                            val dayNumber = index - emptyCellsBefore + 1
+                            val dayAppointments = appointmentsByDay[dayNumber] ?: emptyList()
+                            val diaryPhoto = diaryPhotoByDay[dayNumber]
+                            val hasDiary = diaryHasEntryByDay[dayNumber] == true
+                            val isCellToday = today.year == year && today.monthValue == month && today.dayOfMonth == dayNumber
 
-                    Box(
-                        modifier = Modifier
-                            .aspectRatio(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color.White)
-                            .border(
-                                width = if (isCellToday) 2.dp else 1.dp,
-                                color = if (isCellToday) PatientGreen else Color(0xFFE2E8F0),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                            .clickable { onDayClick(dayNumber) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // Background image for diary entry
-                        if (diaryPhoto != null) {
-                            AsyncImage(
-                                model = diaryPhoto,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
+                            Box(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .alpha(0.4f)
-                            )
-                        }
-
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            Text(
-                                text = dayNumber.toString(),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = if (isCellToday) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isCellToday) PatientGreen else MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            // Colored dots for appointments
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(2.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .aspectRatio(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(
+                                        color = if (isCellToday) PatientGreen else Color(0xFFF7FAFC)
+                                    )
+                                    .clickable { onDayClick(dayNumber) },
+                                contentAlignment = Alignment.Center
                             ) {
-                                val hasCita = dayAppointments.any { it.type == "cita" }
-                                val hasMed = dayAppointments.any { it.type == "medicacion" }
-                                val hasRec = dayAppointments.any { it.type == "recordatorio" }
+                                // Background image crop with white overlay for readability
+                                if (diaryPhoto != null && !isCellToday) {
+                                    AsyncImage(
+                                        model = diaryPhoto,
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .alpha(0.45f)
+                                    )
+                                }
 
-                                if (hasCita) Dot(color = Color(0xFF38A169)) // Green
-                                if (hasMed) Dot(color = Color(0xFF3182CE)) // Blue
-                                if (hasRec) Dot(color = Color(0xFFDD6B20)) // Orange
-                                if (hasDiary) Dot(color = Color(0xFF805AD5)) // Purple for wellness/diary
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    Text(
+                                        text = dayNumber.toString(),
+                                        fontFamily = LexendFontFamily,
+                                        fontWeight = if (isCellToday) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 14.sp,
+                                        color = if (isCellToday) Color.White else TextPrimary
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    // Dots row
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        val hasCita = dayAppointments.any { it.type == "cita" }
+                                        val hasMed = dayAppointments.any { it.type == "medicacion" }
+                                        val hasRec = dayAppointments.any { it.type == "recordatorio" }
+
+                                        if (hasCita) Box(modifier = Modifier.size(4.dp).background(MedicalGreen, CircleShape))
+                                        if (hasMed) Box(modifier = Modifier.size(4.dp).background(MedicationBlue, CircleShape))
+                                        if (hasRec) Box(modifier = Modifier.size(4.dp).background(ReminderOrange, CircleShape))
+                                        if (hasDiary) Box(modifier = Modifier.size(4.dp).background(DiaryPurple, CircleShape))
+                                    }
+                                }
                             }
                         }
                     }
@@ -622,43 +996,93 @@ private fun MonthlyView(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        // Toca un día hint & Legend
+        CalendarInfoAndLegend()
+    }
+}
 
-        // Grid Legend
+@Composable
+private fun CalendarInfoAndLegend() {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Toca un día hint
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            LegendItem(color = Color(0xFF38A169), text = "Citas")
-            LegendItem(color = Color(0xFF3182CE), text = "Medicación")
-            LegendItem(color = Color(0xFFDD6B20), text = "Recordatorios")
-            LegendItem(color = Color(0xFF805AD5), text = "Bienestar")
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .background(SoftMint, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Schedule,
+                    contentDescription = null,
+                    tint = PatientGreen,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Toca un día para ver sus eventos",
+                fontFamily = LexendFontFamily,
+                fontWeight = FontWeight.Medium,
+                fontSize = 12.sp,
+                color = TextSecondary
+            )
+        }
+
+        // Legend row
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(
+                    elevation = 2.dp,
+                    shape = RoundedCornerShape(16.dp),
+                    ambientColor = Color(0xFF8A88A6).copy(alpha = 0.05f),
+                    spotColor = Color(0xFF8A88A6).copy(alpha = 0.05f)
+                ),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp, horizontal = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                LegendItem(color = MedicalGreen, text = "Cita médica")
+                LegendItem(color = MedicationBlue, text = "Medicación")
+                LegendItem(color = ReminderOrange, text = "Recordatorio")
+                LegendItem(color = DiaryPurple, text = "Diario")
+            }
         }
     }
 }
 
 @Composable
-private fun Dot(color: Color) {
-    Box(
-        modifier = Modifier
-            .size(5.dp)
-            .background(color, CircleShape)
-    )
-}
-
-@Composable
 private fun LegendItem(color: Color, text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
         Box(
             modifier = Modifier
-                .size(8.dp)
+                .size(6.dp)
                 .background(color, CircleShape)
         )
-        Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = text,
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-            color = Color.Gray
+            fontFamily = LexendFontFamily,
+            fontWeight = FontWeight.Medium,
+            fontSize = 11.sp,
+            color = TextSecondary
         )
     }
 }
@@ -669,9 +1093,9 @@ private fun AppointmentItem(
     onClick: () -> Unit
 ) {
     val dotColor = when (appointment.type) {
-        "cita" -> Color(0xFF38A169) // Green
-        "medicacion" -> Color(0xFF3182CE) // Blue
-        else -> Color(0xFFDD6B20) // Orange
+        "cita" -> MedicalGreen
+        "medicacion" -> MedicationBlue
+        else -> ReminderOrange
     }
 
     val typeLabel = when (appointment.type) {
@@ -681,29 +1105,45 @@ private fun AppointmentItem(
     }
 
     val badgeBgColor = when (appointment.type) {
-        "cita" -> Color(0xFFE8F5F0)
+        "cita" -> SoftMint
         "medicacion" -> Color(0xFFEBF8FF)
-        else -> Color(0xFFFFFAF0)
+        else -> SoftCream
     }
 
     val badgeTextColor = when (appointment.type) {
-        "cita" -> Color(0xFF2F855A)
-        "medicacion" -> Color(0xFF2B6CB0)
-        else -> Color(0xFFC05621)
+        "cita" -> MedicalGreen
+        "medicacion" -> MedicationBlue
+        else -> ReminderOrange
     }
 
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        shape = RoundedCornerShape(16.dp),
+    Row(
         modifier = Modifier
             .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(20.dp),
+                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.1f),
+                spotColor = Color(0xFF8A88A6).copy(alpha = 0.1f)
+            )
+            .background(Color.White, RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
     ) {
+        // Left border indicator box
+        Box(
+            modifier = Modifier
+                .width(6.dp)
+                .fillMaxHeight()
+                .background(
+                    color = if (appointment.completed) Color.LightGray else dotColor,
+                    shape = RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp)
+                )
+        )
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(vertical = 16.dp, horizontal = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -711,27 +1151,29 @@ private fun AppointmentItem(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                // Hour
+                // Hour text
                 Text(
                     text = appointment.time,
-                    style = MaterialTheme.typography.bodyLarge,
+                    fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
-                    color = if (appointment.completed) Color.LightGray else MaterialTheme.colorScheme.onSurface
+                    fontSize = 14.sp,
+                    color = if (appointment.completed) Color.LightGray else TextPrimary
                 )
-                Spacer(modifier = Modifier.width(16.dp))
-                // Colored dot
+                Spacer(modifier = Modifier.width(14.dp))
+                // Colored dot indicator
                 Box(
                     modifier = Modifier
-                        .size(8.dp)
+                        .size(6.dp)
                         .background(if (appointment.completed) Color.LightGray else dotColor, CircleShape)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                // Title
+                // Title text
                 Text(
                     text = appointment.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (appointment.completed) Color.Gray else MaterialTheme.colorScheme.onSurface,
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp,
+                    color = if (appointment.completed) Color.Gray else TextPrimary,
                     textDecoration = if (appointment.completed) TextDecoration.LineThrough else TextDecoration.None,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -739,21 +1181,46 @@ private fun AppointmentItem(
                 )
             }
 
-            // Tag badge
-            Box(
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Chip showing type/category with a small icon next to it
+            Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (appointment.completed) Color(0xFFF2F4F8) else badgeBgColor)
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                    .background(
+                        color = if (appointment.completed) Color(0xFFF2F4F8) else badgeBgColor,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                Icon(
+                    imageVector = when (appointment.type) {
+                        "cita" -> Icons.Default.LocalHospital
+                        "medicacion" -> Icons.Default.Medication
+                        else -> Icons.Default.PushPin
+                    },
+                    contentDescription = null,
+                    tint = if (appointment.completed) Color.Gray else badgeTextColor,
+                    modifier = Modifier.size(12.dp)
+                )
                 Text(
                     text = typeLabel,
-                    color = if (appointment.completed) Color.Gray else badgeTextColor,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 10.sp
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 11.sp,
+                    color = if (appointment.completed) Color.Gray else badgeTextColor
                 )
             }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Color.LightGray,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
@@ -763,15 +1230,24 @@ private fun DiaryEntryCard(
     diaryEntry: DiaryEntry,
     modifier: Modifier = Modifier
 ) {
-    val emoji = getEmotionEmoji(diaryEntry.emotion)
-    RelaxCard(
-        modifier = modifier.fillMaxWidth()
+    val emotionInitial = diaryEntry.emotion.firstOrNull()?.uppercase() ?: "D"
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(26.dp),
+                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.1f),
+                spotColor = Color(0xFF8A88A6).copy(alpha = 0.1f)
+            ),
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(4.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // Header
             Row(
@@ -779,53 +1255,64 @@ private fun DiaryEntryCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     Box(
                         modifier = Modifier
-                            .size(36.dp)
-                            .background(PatientGreen.copy(alpha = 0.08f), CircleShape),
+                            .size(38.dp)
+                            .background(SoftMint, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(text = emoji, fontSize = 20.sp)
+                        Text(
+                            text = emotionInitial,
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = PatientGreen
+                        )
                     }
-                    Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Text(
                             text = "Mi Diario",
-                            style = MaterialTheme.typography.titleMedium,
+                            fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Bold,
-                            color = PatientGreen
+                            fontSize = 16.sp,
+                            color = TextPrimary
                         )
                         Text(
                             text = "Sintiéndome ${diaryEntry.emotion.lowercase()}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray
+                            fontFamily = LexendFontFamily,
+                            fontSize = 12.sp,
+                            color = TextSecondary
                         )
                     }
                 }
                 
-                // Tag Badge
+                // Category Tag
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(PatientGreen.copy(alpha = 0.08f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .background(SoftMint, RoundedCornerShape(10.dp))
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
                     Text(
                         text = diaryEntry.category,
-                        color = PatientGreen,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 11.sp,
+                        color = PatientGreen
                     )
                 }
             }
 
-            // Notes
+            // Notes content text
             if (diaryEntry.notes.isNotBlank()) {
                 Text(
                     text = diaryEntry.notes,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.DarkGray,
+                    fontFamily = LexendFontFamily,
+                    fontSize = 14.sp,
+                    color = TextPrimary,
                     lineHeight = 20.sp
                 )
             }
@@ -853,12 +1340,14 @@ private fun DiaryCollage(
                 modifier = modifier
                     .fillMaxWidth()
                     .height(180.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(16.dp))
             )
         }
         size == 2 -> {
             Row(
-                modifier = modifier.fillMaxWidth(),
+                modifier = modifier
+                    .fillMaxWidth()
+                    .height(140.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 AsyncImage(
@@ -867,8 +1356,8 @@ private fun DiaryCollage(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .weight(1f)
-                        .height(120.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(16.dp))
                 )
                 AsyncImage(
                     model = photoUrls[1],
@@ -876,14 +1365,17 @@ private fun DiaryCollage(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .weight(1f)
-                        .height(120.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(16.dp))
                 )
             }
         }
-        size == 3 -> {
+        else -> {
+            // More than 2 photos: show first two horizontally, second one gets overlay if more
             Row(
-                modifier = modifier.fillMaxWidth(),
+                modifier = modifier
+                    .fillMaxWidth()
+                    .height(140.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 AsyncImage(
@@ -891,167 +1383,40 @@ private fun DiaryCollage(
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .weight(1.5f)
-                        .height(160.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(16.dp))
                 )
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    AsyncImage(
-                        model = photoUrls[1],
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(76.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                    )
-                    AsyncImage(
-                        model = photoUrls[2],
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(76.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                    )
-                }
-            }
-        }
-        size == 4 -> {
-            Column(
-                modifier = modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    AsyncImage(
-                        model = photoUrls[0],
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(100.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                    )
-                    AsyncImage(
-                        model = photoUrls[1],
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(100.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    AsyncImage(
-                        model = photoUrls[2],
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(100.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                    )
-                    AsyncImage(
-                        model = photoUrls[3],
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(100.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                    )
-                }
-            }
-        }
-        size >= 5 -> {
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                AsyncImage(
-                    model = photoUrls[0],
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
+                Box(
                     modifier = Modifier
-                        .weight(1.2f)
-                        .height(180.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                )
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(16.dp))
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        AsyncImage(
-                            model = photoUrls[1],
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
+                    AsyncImage(
+                        model = photoUrls[1],
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    if (size > 2) {
+                        Box(
                             modifier = Modifier
-                                .weight(1f)
-                                .height(86.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                        )
-                        AsyncImage(
-                            model = photoUrls[2],
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(86.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        AsyncImage(
-                            model = photoUrls[3],
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(86.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                        )
-                        AsyncImage(
-                            model = photoUrls[4],
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(86.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                        )
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.5f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "+${size - 1}",
+                                fontFamily = LexendFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
-
-private fun getEmotionEmoji(emotion: String): String {
-    return when (emotion) {
-        "Ansioso" -> "😟"
-        "Tranquilo" -> "😌"
-        "Feliz" -> "😊"
-        "Triste" -> "😢"
-        "Frustrado" -> "😤"
-        "Emocionado" -> "🤩"
-        else -> "📝"
-    }
-}
-

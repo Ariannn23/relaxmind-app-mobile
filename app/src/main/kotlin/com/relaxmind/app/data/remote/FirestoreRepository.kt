@@ -59,6 +59,11 @@ class FirestoreRepository(
         caregivers.document(id).update(fields).await()
     }
 
+    suspend fun updateFcmToken(id: String, role: String, token: String): Result<Unit> = runCatching {
+        val collection = if (role == "caregiver") caregivers else patients
+        collection.document(id).update("fcmToken", token).await()
+    }
+
     suspend fun getRoleById(id: String): Result<String> = runCatching {
         val patientSnapshot = patients.document(id).get().await()
         if (patientSnapshot.exists()) {
@@ -435,6 +440,13 @@ class FirestoreRepository(
             .await()
     }
 
+    suspend fun updateAppointmentNotificationSent(appointmentId: String): Result<Unit> = runCatching {
+        firestore.collection(APPOINTMENTS_COLLECTION)
+            .document(appointmentId)
+            .update("notificationSent", true)
+            .await()
+    }
+
     suspend fun deleteAppointment(appointmentId: String): Result<Unit> = runCatching {
         firestore.collection(APPOINTMENTS_COLLECTION)
             .document(appointmentId)
@@ -449,20 +461,18 @@ class FirestoreRepository(
         val startLocalDate = LocalDate.of(year, month, 1)
         val daysInMonth = startLocalDate.lengthOfMonth()
 
-        val specific = firestore.collection(APPOINTMENTS_COLLECTION)
+        val patientAppointments = firestore.collection(APPOINTMENTS_COLLECTION)
             .whereEqualTo("patientId", patientId)
-            .whereGreaterThanOrEqualTo("date", "$yearMonth-01")
-            .whereLessThanOrEqualTo("date", "$yearMonth-31")
             .get()
             .await()
             .toObjectList(Appointment::class.java)
 
-        val recurring = firestore.collection(APPOINTMENTS_COLLECTION)
-            .whereEqualTo("patientId", patientId)
-            .whereEqualTo("recurring", true)
-            .get()
-            .await()
-            .toObjectList(Appointment::class.java)
+        val specific = patientAppointments.filter { appt ->
+            val apptDate = runCatching { LocalDate.parse(appt.date) }.getOrNull()
+            apptDate != null && apptDate.year == year && apptDate.monthValue == month
+        }
+
+        val recurring = patientAppointments.filter { it.recurring }
 
         val expandedList = mutableListOf<Appointment>()
         expandedList.addAll(specific)
@@ -587,6 +597,25 @@ class FirestoreRepository(
                     "archivedAt" to System.currentTimeMillis()
                 )
             ).await()
+    }
+
+    suspend fun updateLumiSessionTitle(sessionId: String, title: String): Result<Unit> = runCatching {
+        firestore.collection(LUMI_SESSIONS_COLLECTION)
+            .document(sessionId)
+            .update("title", title)
+            .await()
+    }
+
+    suspend fun updateLumiSessionTitleIfDefault(sessionId: String, text: String): Result<Unit> = runCatching {
+        val doc = firestore.collection(LUMI_SESSIONS_COLLECTION).document(sessionId).get().await()
+        val currentTitle = doc.getString("title") ?: "Chat con Lumi"
+        if (currentTitle == "Chat con Lumi") {
+            val newTitle = text.split(" ").take(5).joinToString(" ") + if (text.split(" ").size > 5) "..." else ""
+            firestore.collection(LUMI_SESSIONS_COLLECTION)
+                .document(sessionId)
+                .update("title", newTitle)
+                .await()
+        }
     }
 
     private fun <T> com.google.firebase.firestore.QuerySnapshot.toObjectList(clazz: Class<T>): List<T> {

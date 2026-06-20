@@ -50,6 +50,14 @@ object ValidationUtils {
     fun validateRole(value: String): String? =
         if (value != "patient" && value != "caregiver") "Selecciona un rol válido." else null
 
+    fun validatePhone(value: String): String? = when {
+        value.isBlank() -> "El número de teléfono es obligatorio."
+        !value.all { it.isDigit() } -> "El teléfono solo debe contener dígitos."
+        value.length > 9 -> "El teléfono debe tener máximo 9 dígitos."
+        value.length < 9 -> "El teléfono debe tener 9 dígitos."
+        else -> null
+    }
+
     fun validateOtpCode(code: String): String? = when {
         code.isBlank() -> "Ingresa el código de verificación."
         code.length != 6 -> "El código debe tener 6 dígitos."

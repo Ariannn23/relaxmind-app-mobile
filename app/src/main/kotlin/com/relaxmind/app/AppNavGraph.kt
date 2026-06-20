@@ -18,6 +18,7 @@ import com.relaxmind.app.features.auth.ForgotPasswordScreen
 import com.relaxmind.app.features.auth.LoginScreen
 import com.relaxmind.app.features.auth.NotificationPermissionScreen
 import com.relaxmind.app.features.auth.RegisterScreen
+import com.relaxmind.app.features.auth.ForgotPasswordScreen
 import com.relaxmind.app.features.caregiver.AlertsHistoryScreen
 import com.relaxmind.app.features.caregiver.DashboardCaregiverScreen
 import com.relaxmind.app.features.caregiver.PatientDetailScreen
@@ -39,6 +40,8 @@ import com.relaxmind.app.features.patient.LinkCaregiverScreen
 import com.relaxmind.app.features.patient.SOSPatientScreen
 import com.relaxmind.app.features.patient.lumi.LumiChatScreen
 import com.relaxmind.app.features.patient.lumi.LumiHistoryScreen
+import com.relaxmind.app.features.patient.EditProfileScreen
+import com.relaxmind.app.features.patient.NearbyHealthScreen
 import com.relaxmind.app.features.caregiver.SOSAlertScreen
 
 sealed class Screen(val route: String) {
@@ -79,6 +82,7 @@ sealed class Screen(val route: String) {
     data object PatientSettings : Screen("patient/settings")
     data object EditProfile : Screen("patient/profile/edit")
     data object LinkCaregiver : Screen("patient/link-caregiver")
+    data object NearbyHealth : Screen("patient/nearby-health")
     data object SOSPatient : Screen("patient/sos")
 
     data object CaregiverDashboard : Screen("caregiver/dashboard")
@@ -153,11 +157,22 @@ fun AppNavGraph(
                     navController.navigate(Screen.EmailVerification.route) {
                         popUpTo(Screen.Register.route) { inclusive = true }
                     }
+                },
+                onNavigateToPatientDashboard = {
+                    navController.navigate(Screen.PatientDashboard.route) {
+                        popUpTo(Screen.Register.route) { inclusive = true }
+                    }
+                },
+                onNavigateToCaregiverDashboard = {
+                    navController.navigate(Screen.CaregiverDashboard.route) {
+                        popUpTo(Screen.Register.route) { inclusive = true }
+                    }
                 }
             )
         }
         composable(Screen.EmailVerification.route) {
             EmailVerificationScreen(
+                autoSendCode = false,
                 onNavigateBack = { navController.popBackStack() },
                 onVerified = {
                     navController.navigate(Screen.AvatarSetup.route) {
@@ -349,7 +364,11 @@ fun AppNavGraph(
                 }
             )
         }
-        composable(Screen.EditProfile.route) { PlaceholderScreen("Pantalla Edit Profile") }
+        composable(Screen.EditProfile.route) {
+            EditProfileScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
         composable(Screen.LinkCaregiver.route) {
             LinkCaregiverScreen(
                 onNavigateBack = { navController.popBackStack() },
@@ -362,6 +381,11 @@ fun AppNavGraph(
         }
         composable(Screen.SOSPatient.route) {
             SOSPatientScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(Screen.NearbyHealth.route) {
+            NearbyHealthScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
@@ -435,7 +459,23 @@ fun AppNavGraph(
                 }
             )
         }
-        composable(Screen.CaregiverSettings.route) { PlaceholderScreen("Pantalla Caregiver Settings") }
+        composable(Screen.CaregiverSettings.route) { 
+            com.relaxmind.app.features.caregiver.SettingsCaregiverScreen(
+                onNavigateToEditProfile = { navController.navigate(Screen.EditProfile.route) },
+                onLogout = { 
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onNavigate = { route -> 
+                    navController.navigate(route) {
+                        popUpTo(navController.graph.startDestinationId) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
+        }
     }
 }
 

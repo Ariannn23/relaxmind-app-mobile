@@ -11,7 +11,9 @@ val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
     localProperties.load(localPropertiesFile.inputStream())
 }
-val geminiApiKey = localProperties.getProperty("GEMINI_API_KEY") ?: "MOCK_KEY"
+val groqApiKey = localProperties.getProperty("GROQ_API_KEY") ?: "MOCK_KEY"
+val mapsApiKey = localProperties.getProperty("MAPS_API_KEY") ?: "MOCK_MAPS_KEY"
+val googleWebClientId = localProperties.getProperty("GOOGLE_WEB_CLIENT_ID") ?: "MOCK_WEB_CLIENT_ID"
 
 android {
     namespace = "com.relaxmind.app"
@@ -28,7 +30,10 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
+        buildConfigField("String", "GROQ_API_KEY", "\"$groqApiKey\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
+        buildConfigField("String", "MAPS_API_KEY", "\"$mapsApiKey\"")
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     buildTypes {
@@ -89,7 +94,9 @@ dependencies {
 
     implementation("com.google.maps.android:maps-compose:4.4.1")
     implementation("com.google.android.gms:play-services-location:21.3.0")
-    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp-sse:4.12.0")
+    implementation("com.google.code.gson:gson:2.10.1")
     implementation("com.airbnb.android:lottie-compose:6.4.1")
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("androidx.work:work-runtime-ktx:2.9.0")
@@ -100,6 +107,14 @@ dependencies {
     implementation("androidx.camera:camera-view:1.3.4")
     implementation("com.google.mlkit:barcode-scanning:17.2.0")
     implementation("com.google.guava:guava:33.2.1-android")
+    
+    // Google Sign In (Credential Manager)
+    implementation("androidx.credentials:credentials:1.3.0-alpha01")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0-alpha01")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+
+    // Google Places SDK
+    implementation("com.google.android.libraries.places:places:3.5.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

@@ -38,10 +38,10 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.relaxmind.app.ui.components.RelaxToastHost
+import com.relaxmind.app.ui.components.rememberRelaxToastState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -53,6 +53,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -69,9 +70,15 @@ import com.relaxmind.app.ui.components.FullScreenLoadingOverlay
 import com.relaxmind.app.ui.components.RelaxButton
 import com.relaxmind.app.ui.components.RelaxIcons
 import com.relaxmind.app.ui.components.RelaxTopBar
+import com.relaxmind.app.ui.components.auth.SoftGradientBackground
+import com.relaxmind.app.ui.themes.BorderSoft
+import com.relaxmind.app.ui.themes.LexendFontFamily
 import com.relaxmind.app.ui.themes.PatientGreen
 import com.relaxmind.app.ui.themes.PatientGreenLight
 import com.relaxmind.app.ui.themes.SOSCoral
+import com.relaxmind.app.ui.themes.SoftMint
+import com.relaxmind.app.ui.themes.TextPrimary
+import com.relaxmind.app.ui.themes.TextSecondary
 import kotlin.math.roundToInt
 
 private enum class StepType {
@@ -100,7 +107,7 @@ fun CheckInScreen(
     val binaryAnswers by viewModel.binaryAnswers.collectAsState()
     val notes by viewModel.notes.collectAsState()
 
-    val snackbarHostState = remember { SnackbarHostState() }
+    val toastState = rememberRelaxToastState()
 
     // Resolve steps list dynamically
     val steps = remember(isInitialTest) {
@@ -134,7 +141,7 @@ fun CheckInScreen(
     // Handle VM errors
     LaunchedEffect(uiState) {
         if (uiState is CheckInUiState.Error) {
-            snackbarHostState.showSnackbar((uiState as CheckInUiState.Error).message)
+            toastState.showError((uiState as CheckInUiState.Error).message)
         }
     }
 
@@ -171,14 +178,15 @@ fun CheckInScreen(
                     }
                 }
             )
-        },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        }
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            SoftGradientBackground(animateBlobs = true)
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -195,13 +203,15 @@ fun CheckInScreen(
                         .height(8.dp)
                         .clip(RoundedCornerShape(4.dp)),
                     color = PatientGreen,
-                    trackColor = Color(0xFFE2E8F0)
+                    trackColor = PatientGreen.copy(alpha = 0.12f)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = "Paso ${currentStepIndex + 1} de $totalSteps",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                    color = TextSecondary,
                     modifier = Modifier.align(Alignment.Start)
                 )
 
@@ -319,6 +329,8 @@ fun CheckInScreen(
             if (uiState is CheckInUiState.Loading) {
                 FullScreenLoadingOverlay()
             }
+
+            RelaxToastHost(state = toastState)
         }
     }
 }
@@ -327,26 +339,51 @@ fun CheckInScreen(
 // STEP 1 — Emotional State
 // ---------------------------------------------------------------------------
 @Composable
+private fun CheckInStepTitle(
+    title: String,
+    subtitle: String
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = title,
+            fontFamily = LexendFontFamily,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 25.sp,
+            lineHeight = 31.sp,
+            color = TextPrimary
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = subtitle,
+            fontFamily = LexendFontFamily,
+            fontWeight = FontWeight.Normal,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            color = TextSecondary
+        )
+    }
+}
+
+@Composable
 private fun EmotionalStepView(
     selected: Int?,
     onSelect: (Int) -> Unit
 ) {
     val options = listOf(
-        EmojiCardOption(1, "😭", "Muy mal"),
-        EmojiCardOption(2, "😕", "Mal"),
-        EmojiCardOption(3, "😐", "Bien"),
-        EmojiCardOption(4, "🙂", "Muy bien"),
-        EmojiCardOption(5, "😄", "Excelente")
+        MoodCardOption(1, "Muy mal", "Necesito apoyo hoy"),
+        MoodCardOption(2, "Mal", "Ha sido un dia pesado"),
+        MoodCardOption(3, "Bien", "Estoy estable"),
+        MoodCardOption(4, "Muy bien", "Me siento con calma"),
+        MoodCardOption(5, "Excelente", "Me siento pleno")
     )
     Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "¿Cómo te has sentido últimamente?",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
+        CheckInStepTitle(
+            title = "¿Cómo te has sentido últimamente?",
+            subtitle = "Elige la opción que más se parezca a tu estado emocional."
         )
         Spacer(modifier = Modifier.height(20.dp))
         options.forEach { option ->
-            EmojiSelectionCard(
+            MoodSelectionCard(
                 option = option,
                 isSelected = selected == option.value,
                 onClick = { onSelect(option.value) }
@@ -364,21 +401,20 @@ private fun SleepStepView(
     onSelect: (Int) -> Unit
 ) {
     val options = listOf(
-        EmojiCardOption(1, "😴", "Pésimo"),
-        EmojiCardOption(2, "😪", "Mal"),
-        EmojiCardOption(3, "😑", "Regular"),
-        EmojiCardOption(4, "😌", "Bien"),
-        EmojiCardOption(5, "😊", "Excelente")
+        MoodCardOption(1, "Pésimo", "Casi no pude descansar"),
+        MoodCardOption(2, "Mal", "Dormí poco o interrumpido"),
+        MoodCardOption(3, "Regular", "Descansé lo justo"),
+        MoodCardOption(4, "Bien", "Dormí de forma reparadora"),
+        MoodCardOption(5, "Excelente", "Desperté con energía")
     )
     Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "¿Cómo dormiste anoche?",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
+        CheckInStepTitle(
+            title = "¿Cómo dormiste anoche?",
+            subtitle = "Tu descanso también ayuda a entender tu bienestar de hoy."
         )
         Spacer(modifier = Modifier.height(20.dp))
         options.forEach { option ->
-            EmojiSelectionCard(
+            MoodSelectionCard(
                 option = option,
                 isSelected = selected == option.value,
                 onClick = { onSelect(option.value) }
@@ -387,11 +423,11 @@ private fun SleepStepView(
     }
 }
 
-private data class EmojiCardOption(val value: Int, val emoji: String, val text: String)
+private data class MoodCardOption(val value: Int, val text: String, val helper: String)
 
 @Composable
-private fun EmojiSelectionCard(
-    option: EmojiCardOption,
+private fun MoodSelectionCard(
+    option: MoodCardOption,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
@@ -399,35 +435,69 @@ private fun EmojiSelectionCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
+            .shadow(
+                elevation = if (isSelected) 10.dp else 4.dp,
+                shape = RoundedCornerShape(22.dp),
+                ambientColor = PatientGreen.copy(alpha = if (isSelected) 0.20f else 0.08f),
+                spotColor = PatientGreen.copy(alpha = if (isSelected) 0.16f else 0.06f)
+            )
             .clickable(onClick = onClick)
             .border(
                 border = BorderStroke(
                     width = if (isSelected) 2.dp else 1.dp,
-                    color = if (isSelected) PatientGreen else Color(0xFFE2E8F0)
+                    color = if (isSelected) PatientGreen else BorderSoft
                 ),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(22.dp)
             ),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) Color(0xFFE8F5F0) else Color.White
+            containerColor = if (isSelected) SoftMint else Color.White
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(22.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 18.dp),
+                .padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = option.emoji, fontSize = 32.sp)
-                Spacer(modifier = Modifier.width(16.dp))
-                Text(
-                    text = option.text,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (isSelected) PatientGreen else MaterialTheme.colorScheme.onBackground
-                )
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(if (isSelected) PatientGreen else PatientGreen.copy(alpha = 0.10f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = option.value.toString(),
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = if (isSelected) Color.White else PatientGreen
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column {
+                    Text(
+                        text = option.text,
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = if (isSelected) PatientGreen else TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Text(
+                        text = option.helper,
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 12.sp,
+                        color = TextSecondary
+                    )
+                }
             }
             if (isSelected) {
                 Icon(
@@ -450,17 +520,9 @@ private fun EnergyStepView(
     onValueChange: (Int) -> Unit
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "¿Cuánta energía sientes hoy?",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.Start)
-        )
-        Text(
-            text = "Desliza para indicar tu nivel",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
-            modifier = Modifier.align(Alignment.Start)
+        CheckInStepTitle(
+            title = "¿Cuánta energía sientes hoy?",
+            subtitle = "Desliza para indicar tu nivel del 1 al 10."
         )
         Spacer(modifier = Modifier.height(28.dp))
 
@@ -470,8 +532,9 @@ private fun EnergyStepView(
         Spacer(modifier = Modifier.height(28.dp))
         Text(
             text = value.toString(),
-            style = MaterialTheme.typography.displayLarge.copy(fontSize = 72.sp),
+            fontFamily = LexendFontFamily,
             fontWeight = FontWeight.ExtraBold,
+            fontSize = 72.sp,
             color = PatientGreen
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -518,8 +581,8 @@ private fun EnergyStepView(
                 .padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("1\nMuy poca", style = MaterialTheme.typography.labelMedium, color = Color.Gray, textAlign = TextAlign.Center)
-            Text("10\nMucha", style = MaterialTheme.typography.labelMedium, color = Color.Gray, textAlign = TextAlign.Center)
+            Text("1\nMuy poca", fontFamily = LexendFontFamily, fontSize = 12.sp, color = TextSecondary, textAlign = TextAlign.Center)
+            Text("10\nMucha", fontFamily = LexendFontFamily, fontSize = 12.sp, color = TextSecondary, textAlign = TextAlign.Center)
         }
     }
 }
@@ -533,7 +596,9 @@ private fun EnergyBatteryIndicator(level: Int) {
         modifier = Modifier
             .width(100.dp)
             .height(200.dp)
-            .border(4.dp, Color(0xFF4A5568), RoundedCornerShape(12.dp))
+            .shadow(10.dp, RoundedCornerShape(26.dp), ambientColor = PatientGreen.copy(alpha = 0.12f), spotColor = PatientGreen.copy(alpha = 0.10f))
+            .background(Color.White, RoundedCornerShape(26.dp))
+            .border(1.dp, BorderSoft, RoundedCornerShape(26.dp))
             .padding(8.dp)
     ) {
         Column(
@@ -569,17 +634,9 @@ private fun StressStepView(
     onValueChange: (Int) -> Unit
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "¿Cuánto estrés sientes?",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.Start)
-        )
-        Text(
-            text = "Desliza para indicar tu nivel",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
-            modifier = Modifier.align(Alignment.Start)
+        CheckInStepTitle(
+            title = "¿Cuánto estrés sientes?",
+            subtitle = "Marca la intensidad de tu estrés actual."
         )
         Spacer(modifier = Modifier.height(28.dp))
 
@@ -594,8 +651,9 @@ private fun StressStepView(
         }
         Text(
             text = value.toString(),
-            style = MaterialTheme.typography.displayLarge.copy(fontSize = 72.sp),
+            fontFamily = LexendFontFamily,
             fontWeight = FontWeight.ExtraBold,
+            fontSize = 72.sp,
             color = stressColor
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -642,8 +700,8 @@ private fun StressStepView(
                 .padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("1\nSin estrés", style = MaterialTheme.typography.labelMedium, color = Color.Gray, textAlign = TextAlign.Center)
-            Text("10\nMucho", style = MaterialTheme.typography.labelMedium, color = Color.Gray, textAlign = TextAlign.Center)
+            Text("1\nSin estrés", fontFamily = LexendFontFamily, fontSize = 12.sp, color = TextSecondary, textAlign = TextAlign.Center)
+            Text("10\nMucho", fontFamily = LexendFontFamily, fontSize = 12.sp, color = TextSecondary, textAlign = TextAlign.Center)
         }
     }
 }
@@ -666,14 +724,19 @@ private fun StressIndicatorView(level: Int) {
                 .clip(CircleShape)
                 .background(stressColor.copy(alpha = 0.15f))
         )
-        // Emoji showing stress face
-        val emoji = when {
-            level <= 3 -> "😌" // Calm
-            level <= 6 -> "😐" // Worried
-            level <= 8 -> "😰" // Stressed
-            else -> "🤯" // Overwhelmed
+        val label = when {
+            level <= 3 -> "Calma"
+            level <= 6 -> "Tensión"
+            level <= 8 -> "Alerta"
+            else -> "Pausa"
         }
-        Text(text = emoji, fontSize = 64.sp)
+        Text(
+            text = label,
+            fontFamily = LexendFontFamily,
+            fontWeight = FontWeight.Bold,
+            fontSize = 22.sp,
+            color = stressColor
+        )
     }
 }
 

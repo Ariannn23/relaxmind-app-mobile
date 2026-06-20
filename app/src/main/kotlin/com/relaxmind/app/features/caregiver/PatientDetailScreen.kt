@@ -27,8 +27,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
+import com.relaxmind.app.ui.components.RelaxToastHost
+import com.relaxmind.app.ui.components.RelaxToastState
+import com.relaxmind.app.ui.components.rememberRelaxToastState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -80,7 +81,7 @@ fun PatientDetailScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val context = LocalContext.current
-    val snackbarHostState = remember { SnackbarHostState() }
+    val toastState = rememberRelaxToastState()
     var selectedTab by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(patientId) {
@@ -89,7 +90,7 @@ fun PatientDetailScreen(
 
     LaunchedEffect(error) {
         if (!error.isNullOrBlank()) {
-            snackbarHostState.showSnackbar(error.orEmpty())
+            toastState.showError(error.orEmpty())
             viewModel.consumeError()
         }
     }
@@ -98,7 +99,6 @@ fun PatientDetailScreen(
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             RelaxTopBar(
                 title = fullName,
@@ -195,6 +195,8 @@ fun PatientDetailScreen(
             if (isLoading && patient == null) {
                 LoadingIndicator(modifier = Modifier.align(Alignment.Center))
             }
+
+            RelaxToastHost(state = toastState)
         }
     }
 }

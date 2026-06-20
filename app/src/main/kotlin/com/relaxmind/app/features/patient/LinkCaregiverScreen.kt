@@ -20,8 +20,8 @@ import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
+import com.relaxmind.app.ui.components.RelaxToastHost
+import com.relaxmind.app.ui.components.rememberRelaxToastState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -63,26 +63,25 @@ fun LinkCaregiverScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val linked by viewModel.linked.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val toastState = rememberRelaxToastState()
 
     LaunchedEffect(Unit) {
         viewModel.createCode()
     }
 
     LaunchedEffect(error) {
-        if (!error.isNullOrBlank()) snackbarHostState.showSnackbar(error.orEmpty())
+        if (!error.isNullOrBlank()) toastState.showError(error.orEmpty())
     }
 
     LaunchedEffect(linked) {
         if (linked) {
-            snackbarHostState.showSnackbar("Cuidador vinculado exitosamente")
+            toastState.showSuccess("Cuidador vinculado exitosamente")
             onLinked()
         }
     }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             RelaxTopBar(
                 title = "Vincular Cuidador",
@@ -183,6 +182,8 @@ fun LinkCaregiverScreen(
             if (isLoading) {
                 FullScreenLoadingOverlay()
             }
+
+            RelaxToastHost(state = toastState)
         }
     }
 }

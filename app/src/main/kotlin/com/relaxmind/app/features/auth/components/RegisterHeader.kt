@@ -1,13 +1,14 @@
 package com.relaxmind.app.features.auth.components
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,13 +28,13 @@ import com.relaxmind.app.ui.themes.TextSecondary
 fun RegisterHeader(
     modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = modifier.fillMaxWidth()
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth(0.65f)
-                .align(Alignment.CenterStart)
+            modifier = Modifier.weight(1f)
         ) {
             Image(
                 painter = painterResource(id = R.drawable.icono_plano2),
@@ -47,11 +48,10 @@ fun RegisterHeader(
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 32.sp,
-                    lineHeight = 38.sp,
+                    fontSize = 30.sp,
+                    lineHeight = 36.sp,
                     color = TextPrimary
-                ),
-                maxLines = 1
+                )
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -60,18 +60,17 @@ fun RegisterHeader(
                     fontFamily = LexendFontFamily,
                     fontSize = 13.sp,
                     color = TextSecondary
-                ),
-                maxLines = 1
+                )
             )
         }
+
+        Spacer(modifier = Modifier.width(8.dp))
 
         Image(
             painter = painterResource(id = R.drawable.registro),
             contentDescription = "Ilustración 3D Registro",
             modifier = Modifier
-                .size(150.dp)
-                .align(Alignment.CenterEnd)
-                .offset(x = 10.dp),
+                .size(120.dp),
             contentScale = ContentScale.Fit
         )
     }

@@ -196,30 +196,92 @@ object RelaxIcons {
     }
 
     val Meditation: ImageVector = outlinedIcon("RelaxMeditation") {
-        path(stroke = SolidColor(Color.Black), strokeLineWidth = 1.8f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+        path(fill = SolidColor(Color.Black)) {
+            // Central petal (vertical drop)
             moveTo(12f, 5f)
-            arcToRelative(2f, 2f, 0f, true, true, 0f, 4f)
-            arcToRelative(2f, 2f, 0f, true, true, 0f, -4f)
-            moveTo(12f, 10f)
-            verticalLineTo(14f)
-            moveTo(8f, 12f)
-            lineTo(16f, 12f)
-            moveTo(5f, 19f)
-            quadTo(9f, 15f, 12f, 18f)
-            quadTo(15f, 15f, 19f, 19f)
+            quadTo(15f, 11f, 12f, 19f)
+            quadTo(9f, 11f, 12f, 5f)
+            close()
+
+            // Left inner petal
+            moveTo(11.5f, 10f)
+            quadTo(7f, 10f, 7f, 16f)
+            quadTo(10f, 17.5f, 11.5f, 14f)
+            close()
+
+            // Right inner petal
+            moveTo(12.5f, 10f)
+            quadTo(17f, 10f, 17f, 16f)
+            quadTo(14f, 17.5f, 12.5f, 14f)
+            close()
+
+            // Left outer petal (horizontal base curve)
+            moveTo(8f, 15f)
+            quadTo(4f, 15f, 4f, 18f)
+            quadTo(7f, 19f, 9.5f, 17f)
+            close()
+
+            // Right outer petal (horizontal base curve)
+            moveTo(16f, 15f)
+            quadTo(20f, 15f, 20f, 18f)
+            quadTo(17f, 19f, 14.5f, 17f)
+            close()
+        }
+    }
+
+    val Phone: ImageVector = outlinedIcon("RelaxPhone") {
+        path(stroke = SolidColor(Color.Black), strokeLineWidth = 1.8f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(6.5f, 4f)
+            quadTo(5f, 4f, 5f, 5.5f)
+            lineTo(5f, 9f)
+            quadTo(5f, 19f, 15f, 19f)
+            lineTo(18.5f, 19f)
+            quadTo(20f, 19f, 20f, 17.5f)
+            lineTo(20f, 15f)
+            quadTo(20f, 14f, 19f, 14f)
+            lineTo(16.5f, 13f)
+            quadTo(15.5f, 12.7f, 15f, 13.5f)
+            lineTo(14f, 15f)
+            quadTo(11f, 14f, 9f, 10f)
+            lineTo(10.5f, 9f)
+            quadTo(11.3f, 8.5f, 11f, 7.5f)
+            lineTo(10f, 5f)
+            quadTo(9.5f, 4f, 8.5f, 4f)
+            close()
         }
     }
 
     val Progress: ImageVector = outlinedIcon("RelaxProgress") {
-        path(stroke = SolidColor(Color.Black), strokeLineWidth = 1.8f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
-            moveTo(4f, 19f)
-            lineTo(9f, 14f)
-            lineTo(13f, 16f)
-            lineTo(20f, 7f)
-            moveTo(20f, 7f)
-            horizontalLineTo(15f)
-            moveTo(20f, 7f)
-            verticalLineTo(12f)
+        path(fill = SolidColor(Color.Black)) {
+            // Bar 1 (Left): Y from 13 to 19
+            moveTo(7f, 13f)
+            quadTo(8f, 13f, 8f, 14f)
+            lineTo(8f, 18f)
+            quadTo(8f, 19f, 7f, 19f)
+            quadTo(6f, 19f, 6f, 18f)
+            lineTo(6f, 14f)
+            quadTo(6f, 13f, 7f, 13f)
+            close()
+
+            // Bar 2 (Middle): Y from 9 to 19
+            moveTo(12f, 9f)
+            quadTo(13f, 9f, 13f, 10f)
+            lineTo(13f, 18f)
+            quadTo(13f, 19f, 12f, 19f)
+            quadTo(11f, 19f, 11f, 18f)
+            lineTo(11f, 10f)
+            quadTo(11f, 9f, 12f, 9f)
+            close()
+
+            // Bar 3 (Right): Y from 5 to 19
+            moveTo(17f, 5f)
+            quadTo(18f, 5f, 18f, 6f)
+            lineTo(18f, 18f)
+            quadTo(18f, 19f, 17f, 19f)
+            quadTo(16f, 19f, 16f, 18f)
+            lineTo(16f, 6f)
+            quadTo(16f, 5f, 17f, 5f)
+            close()
         }
     }
 

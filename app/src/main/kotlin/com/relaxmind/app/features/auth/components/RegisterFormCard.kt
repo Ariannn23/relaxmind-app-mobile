@@ -88,6 +88,9 @@ fun RegisterFormCard(
     onTogglePasswordVisibility: () -> Unit,
     confirmPasswordVisible: Boolean,
     onToggleConfirmPasswordVisibility: () -> Unit,
+    phone: String,
+    onPhoneChange: (String) -> Unit,
+    phoneError: String?,
     selectedRole: String,
     onRoleSelected: (String) -> Unit,
     termsAccepted: Boolean,
@@ -96,6 +99,7 @@ fun RegisterFormCard(
     isFormValid: Boolean,
     isLoading: Boolean,
     onSubmit: () -> Unit,
+    onGoogleRegister: () -> Unit,
     onNavigateToLogin: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -287,6 +291,23 @@ fun RegisterFormCard(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Número de Teléfono
+            RelaxMindAuthTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = phone,
+                onValueChange = { if (it.length <= 9 && it.all { c -> c.isDigit() }) onPhoneChange(it) },
+                placeholder = "Número de teléfono",
+                leadingIcon = RelaxIcons.Phone,
+                keyboardType = KeyboardType.Number,
+                isError = phoneError != null,
+                errorMessage = phoneError,
+                contentDescription = "Campo de número de teléfono",
+                iconColor = iconColor,
+                iconBgColor = iconBgColor
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             // Selector de Rol
             Text(
                 text = "¿Cómo te identificarías en RelaxMind?",
@@ -344,6 +365,36 @@ fun RegisterFormCard(
                 enabled = isFormValid && !isLoading,
                 isLoading = isLoading,
                 backgroundColor = accentColor
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                androidx.compose.material3.Divider(
+                    modifier = Modifier.weight(1f),
+                    color = BorderSoft
+                )
+                Text(
+                    text = "O regístrate con",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextSecondary,
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+                androidx.compose.material3.Divider(
+                    modifier = Modifier.weight(1f),
+                    color = BorderSoft
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            com.relaxmind.app.ui.components.auth.RelaxOutlineButton(
+                modifier = Modifier.fillMaxWidth(),
+                text = "Continuar con Google",
+                onClick = onGoogleRegister
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -408,7 +459,7 @@ private fun RoleCard(
         label = "role-bg-$label"
     )
 
-    val unselectedIconBgColor = if (label == "Cuidador") SoftLavender else SoftMint
+    val unselectedIconBgColor = if (label == "Cuidador") SoftBlue else SoftMint
 
     Card(
         modifier = modifier

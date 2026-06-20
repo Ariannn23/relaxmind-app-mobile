@@ -14,8 +14,9 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
+import com.relaxmind.app.ui.components.RelaxToastHost
+import com.relaxmind.app.ui.components.RelaxToastState
+import com.relaxmind.app.ui.components.rememberRelaxToastState
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,6 +31,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import com.relaxmind.app.utils.GoogleAuthHelper
 import com.relaxmind.app.features.auth.components.RegisterFormCard
 import com.relaxmind.app.features.auth.components.RegisterHeader
 import com.relaxmind.app.features.auth.components.RelaxAuthBackButton
@@ -50,11 +54,15 @@ import java.util.Calendar
 fun RegisterScreen(
     viewModel: AuthViewModel = viewModel(),
     onNavigateBack: () -> Unit,
-    onNavigateToEmailVerification: () -> Unit
+    onNavigateToEmailVerification: () -> Unit,
+    onNavigateToPatientDashboard: () -> Unit,
+    onNavigateToCaregiverDashboard: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val toastState = rememberRelaxToastState()
+    val userRole by viewModel.userRole.collectAsState()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     // ── Form state ──────────────────────────────────────────────────────────
     var name by remember { mutableStateOf("") }
@@ -67,6 +75,7 @@ fun RegisterScreen(
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     var selectedRole by remember { mutableStateOf("patient") }
     var termsAccepted by remember { mutableStateOf(false) }
+    var phone by remember { mutableStateOf("") }
 
     // ── Date picker ─────────────────────────────────────────────────────────
     val calendar = Calendar.getInstance()
@@ -98,30 +107,50 @@ fun RegisterScreen(
     val confirmPasswordError = if (confirmPassword.isNotEmpty()) {
         if (password != confirmPassword) "Las contraseñas no coinciden." else null
     } else null
+    val phoneError = if (phone.isNotEmpty()) ValidationUtils.validatePhone(phone) else null
 
     val isFormValid = name.isNotBlank() && lastName.isNotBlank() &&
             birthDate.isNotBlank() && email.isNotBlank() &&
-            password.isNotBlank() && confirmPassword.isNotBlank() &&
+            password.isNotBlank() && confirmPassword.isNotBlank() && phone.isNotBlank() &&
             nameError == null && lastNameError == null && birthDateError == null &&
-            emailError == null && passwordError == null && confirmPasswordError == null &&
+            emailError == null && passwordError == null && confirmPasswordError == null && phoneError == null &&
             termsAccepted
 
     // ── Side effects ─────────────────────────────────────────────────────────
-    LaunchedEffect(uiState.success) {
-        if (uiState.success) onNavigateToEmailVerification()
+    LaunchedEffect(uiState.success, userRole) {
+        if (uiState.success) {
+            // Si el userRole es nulo, significa que acaba de registrarse con Google y falta asignar el rol
+            if (userRole == null) {
+                viewModel.finishGoogleRegistration(selectedRole)
+            } else {
+                // Ya tiene rol, decidir a dónde navegar
+                // Si fue un registro manual, el email verification es el siguiente paso. 
+                // Pero si fue Google Auth, ya está verificado y vamos al dashboard.
+                // Sin embargo, para no complicar, asumo que Google = verificado. Si FirebaseAuthService dice que current user tiene emailVerified, omitimos EmailVerification.
+                val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                if (currentUser?.isEmailVerified == true || currentUser?.providerData?.any { it.providerId == "google.com" } == true) {
+                    if (userRole == "caregiver") {
+                        onNavigateToCaregiverDashboard()
+                    } else {
+                        onNavigateToPatientDashboard()
+                    }
+                } else {
+                    onNavigateToEmailVerification()
+                }
+            }
+        }
     }
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let { msg ->
-            snackbarHostState.showSnackbar(msg)
+            toastState.showError(msg)
             viewModel.clearError()
         }
     }
 
     RegisterTheme {
         Scaffold(
-            containerColor = BackgroundWhite,
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+            containerColor = BackgroundWhite
         ) { innerPadding ->
             Box(
                 modifier = Modifier
@@ -182,6 +211,9 @@ fun RegisterScreen(
                         onTogglePasswordVisibility = { passwordVisible = !passwordVisible },
                         confirmPasswordVisible = confirmPasswordVisible,
                         onToggleConfirmPasswordVisibility = { confirmPasswordVisible = !confirmPasswordVisible },
+                        phone = phone,
+                        onPhoneChange = { phone = it },
+                        phoneError = phoneError,
                         selectedRole = selectedRole,
                         onRoleSelected = { selectedRole = it },
                         termsAccepted = termsAccepted,
@@ -197,14 +229,27 @@ fun RegisterScreen(
                                 email = email,
                                 password = password,
                                 confirmPassword = confirmPassword,
-                                role = selectedRole
+                                role = selectedRole,
+                                phone = phone
                             )
+                        },
+                        onGoogleRegister = {
+                            scope.launch {
+                                val result = GoogleAuthHelper.getGoogleIdToken(context)
+                                result.onSuccess { token ->
+                                    viewModel.loginWithGoogle(token)
+                                }.onFailure { error ->
+                                    toastState.showError(error.message ?: "Error al autenticar con Google")
+                                }
+                            }
                         },
                         onNavigateToLogin = onNavigateBack
                     )
 
                     Spacer(modifier = Modifier.height(32.dp))
                 }
+
+                RelaxToastHost(state = toastState)
 
                 // Loading overlay
                 if (uiState.isLoading) {
@@ -254,6 +299,8 @@ private fun String.onlyLettersAndSpaces(): String =
 private fun RegisterScreenPreview() {
     RegisterScreen(
         onNavigateBack = {},
-        onNavigateToEmailVerification = {}
+        onNavigateToEmailVerification = {},
+        onNavigateToPatientDashboard = {},
+        onNavigateToCaregiverDashboard = {}
     )
 }

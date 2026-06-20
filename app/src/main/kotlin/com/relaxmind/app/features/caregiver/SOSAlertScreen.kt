@@ -15,6 +15,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -60,7 +64,7 @@ import com.relaxmind.app.ui.components.ButtonVariant
 import com.relaxmind.app.ui.components.LoadingIndicator
 import com.relaxmind.app.ui.components.RelaxButton
 import com.relaxmind.app.ui.components.RelaxIcons
-import com.relaxmind.app.ui.themes.SOSCoral
+import com.relaxmind.app.ui.themes.ScoreRed
 
 @Composable
 fun SOSAlertScreen(
@@ -102,73 +106,149 @@ fun SOSAlertScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(0.4f)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(SOSCoral, SOSCoral.copy(alpha = 0.8f))
-                    )
-                )
-                .padding(top = 40.dp, start = 16.dp, end = 16.dp, bottom = 24.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(ScoreRed)
+            .padding(start = 24.dp, end = 24.dp, top = 40.dp, bottom = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = RelaxIcons.ArrowBack,
-                            contentDescription = "Volver",
-                            tint = Color.White
-                        )
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    BlinkingAlertText()
-                    Spacer(modifier = Modifier.weight(1.5f))
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                AsyncImage(
-                    model = uiState.patientAvatarUrl.ifBlank { "https://ui-avatars.com/api/?name=${alert.patientName}&background=fff&color=E8582A" },
-                    contentDescription = "Patient Avatar",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(CircleShape)
-                        .border(2.dp, Color.White, CircleShape)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = alert.patientName,
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp
-                    ),
-                    color = Color.White
+            Spacer(modifier = Modifier.weight(1f))
+            BlinkingAlertText()
+            Spacer(modifier = Modifier.weight(1f))
+            IconButton(onClick = onNavigateBack) {
+                Icon(
+                    imageVector = RelaxIcons.Close,
+                    contentDescription = "Cerrar",
+                    tint = Color.White
                 )
             }
         }
 
-        Column(
+        Spacer(modifier = Modifier.weight(1f))
+
+        AsyncImage(
+            model = uiState.patientAvatarUrl.ifBlank { "https://ui-avatars.com/api/?name=${alert.patientName}&background=fff&color=E8582A" },
+            contentDescription = "Patient Avatar",
+            contentScale = ContentScale.Crop,
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(0.6f)
-                .background(Color.White)
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            RelaxButton(
-                text = "LLAMAR AL PACIENTE",
+                .size(72.dp)
+                .clip(CircleShape)
+                .border(2.dp, Color.White, CircleShape)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = alert.patientName,
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.Bold,
+                fontSize = 24.sp
+            ),
+            color = Color.White
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        if (hasLocation) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .clip(MaterialTheme.shapes.medium)
+            ) {
+                GoogleMap(
+                    modifier = Modifier.fillMaxSize(),
+                    cameraPositionState = cameraPositionState
+                ) {
+                    val latLng = LatLng(lat!!, lng!!)
+                    Marker(
+                        state = MarkerState(position = latLng),
+                        title = "Ubicación del paciente"
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Lat: $lat, Lng: $lng",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.8f)
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Button(
+                    onClick = {
+                        val phone = uiState.patientPhone
+                        if (phone.isNotBlank()) {
+                            val intent = Intent(Intent.ACTION_DIAL).apply {
+                                data = Uri.parse("tel:$phone")
+                            }
+                            context.startActivity(intent)
+                        }
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = ScoreRed
+                    )
+                ) {
+                    Text(
+                        text = "LLAMAR",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+
+                Button(
+                    onClick = {
+                        val intent = Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving")
+                        )
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = ScoreRed
+                    )
+                ) {
+                    Text(
+                        text = "VER RUTA",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .background(Color.White.copy(alpha = 0.2f), MaterialTheme.shapes.medium),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Obteniendo ubicación...", color = Color.White)
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
                 onClick = {
                     val phone = uiState.patientPhone
                     if (phone.isNotBlank()) {
@@ -178,69 +258,32 @@ fun SOSAlertScreen(
                         context.startActivity(intent)
                     }
                 },
-                variant = ButtonVariant.DESTRUCTIVE,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            if (hasLocation) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp)
-                        .clip(MaterialTheme.shapes.medium)
-                ) {
-                    GoogleMap(
-                        modifier = Modifier.fillMaxSize(),
-                        cameraPositionState = cameraPositionState
-                    ) {
-                        val latLng = LatLng(lat!!, lng!!)
-                        Marker(
-                            state = MarkerState(position = latLng),
-                            title = "Ubicación del paciente"
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                RelaxButton(
-                    text = "VER RUTA",
-                    onClick = {
-                        val intent = Intent(
-                            Intent.ACTION_VIEW,
-                            Uri.parse("https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving")
-                        )
-                        context.startActivity(intent)
-                    },
-                    variant = ButtonVariant.OUTLINE,
-                    role = AppRole.PATIENT,
-                    modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    contentColor = ScoreRed
                 )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp)
-                        .background(Color.LightGray.copy(alpha = 0.3f), MaterialTheme.shapes.medium),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Obteniendo ubicación...", color = Color.Gray)
-                }
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            TextButton(
-                onClick = { showResolveDialog = true }
             ) {
                 Text(
-                    text = "Marcar como resuelta",
-                    color = Color.Gray,
-                    style = MaterialTheme.typography.labelLarge
+                    text = "LLAMAR AL PACIENTE",
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
                 )
             }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        TextButton(
+            onClick = { showResolveDialog = true }
+        ) {
+            Text(
+                text = "Marcar como resuelta",
+                color = Color.White,
+                style = MaterialTheme.typography.labelLarge
+            )
         }
     }
 

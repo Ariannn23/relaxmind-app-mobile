@@ -3,6 +3,7 @@ package com.relaxmind.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import com.google.android.libraries.places.api.Places
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -22,6 +23,9 @@ import com.relaxmind.app.data.remote.FirestoreRepository
 import com.relaxmind.app.ui.themes.RelaxMindTheme
 import com.relaxmind.app.ui.themes.ThemeState
 import com.relaxmind.app.utils.OnboardingPreferences
+import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 
 class MainActivity : ComponentActivity() {
@@ -30,6 +34,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Initialize notification channels and schedule workers
+        com.relaxmind.app.services.NotificationUtils.createNotificationChannels(this)
+        com.relaxmind.app.services.NotificationUtils.scheduleDailyCheckInReminder(this)
+
+        // Initialize Places API
+        if (!Places.isInitialized()) {
+            Places.initialize(applicationContext, BuildConfig.MAPS_API_KEY)
+        }
 
         // Read the onboarding flag before composition so the start destination is stable.
         val onboardingSeen = OnboardingPreferences.isSeen(this)
@@ -60,6 +73,7 @@ class MainActivity : ComponentActivity() {
                                     updateAppLocale(patient.language)
                                     userRole = "patient"
                                     isNewPatient = !patient.onboardingCompleted
+                                    updateFcmToken("patient")
                                 } else {
                                     val caregiver = withTimeoutOrNull(5000L) {
                                         firestoreRepository.getCaregiverById(currentUser.uid).getOrNull()
@@ -69,6 +83,7 @@ class MainActivity : ComponentActivity() {
                                         ThemeState.language.value = caregiver.language
                                         updateAppLocale(caregiver.language)
                                         userRole = "caregiver"
+                                        updateFcmToken("caregiver")
                                     } else {
                                         authService.logout()
                                         isAuthenticated = false
@@ -103,6 +118,37 @@ class MainActivity : ComponentActivity() {
                                 onboardingSeen = onboardingSeen
                             )
                         )
+                        
+                        LaunchedEffect(intent) {
+                            val action = intent.getStringExtra("action")
+                            when (action) {
+                                "open_sos" -> {
+                                    val alertId = intent.getStringExtra("alertId")
+                                    if (alertId != null) {
+                                        navController.navigate(com.relaxmind.app.Screen.SOSAlert.createRoute(alertId))
+                                    }
+                                }
+                                "open_patient_detail" -> {
+                                    val patientId = intent.getStringExtra("patientId")
+                                    if (patientId != null) {
+                                        navController.navigate(com.relaxmind.app.Screen.PatientDetail.createRoute(patientId))
+                                    }
+                                }
+                                "open_checkin" -> {
+                                    navController.navigate(com.relaxmind.app.Screen.CheckIn.route)
+                                }
+                                "open_appointment" -> {
+                                    val appointmentId = intent.getStringExtra("appointmentId")
+                                    if (appointmentId != null) {
+                                        navController.navigate(com.relaxmind.app.Screen.AppointmentDetail.createRoute(appointmentId))
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (isAuthenticated && userRole == "caregiver") {
+                            com.relaxmind.app.features.caregiver.GlobalCaregiverAlertObserver(navController = navController)
+                        }
                     }
                 }
             }
@@ -119,6 +165,35 @@ class MainActivity : ComponentActivity() {
             resources.updateConfiguration(configuration, resources.displayMetrics)
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    private fun updateFcmToken(role: String) {
+        val user = authService.getCurrentUser()
+        if (user == null) {
+            android.util.Log.e("FCM_TOKEN", "Cannot update token: User is null")
+            return
+        }
+        
+        android.util.Log.d("FCM_TOKEN", "Fetching token for role: $role, user: ${user.uid}")
+        
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val token = task.result
+                android.util.Log.d("FCM_TOKEN", "Token fetch successful: $token")
+                if (!token.isNullOrBlank()) {
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                        val result = firestoreRepository.updateFcmToken(user.uid, role, token)
+                        if (result.isSuccess) {
+                            android.util.Log.d("FCM_TOKEN", "Successfully updated token in Firestore!")
+                        } else {
+                            android.util.Log.e("FCM_TOKEN", "Failed to update token in Firestore", result.exceptionOrNull())
+                        }
+                    }
+                }
+            } else {
+                android.util.Log.e("FCM_TOKEN", "Failed to fetch FCM token", task.exception)
+            }
         }
     }
 }

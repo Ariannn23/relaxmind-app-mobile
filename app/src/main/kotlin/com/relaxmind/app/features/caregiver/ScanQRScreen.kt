@@ -30,8 +30,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
+import com.relaxmind.app.ui.components.RelaxToastHost
+import com.relaxmind.app.ui.components.RelaxToastState
+import com.relaxmind.app.ui.components.rememberRelaxToastState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -76,7 +77,7 @@ fun ScanQRScreen(
     onLinked: () -> Unit
 ) {
     val context = LocalContext.current
-    val snackbarHostState = remember { SnackbarHostState() }
+    val toastState = rememberRelaxToastState()
     val error by viewModel.error.collectAsState()
     val message by viewModel.message.collectAsState()
     val isLinking by viewModel.isLinking.collectAsState()
@@ -101,21 +102,20 @@ fun ScanQRScreen(
     LaunchedEffect(error) {
         if (!error.isNullOrBlank()) {
             scanLocked = false
-            snackbarHostState.showSnackbar(error.orEmpty())
+            toastState.showError(error.orEmpty())
             viewModel.consumeError()
         }
     }
 
     LaunchedEffect(message) {
         if (!message.isNullOrBlank()) {
-            snackbarHostState.showSnackbar(message.orEmpty())
+            toastState.showSuccess(message.orEmpty())
             viewModel.consumeMessage()
         }
     }
 
     Scaffold(
         containerColor = Color.Black,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             RelaxTopBar(
                 title = "Vincularme con paciente",
@@ -172,6 +172,8 @@ fun ScanQRScreen(
             if (isLinking) {
                 FullScreenLoadingOverlay()
             }
+
+            RelaxToastHost(state = toastState)
         }
     }
 }
