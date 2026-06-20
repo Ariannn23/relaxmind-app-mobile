@@ -426,7 +426,14 @@ fun AppNavGraph(
             PatientDetailScreen(
                 patientId = patientId,
                 onNavigateBack = { navController.popBackStack() },
-                onSosAlertClick = { alertId -> navController.navigate(Screen.SOSAlert.createRoute(alertId)) }
+                onSosAlertClick = { alertId -> navController.navigate(Screen.SOSAlert.createRoute(alertId)) },
+                onNavigate = { route ->
+                    navController.navigate(route) {
+                        popUpTo(Screen.CaregiverDashboard.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
             )
         }
         composable(Screen.AlertsHistory.route) {
