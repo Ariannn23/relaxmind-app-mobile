@@ -44,9 +44,12 @@ class SOSPatientViewModel(
 
             val caregiverId = patient.caregiverId
             var caregiverPhone = ""
+            var caregiverName = ""
             if (caregiverId != null) {
                 val caregiverResult = firestoreRepository.getCaregiverById(caregiverId)
-                caregiverPhone = caregiverResult.getOrNull()?.phone ?: ""
+                val caregiver = caregiverResult.getOrNull()
+                caregiverPhone = caregiver?.phone ?: ""
+                caregiverName = if (caregiver != null) "${caregiver.name} ${caregiver.lastName}".trim() else ""
             }
 
             _uiState.value = _uiState.value.copy(
@@ -54,6 +57,7 @@ class SOSPatientViewModel(
                 patientName = "${patient.name} ${patient.lastName}",
                 caregiverId = caregiverId,
                 caregiverPhone = caregiverPhone,
+                caregiverName = caregiverName,
                 isDataLoaded = true
             )
         }
@@ -158,5 +162,6 @@ data class SOSPatientUiState(
     val patientName: String = "",
     val caregiverId: String? = null,
     val caregiverPhone: String = "",
+    val caregiverName: String = "",
     val error: String? = null
 )

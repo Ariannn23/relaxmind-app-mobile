@@ -1,4 +1,4 @@
-﻿package com.relaxmind.app.features.caregiver
+package com.relaxmind.app.features.caregiver
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -40,7 +40,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.Image
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -55,6 +58,7 @@ import com.relaxmind.app.ui.components.RelaxButton
 import com.relaxmind.app.ui.components.RelaxCard
 import com.relaxmind.app.ui.components.RelaxInputField
 import com.relaxmind.app.ui.components.RelaxTopBar
+import com.relaxmind.app.ui.components.getAvatarDrawableRes
 import com.relaxmind.app.ui.themes.CaregiverIndigo
 import com.relaxmind.app.ui.themes.SOSCoral
 import com.relaxmind.app.ui.themes.LexendFontFamily
@@ -199,17 +203,31 @@ private fun PatientListCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(contentAlignment = Alignment.BottomEnd) {
-                AsyncImage(
-                    model = patient.avatarUrl.ifBlank {
-                        "https://ui-avatars.com/api/?name=$fullName&background=4338A8&color=fff"
-                    },
-                    contentDescription = "Avatar de $fullName",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .border(2.dp, CaregiverIndigo.copy(alpha = 0.2f), CircleShape)
-                )
+                val isCustomAvatar = patient.avatarUrl.startsWith("relaxmind://avatar/")
+                if (isCustomAvatar) {
+                    Image(
+                        painter = painterResource(id = getAvatarDrawableRes(patient.avatarUrl)),
+                        contentDescription = "Avatar de $fullName",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, CaregiverIndigo.copy(alpha = 0.2f), CircleShape)
+                            .background(Color(0xFFF3F4F6))
+                    )
+                } else {
+                    AsyncImage(
+                        model = patient.avatarUrl.ifBlank {
+                            "https://ui-avatars.com/api/?name=$fullName&background=4338A8&color=fff"
+                        },
+                        contentDescription = "Avatar de $fullName",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, CaregiverIndigo.copy(alpha = 0.2f), CircleShape)
+                    )
+                }
                 if (summary.hasPendingAlert) {
                     Box(
                         modifier = Modifier

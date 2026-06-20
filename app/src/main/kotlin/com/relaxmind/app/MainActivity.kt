@@ -24,6 +24,10 @@ import com.relaxmind.app.ui.themes.RelaxMindTheme
 import com.relaxmind.app.ui.themes.ThemeState
 import com.relaxmind.app.utils.OnboardingPreferences
 import com.google.firebase.messaging.FirebaseMessaging
+import androidx.compose.runtime.CompositionLocalProvider
+import com.relaxmind.app.ui.components.toast.LocalRelaxToast
+import com.relaxmind.app.ui.components.toast.RelaxToastHost
+import com.relaxmind.app.ui.components.toast.RelaxToastHostState
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
@@ -49,13 +53,16 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val darkMode by ThemeState.darkMode.collectAsState()
+            val toastHostState = remember { RelaxToastHostState() }
 
             RelaxMindTheme(darkTheme = darkMode) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    val currentUser = authService.getCurrentUser()
+                CompositionLocalProvider(LocalRelaxToast provides toastHostState) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = MaterialTheme.colorScheme.background
+                        ) {
+                            val currentUser = authService.getCurrentUser()
                     var isCheckingSession by remember { mutableStateOf(currentUser != null) }
                     var isAuthenticated by remember { mutableStateOf(currentUser != null) }
                     var userRole by remember { mutableStateOf<String?>(null) }
@@ -151,9 +158,13 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+                
+                RelaxToastHost(hostState = toastHostState)
             }
         }
     }
+}
+}
 
     private fun updateAppLocale(lang: String) {
         try {

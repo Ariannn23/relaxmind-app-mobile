@@ -1,5 +1,12 @@
 package com.relaxmind.app.features.auth
 
+import androidx.compose.foundation.Image
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.relaxmind.app.ui.components.LocalRelaxAvatars
+import com.relaxmind.app.ui.components.RelaxAvatar
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -53,26 +60,6 @@ import kotlinx.coroutines.delay
 
 private const val DEFAULT_AVATAR_URL = "relaxmind://avatar/default"
 
-private data class AvatarOption(
-    val url: String,
-    val colors: List<Color>
-)
-
-private val avatarOptions = listOf(
-    AvatarOption("relaxmind://avatar/01", listOf(Color(0xFFA7F3D0), Color(0xFF0F6E56))),
-    AvatarOption("relaxmind://avatar/02", listOf(Color(0xFFFFD6A5), Color(0xFFED8936))),
-    AvatarOption("relaxmind://avatar/03", listOf(Color(0xFFD8B4FE), Color(0xFF7C3AED))),
-    AvatarOption("relaxmind://avatar/04", listOf(Color(0xFFA5F3FC), Color(0xFF0891B2))),
-    AvatarOption("relaxmind://avatar/05", listOf(Color(0xFFFBCFE8), Color(0xFFDB2777))),
-    AvatarOption("relaxmind://avatar/06", listOf(Color(0xFFBFDBFE), Color(0xFF2563EB))),
-    AvatarOption("relaxmind://avatar/07", listOf(Color(0xFFFEF3C7), Color(0xFFEAB308))),
-    AvatarOption("relaxmind://avatar/08", listOf(Color(0xFFFECACA), Color(0xFFEF4444))),
-    AvatarOption("relaxmind://avatar/09", listOf(Color(0xFFCCFBF1), Color(0xFF14B8A6))),
-    AvatarOption("relaxmind://avatar/10", listOf(Color(0xFFFED7AA), Color(0xFFEA580C))),
-    AvatarOption("relaxmind://avatar/11", listOf(Color(0xFFE9D5FF), Color(0xFFA855F7))),
-    AvatarOption("relaxmind://avatar/12", listOf(Color(0xFFFDE68A), Color(0xFFB45309)))
-)
-
 @Composable
 fun AvatarSetupScreen(
     viewModel: AuthViewModel = viewModel(),
@@ -81,7 +68,7 @@ fun AvatarSetupScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val toastState = rememberRelaxToastState()
-    var selectedAvatarUrl by remember { mutableStateOf(avatarOptions.first().url) }
+    var selectedAvatarUrl by remember { mutableStateOf(LocalRelaxAvatars.first().url) }
     var submitted by remember { mutableStateOf(false) }
     var showSavingScreen by remember { mutableStateOf(false) }
     var savingStartedAt by remember { mutableStateOf(0L) }
@@ -151,7 +138,7 @@ fun AvatarSetupScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    items(avatarOptions) { avatar ->
+                    items(LocalRelaxAvatars) { avatar ->
                         AvatarBubble(
                             option = avatar,
                             selected = selectedAvatarUrl == avatar.url,
@@ -198,7 +185,7 @@ fun AvatarSetupScreen(
 
 @Composable
 private fun AvatarBubble(
-    option: AvatarOption,
+    option: RelaxAvatar,
     selected: Boolean,
     onClick: () -> Unit
 ) {
@@ -216,11 +203,16 @@ private fun AvatarBubble(
                 shape = CircleShape
             )
             .padding(if (selected) 5.dp else 0.dp)
-            .background(
-                brush = Brush.linearGradient(option.colors),
-                shape = CircleShape
-            )
-    )
+            .clip(CircleShape)
+            .background(Color(0xFFF3F4F6))
+    ) {
+        Image(
+            painter = painterResource(id = option.drawableRes),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
 }
 
 @Preview(name = "AvatarSetupScreen", showBackground = true, showSystemUi = true)

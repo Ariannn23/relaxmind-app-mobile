@@ -7,6 +7,12 @@ val PatientGreen = Color(0xFF0F6E56)
 val PatientGreenLight = Color(0xFF68D391)
 val CaregiverIndigo = Color(0xFF4338A8)
 val SOSCoral = Color(0xFFE8582A)
+val SOSCoralDark = Color(0xFFD8421F)
+val SOSOrange = Color(0xFFFF6B3A)
+val SOSLight = Color(0xFFFFEDE7)
+val SOSWhite = Color(0xFFFFFFFF)
+val TextOnSOS = Color(0xFFFFFFFF)
+val TextOnSOSMuted = Color(0xFFFFD6CA)
 
 // Wellness score colors are shared by progress charts, chips, and summaries.
 val ScoreRed = Color(0xFFE53E3E)

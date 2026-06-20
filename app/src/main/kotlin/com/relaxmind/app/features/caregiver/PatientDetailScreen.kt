@@ -47,6 +47,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
+import com.relaxmind.app.ui.components.getAvatarDrawableRes
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -213,15 +216,29 @@ private fun PatientHeader(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        AsyncImage(
-            model = avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=$fullName&background=4338A8&color=fff" },
-            contentDescription = "Avatar de $fullName",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(80.dp)
-                .clip(CircleShape)
-                .border(4.dp, WellnessScoreCalculator.getScoreColor(score), CircleShape)
-        )
+        val isCustomAvatar = avatarUrl.startsWith("relaxmind://avatar/")
+        if (isCustomAvatar) {
+            Image(
+                painter = painterResource(id = getAvatarDrawableRes(avatarUrl)),
+                contentDescription = "Avatar de $fullName",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(CircleShape)
+                    .border(4.dp, WellnessScoreCalculator.getScoreColor(score), CircleShape)
+                    .background(Color(0xFFF3F4F6))
+            )
+        } else {
+            AsyncImage(
+                model = avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=$fullName&background=4338A8&color=fff" },
+                contentDescription = "Avatar de $fullName",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(CircleShape)
+                    .border(4.dp, WellnessScoreCalculator.getScoreColor(score), CircleShape)
+            )
+        }
         Text(
             text = fullName,
             style = MaterialTheme.typography.headlineSmall,

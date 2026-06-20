@@ -83,9 +83,11 @@ import coil.compose.AsyncImage
 import com.relaxmind.app.R
 import com.relaxmind.app.Screen
 import com.relaxmind.app.ui.components.AppRole
-import com.relaxmind.app.ui.components.LoadingIndicator
+import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxIcons
+import com.relaxmind.app.ui.components.getAvatarDrawableRes
+import com.relaxmind.app.ui.components.LoadingIndicator
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.BorderSoft
 import com.relaxmind.app.ui.themes.CaregiverIndigo
@@ -326,8 +328,12 @@ private fun UserAvatar(
             contentAlignment = Alignment.BottomCenter
         ) {
             if (isCustomAvatar) {
-                val colors = getAvatarColors(avatarUrl)
-                Box(modifier = Modifier.fillMaxSize().background(Brush.linearGradient(colors)))
+                Image(
+                    painter = painterResource(id = getAvatarDrawableRes(avatarUrl)),
+                    contentDescription = "Avatar de usuario",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
             } else if (avatarUrl.isBlank()) {
                 Image(
                     painter = painterResource(id = R.drawable.avatar),
@@ -354,24 +360,6 @@ private fun UserAvatar(
                 .border(2.dp, Color.White, CircleShape)
                 .align(Alignment.BottomEnd)
         )
-    }
-}
-
-private fun getAvatarColors(url: String): List<Color> {
-    return when (url) {
-        "relaxmind://avatar/01" -> listOf(Color(0xFFA7F3D0), Color(0xFF0F6E56))
-        "relaxmind://avatar/02" -> listOf(Color(0xFFFFD6A5), Color(0xFFED8936))
-        "relaxmind://avatar/03" -> listOf(Color(0xFFD8B4FE), Color(0xFF7C3AED))
-        "relaxmind://avatar/04" -> listOf(Color(0xFFA5F3FC), Color(0xFF0891B2))
-        "relaxmind://avatar/05" -> listOf(Color(0xFFFBCFE8), Color(0xFFDB2777))
-        "relaxmind://avatar/06" -> listOf(Color(0xFFBFDBFE), Color(0xFF2563EB))
-        "relaxmind://avatar/07" -> listOf(Color(0xFFFEF3C7), Color(0xFFEAB308))
-        "relaxmind://avatar/08" -> listOf(Color(0xFFFECACA), Color(0xFFEF4444))
-        "relaxmind://avatar/09" -> listOf(Color(0xFFCCFBF1), Color(0xFF14B8A6))
-        "relaxmind://avatar/10" -> listOf(Color(0xFFFED7AA), Color(0xFFEA580C))
-        "relaxmind://avatar/11" -> listOf(Color(0xFFE9D5FF), Color(0xFFA855F7))
-        "relaxmind://avatar/12" -> listOf(Color(0xFFFDE68A), Color(0xFFB45309))
-        else -> listOf(Color(0xFFCBD5E0), Color(0xFF718096))
     }
 }
 

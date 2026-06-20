@@ -258,6 +258,7 @@ class PatientViewModel(
         sex: String,
         phone: String,
         condition: String,
+        avatarUrl: String = "",
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
@@ -267,15 +268,27 @@ class PatientViewModel(
         }
         viewModelScope.launch {
             _isLoading.value = true
+            val currentAvatar = _patient.value?.avatarUrl ?: "relaxmind://avatar/buho"
+            val updatedAvatarUrl = avatarUrl.ifBlank { currentAvatar }
+            
             val fields = mapOf(
                 "name" to name,
                 "lastName" to lastName,
                 "birthDate" to birthDate,
                 "sex" to sex,
                 "phone" to phone,
-                "condition" to condition
+                "condition" to condition,
+                "avatarUrl" to updatedAvatarUrl
             )
-            _patient.update { it?.copy(name = name, lastName = lastName, birthDate = birthDate, sex = sex, phone = phone, condition = condition) }
+            _patient.update { it?.copy(
+                name = name, 
+                lastName = lastName, 
+                birthDate = birthDate, 
+                sex = sex, 
+                phone = phone, 
+                condition = condition,
+                avatarUrl = updatedAvatarUrl
+            ) }
             val result = firestoreRepository.updatePatient(userId, fields)
             _isLoading.value = false
             if (result.isSuccess) onSuccess()
