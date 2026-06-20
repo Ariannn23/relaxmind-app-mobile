@@ -156,7 +156,7 @@ fun AppointmentDetailScreen(
                                 color = TextPrimary
                             )
                             Text(
-                                text = "Información y opciones del evento 🌿",
+                                text = "Información y opciones del evento",
                                 fontFamily = LexendFontFamily,
                                 fontWeight = FontWeight.Normal,
                                 fontSize = 12.sp,

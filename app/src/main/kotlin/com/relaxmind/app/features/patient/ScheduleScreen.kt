@@ -182,8 +182,8 @@ fun ScheduleScreen(
                         )
                     }
                     1 -> {
-                        // MONTHLY VIEW SIMPLE
-                        MonthlyViewSimple(
+                        // MONTHLY VIEW WITH DIARY COLLAGE
+                        MonthlyViewCollage(
                             currentMonth = calendarYearMonth,
                             appointments = monthlyAppointments,
                             diaryEntries = monthlyDiaryEntries,
