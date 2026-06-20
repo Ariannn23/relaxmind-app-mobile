@@ -7,6 +7,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -81,6 +82,7 @@ import com.relaxmind.app.ui.themes.TextPrimary
 import com.relaxmind.app.ui.themes.TextSecondary
 import com.relaxmind.app.utils.WellnessScoreCalculator
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -602,10 +604,10 @@ private fun MonthlyProgressCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Calendar Matrix (Solid Dots)
+            // Calendar Matrix
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 rows.forEach { rowCells ->
                     Row(
@@ -624,27 +626,46 @@ private fun MonthlyProgressCard(
                                                   LocalDate.now().dayOfMonth == dayNumber
 
                                 val cellColor = WellnessScoreCalculator.getScoreColor(score)
+                                val hasScore = score != null
 
                                 Box(
                                     modifier = Modifier
-                                        .size(34.dp)
+                                        .size(38.dp)
                                         .clip(CircleShape)
-                                        .background(cellColor)
+                                        .background(if (hasScore) cellColor else Color(0xFFF4F7F5))
                                         .then(
                                             if (isCellToday) {
-                                                Modifier.border(2.dp, PatientGreen, CircleShape)
+                                                Modifier.border(1.5.dp, PatientGreen.copy(alpha = 0.45f), CircleShape)
                                             } else Modifier
                                         )
                                         .clickable(enabled = score != null) {
                                             score?.let { onDayClick(dayNumber, it) }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val isLightBackground = !hasScore ||
+                                        cellColor == ScoreGray ||
+                                        cellColor == ScoreYellow ||
+                                        cellColor == ScoreGreenLight
+                                    Text(
+                                        text = dayNumber.toString(),
+                                        fontFamily = LexendFontFamily,
+                                        fontWeight = if (isCellToday || hasScore) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 13.sp,
+                                        color = when {
+                                            hasScore && !isLightBackground -> Color.White
+                                            hasScore -> TextPrimary
+                                            isCellToday -> PatientGreen
+                                            else -> TextSecondary
                                         }
-                                )
+                                    )
+                                }
                             }
                         }
                         // Padding row if short
                         if (rowCells.size < 7) {
                             repeat(7 - rowCells.size) {
-                                Spacer(modifier = Modifier.size(34.dp))
+                                Spacer(modifier = Modifier.size(38.dp))
                             }
                         }
                     }
@@ -1068,10 +1089,8 @@ private fun AchievementVectorIcon(
 private fun HistorySection(
     history: List<CheckIn>
 ) {
-    var limitHistory by remember { mutableStateOf(true) }
-    val visibleHistory = remember(history, limitHistory) {
-        if (limitHistory) history.take(3) else history
-    }
+    var showFullHistory by remember { mutableStateOf(false) }
+    val visibleHistory = remember(history) { history.take(3) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -1088,14 +1107,14 @@ private fun HistorySection(
             )
             if (history.size > 3) {
                 Text(
-                    text = if (limitHistory) "Ver todo" else "Ver menos",
+                    text = "Ver todo",
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 13.sp,
                     color = PatientGreenLight,
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
-                        .clickable { limitHistory = !limitHistory }
+                        .clickable { showFullHistory = true }
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
@@ -1120,7 +1139,117 @@ private fun HistorySection(
                 }
             }
         }
+
+        if (showFullHistory) {
+            FullHistoryDialog(
+                history = history,
+                onDismiss = { showFullHistory = false }
+            )
+        }
     }
+}
+
+@Composable
+private fun FullHistoryDialog(
+    history: List<CheckIn>,
+    onDismiss: () -> Unit
+) {
+    val availableMonths = remember(history) {
+        history.mapNotNull { checkIn ->
+            runCatching { YearMonth.from(LocalDate.parse(checkIn.date)) }.getOrNull()
+        }.distinct().sortedDescending()
+    }
+    var selectedMonth by remember(availableMonths) { mutableStateOf(availableMonths.firstOrNull()) }
+    val filteredHistory = remember(history, selectedMonth) {
+        if (selectedMonth == null) {
+            history
+        } else {
+            history.filter { checkIn ->
+                runCatching { YearMonth.from(LocalDate.parse(checkIn.date)) == selectedMonth }.getOrDefault(false)
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cerrar", fontFamily = LexendFontFamily, color = PatientGreen)
+            }
+        },
+        title = {
+            Text(
+                text = "Historial completo",
+                fontFamily = LexendFontFamily,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(520.dp)
+            ) {
+                if (availableMonths.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        availableMonths.forEach { month ->
+                            val selected = month == selectedMonth
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(50))
+                                    .background(if (selected) PatientGreen else Color.White)
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (selected) PatientGreen else BorderSoft,
+                                        shape = RoundedCornerShape(50)
+                                    )
+                                    .clickable { selectedMonth = month }
+                                    .padding(horizontal = 14.dp, vertical = 9.dp)
+                            ) {
+                                Text(
+                                    text = "${getMonthNameInSpanish(month.monthValue)} ${month.year}",
+                                    fontFamily = LexendFontFamily,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 12.sp,
+                                    color = if (selected) Color.White else TextPrimary
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (filteredHistory.isEmpty()) {
+                        Text(
+                            text = "No hay registros para este mes.",
+                            fontFamily = LexendFontFamily,
+                            fontSize = 14.sp,
+                            color = TextSecondary,
+                            modifier = Modifier.padding(vertical = 20.dp)
+                        )
+                    } else {
+                        filteredHistory.forEach { checkIn ->
+                            HistoryItemRow(checkIn = checkIn)
+                        }
+                    }
+                }
+            }
+        },
+        containerColor = Color.White,
+        shape = RoundedCornerShape(28.dp)
+    )
 }
 
 @Composable
