@@ -1,5 +1,8 @@
 package com.relaxmind.app.features.patient
 
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -51,6 +54,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
@@ -71,6 +76,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -214,7 +220,9 @@ fun DashboardPatientScreen(
                         // 7. "Mi Cuidador" Card (Soft 3D style)
                         CaregiverCard(
                             caregiverId = patient?.caregiverId,
-                            caregiverName = caregiver?.let { "${it.name} ${it.lastName}" },
+                            caregiverName = caregiver
+                                ?.let { "${it.name} ${it.lastName}".trim() }
+                                ?.takeIf { it.isNotBlank() },
                             caregiverAvatar = caregiver?.avatarUrl ?: "",
                             caregiver = caregiver,
                             onLinkClick = onNavigateToLinkCaregiver
@@ -1256,12 +1264,48 @@ private fun CaregiverCard(
     onLinkClick: () -> Unit
 ) {
     var showModal by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val displayName = caregiverName ?: if (caregiverId != null) "Cargando datos del cuidador..." else "Cuidador"
 
     // Modal de contacto del cuidador
     if (showModal && caregiver != null) {
+        val caregiverFullName = "${caregiver.name} ${caregiver.lastName}".trim().ifBlank { "Cuidador" }
         AlertDialog(
             onDismissRequest = { showModal = false },
-            confirmButton = {},
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (caregiver.phone.isNotBlank()) {
+                            val intent = Intent(Intent.ACTION_DIAL).apply {
+                                data = Uri.parse("tel:${caregiver.phone}")
+                            }
+                            context.startActivity(intent)
+                        } else {
+                            Toast.makeText(context, "El cuidador no tiene un número registrado", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    enabled = caregiver.phone.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF4338A8),
+                        disabledContainerColor = Color(0xFFE6E8EF)
+                    ),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Phone,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Llamar",
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            },
             dismissButton = {
                 TextButton(onClick = { showModal = false }) {
                     Text("Cerrar", fontFamily = LexendFontFamily, color = Color(0xFF4338A8))
@@ -1277,7 +1321,7 @@ private fun CaregiverCard(
                 ) {
                     // Avatar
                     AsyncImage(
-                        model = caregiver.avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=${caregiver.name}+${caregiver.lastName}&background=4338A8&color=fff" },
+                        model = caregiver.avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=${Uri.encode(caregiverFullName)}&background=4338A8&color=fff" },
                         contentDescription = "Avatar",
                         modifier = Modifier
                             .size(76.dp)
@@ -1287,7 +1331,7 @@ private fun CaregiverCard(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "${caregiver.name} ${caregiver.lastName}",
+                        text = caregiverFullName,
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
@@ -1317,20 +1361,30 @@ private fun CaregiverCard(
                         if (caregiver.sex.isNotBlank()) add(Pair(Icons.Default.Person, "Género: ${caregiver.sex}"))
                         if (caregiver.birthDate.isNotBlank()) add(Pair(Icons.Default.DateRange, caregiver.birthDate))
                     }
-                    infoItems.forEachIndexed { i, (icon, label) ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(Color(0xFFF8F7FF))
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Icon(imageVector = icon, contentDescription = null, tint = Color(0xFF4338A8), modifier = Modifier.size(20.dp))
-                            Text(text = label, fontFamily = LexendFontFamily, fontSize = 14.sp, color = Color(0xFF2C3E50))
+                    if (infoItems.isEmpty()) {
+                        Text(
+                            text = "Aún no hay información de contacto registrada.",
+                            fontFamily = LexendFontFamily,
+                            fontSize = 13.sp,
+                            color = TextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                    } else {
+                        infoItems.forEachIndexed { i, (icon, label) ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(Color(0xFFF8F7FF))
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(imageVector = icon, contentDescription = null, tint = Color(0xFF4338A8), modifier = Modifier.size(20.dp))
+                                Text(text = label, fontFamily = LexendFontFamily, fontSize = 14.sp, color = Color(0xFF2C3E50))
+                            }
+                            if (i < infoItems.lastIndex) Spacer(modifier = Modifier.height(8.dp))
                         }
-                        if (i < infoItems.lastIndex) Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
             }
@@ -1415,7 +1469,13 @@ private fun CaregiverCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { if (caregiver != null) showModal = true }
+                    .clickable {
+                        if (caregiver != null) {
+                            showModal = true
+                        } else {
+                            Toast.makeText(context, "Cargando datos del cuidador", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                     .padding(18.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
@@ -1426,7 +1486,7 @@ private fun CaregiverCard(
                     modifier = Modifier.weight(1f)
                 ) {
                     AsyncImage(
-                        model = caregiverAvatar.ifBlank { "https://ui-avatars.com/api/?name=Caregiver&background=4338A8&color=fff" },
+                        model = caregiverAvatar.ifBlank { "https://ui-avatars.com/api/?name=${Uri.encode(displayName)}&background=4338A8&color=fff" },
                         contentDescription = "Caregiver Avatar",
                         modifier = Modifier
                             .size(48.dp)
@@ -1444,7 +1504,7 @@ private fun CaregiverCard(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = caregiverName ?: "Cuidador",
+                            text = displayName,
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Normal,
                             fontSize = 12.sp,
