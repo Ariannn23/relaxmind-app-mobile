@@ -39,6 +39,9 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.relaxmind.app.R
@@ -70,7 +73,7 @@ fun ScheduleScreen(
     val monthlyAppointments by viewModel.monthlyAppointments.collectAsState()
     val monthlyDiaryEntries by viewModel.monthlyDiaryEntries.collectAsState()
 
-    var selectedTabIndex by remember { mutableStateOf(0) } // 0 = Semana, 1 = Calendario, 2 = Fotos Diario
+    var selectedTabIndex by remember { mutableStateOf(0) } // 0 = Semana, 1 = Calendario
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var calendarYearMonth by remember { mutableStateOf(LocalDate.now()) }
 
@@ -81,13 +84,28 @@ fun ScheduleScreen(
 
     LaunchedEffect(selectedDate) {
         viewModel.loadAppointmentsForDate(selectedDate.toString())
+        if (selectedDate.year != calendarYearMonth.year || selectedDate.monthValue != calendarYearMonth.monthValue) {
+            calendarYearMonth = selectedDate.withDayOfMonth(1)
+        }
     }
 
     LaunchedEffect(calendarYearMonth) {
         viewModel.loadMonthlyEvents(calendarYearMonth.year, calendarYearMonth.monthValue)
     }
 
-    val tabs = listOf("Semana", "Calendario", "Fotos Diario")
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, selectedDate, calendarYearMonth) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.loadAppointmentsForDate(selectedDate.toString())
+                viewModel.loadMonthlyEvents(calendarYearMonth.year, calendarYearMonth.monthValue)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val tabs = listOf("Semana", "Calendario")
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -156,7 +174,9 @@ fun ScheduleScreen(
                         WeeklyView(
                             selectedDate = selectedDate,
                             appointments = selectedDateAppointments,
+                            monthlyAppointments = monthlyAppointments,
                             diaryEntry = selectedDateDiaryEntry,
+                            monthlyDiaryEntries = monthlyDiaryEntries,
                             onDateSelected = { selectedDate = it },
                             onAppointmentClick = { onNavigate(Screen.AppointmentDetail.createRoute(it.id)) }
                         )
@@ -164,19 +184,6 @@ fun ScheduleScreen(
                     1 -> {
                         // MONTHLY VIEW SIMPLE
                         MonthlyViewSimple(
-                            currentMonth = calendarYearMonth,
-                            appointments = monthlyAppointments,
-                            diaryEntries = monthlyDiaryEntries,
-                            onMonthChange = { calendarYearMonth = it },
-                            onDayClick = { day ->
-                                bottomSheetDate = calendarYearMonth.withDayOfMonth(day)
-                                showBottomSheet = true
-                            }
-                        )
-                    }
-                    2 -> {
-                        // MONTHLY VIEW COLLAGE (DIARY PHOTOS)
-                        MonthlyViewCollage(
                             currentMonth = calendarYearMonth,
                             appointments = monthlyAppointments,
                             diaryEntries = monthlyDiaryEntries,
@@ -318,9 +325,8 @@ private fun ScheduleHeader(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = when (selectedTabIndex) {
-                        0 -> "Tu semana, organizada y en calma 🌿"
-                        1 -> "Tus eventos, hábitos y momentos importantes 🌿"
-                        else -> "Tus notas y recuerdos del mes 🌿"
+                        0 -> "Tu semana, organizada y en calma"
+                        else -> "Tus eventos, hábitos y momentos importantes"
                     },
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Normal,
@@ -363,13 +369,25 @@ private fun ScheduleHeader(
 private fun WeeklyView(
     selectedDate: LocalDate,
     appointments: List<Appointment>,
+    monthlyAppointments: List<Appointment>,
     diaryEntry: DiaryEntry?,
+    monthlyDiaryEntries: List<DiaryEntry>,
     onDateSelected: (LocalDate) -> Unit,
     onAppointmentClick: (Appointment) -> Unit
 ) {
     val today = LocalDate.now()
     val monday = selectedDate.with(java.time.DayOfWeek.MONDAY)
     val weekDays = remember(monday) { (0..6).map { monday.plusDays(it.toLong()) } }
+    val eventDates = remember(monthlyAppointments) {
+        monthlyAppointments.mapNotNull { appointment ->
+            runCatching { LocalDate.parse(appointment.date) }.getOrNull()
+        }.toSet()
+    }
+    val diaryDates = remember(monthlyDiaryEntries) {
+        monthlyDiaryEntries.mapNotNull { entry ->
+            runCatching { LocalDate.parse(entry.date) }.getOrNull()
+        }.toSet()
+    }
 
     Column(
         modifier = Modifier
@@ -400,6 +418,8 @@ private fun WeeklyView(
                 weekDays.forEachIndexed { index, date ->
                     val isSelected = date == selectedDate
                     val isToday = date == today
+                    val hasEvents = eventDates.contains(date)
+                    val hasDiary = diaryDates.contains(date)
 
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -443,9 +463,14 @@ private fun WeeklyView(
                         Spacer(modifier = Modifier.height(4.dp))
                         Box(
                             modifier = Modifier
-                                .size(4.dp)
+                                .size(if (hasEvents || hasDiary) 6.dp else 4.dp)
                                 .background(
-                                    color = if (isSelected) PatientGreen else Color.Transparent,
+                                    color = when {
+                                        hasEvents -> PatientGreen
+                                        hasDiary -> DiaryPurple
+                                        isSelected -> PatientGreen.copy(alpha = 0.45f)
+                                        else -> Color.Transparent
+                                    },
                                     shape = CircleShape
                                 )
                         )
@@ -603,7 +628,7 @@ private fun EmptyEventsPlaceholder() {
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "¡Disfruta tu día! 🌿",
+                text = "Disfruta tu día",
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Medium,
                 fontSize = 12.sp,
@@ -1205,7 +1230,7 @@ private fun DiaryEntryCard(
     diaryEntry: DiaryEntry,
     modifier: Modifier = Modifier
 ) {
-    val emoji = getEmotionEmoji(diaryEntry.emotion)
+    val emotionInitial = diaryEntry.emotion.firstOrNull()?.uppercase() ?: "D"
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -1240,7 +1265,13 @@ private fun DiaryEntryCard(
                             .background(SoftMint, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(text = emoji, fontSize = 20.sp)
+                        Text(
+                            text = emotionInitial,
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = PatientGreen
+                        )
                     }
                     Column {
                         Text(
@@ -1387,17 +1418,5 @@ private fun DiaryCollage(
                 }
             }
         }
-    }
-}
-
-private fun getEmotionEmoji(emotion: String): String {
-    return when (emotion.lowercase()) {
-        "ansioso" -> "😟"
-        "tranquilo" -> "😌"
-        "feliz" -> "😊"
-        "triste" -> "😢"
-        "frustrado" -> "😤"
-        "emocionado" -> "🤩"
-        else -> "😌"
     }
 }
