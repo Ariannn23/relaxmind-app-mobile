@@ -148,7 +148,9 @@ class PatientViewModel(
                 val appointmentsDeferred = async { firestoreRepository.getAppointments(userId, todayDate) }
                 // Fetch caregiver (if linked)
                 val caregiverDeferred = async {
-                    patientData.caregiverId?.let { firestoreRepository.getCaregiverById(it) }
+                    patientData.caregiverId?.let {
+                        firestoreRepository.getLinkedCaregiverProfile(it, patientData)
+                    }
                 }
 
                 val checkInResult = checkInDeferred.await()
@@ -198,7 +200,12 @@ class PatientViewModel(
                     }
 
                 // Map Caregiver
-                _caregiver.value = caregiverResult?.getOrNull()
+                val linkedCaregiver = caregiverResult?.getOrNull()
+                _caregiver.value = linkedCaregiver
+                if (patientData.caregiverId != null && linkedCaregiver == null) {
+                    _error.value = caregiverResult?.exceptionOrNull()?.localizedMessage
+                        ?: "No se pudieron cargar los datos del cuidador vinculado."
+                }
             }
 
             _isLoading.value = false

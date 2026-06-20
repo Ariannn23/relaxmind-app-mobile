@@ -45,6 +45,73 @@ class FirestoreRepository(
         caregivers.document(id).get().await().toObject(Caregiver::class.java)
     }
 
+    suspend fun getLinkedCaregiverProfile(
+        caregiverId: String,
+        patientSnapshot: Patient? = null
+    ): Result<Caregiver?> = runCatching {
+        val caregiverFromCaregivers = runCatching {
+            caregivers.document(caregiverId).get().await()
+        }.getOrNull()
+            ?.takeIf { it.exists() }
+            ?.toObject(Caregiver::class.java)
+            ?.copy(id = caregiverId)
+
+        if (caregiverFromCaregivers != null) {
+            return@runCatching caregiverFromCaregivers
+        }
+
+        val caregiverFromPatients = runCatching {
+            patients.document(caregiverId).get().await()
+        }.getOrNull()
+            ?.takeIf { it.exists() }
+            ?.toObject(Patient::class.java)
+            ?.let { patient ->
+                Caregiver(
+                    id = caregiverId,
+                    name = patient.name,
+                    lastName = patient.lastName,
+                    email = patient.email,
+                    emailVerified = patient.emailVerified,
+                    phone = patient.phone,
+                    birthDate = patient.birthDate,
+                    sex = patient.sex,
+                    avatarUrl = patient.avatarUrl,
+                    fcmToken = patient.fcmToken,
+                    darkMode = patient.darkMode,
+                    language = patient.language,
+                    biometricEnabled = patient.biometricEnabled,
+                    keepSessionActive = patient.keepSessionActive,
+                    notificationsEnabled = patient.notificationsEnabled,
+                    onboardingCompleted = patient.onboardingCompleted,
+                    isDeleted = patient.isDeleted,
+                    deletedAt = patient.deletedAt,
+                    deletionReason = patient.deletionReason,
+                    createdAt = patient.createdAt
+                )
+            }
+
+        if (caregiverFromPatients != null) {
+            return@runCatching caregiverFromPatients
+        }
+
+        patientSnapshot?.takeIf {
+            !it.caregiverName.isNullOrBlank() ||
+                !it.caregiverLastName.isNullOrBlank() ||
+                !it.caregiverEmail.isNullOrBlank() ||
+                !it.caregiverPhone.isNullOrBlank() ||
+                !it.caregiverAvatarUrl.isNullOrBlank()
+        }?.let {
+            Caregiver(
+                id = caregiverId,
+                name = it.caregiverName.orEmpty(),
+                lastName = it.caregiverLastName.orEmpty(),
+                email = it.caregiverEmail.orEmpty(),
+                phone = it.caregiverPhone.orEmpty(),
+                avatarUrl = it.caregiverAvatarUrl.orEmpty()
+            )
+        }
+    }
+
     suspend fun updatePatient(
         id: String,
         fields: Map<String, Any?>
@@ -226,14 +293,21 @@ class FirestoreRepository(
         val patientRef = patients.document(bindingCode.patientId)
 
         val linkedAt = LocalDate.now().toString()
+        val caregiverProfile = getLinkedCaregiverProfile(caregiverId).getOrNull()
+        val patientUpdates = mutableMapOf<String, Any>(
+            "caregiverId" to caregiverId,
+            "linkedCaregiverAt" to linkedAt
+        )
+        caregiverProfile?.let { caregiver ->
+            if (caregiver.name.isNotBlank()) patientUpdates["caregiverName"] = caregiver.name
+            if (caregiver.lastName.isNotBlank()) patientUpdates["caregiverLastName"] = caregiver.lastName
+            if (caregiver.email.isNotBlank()) patientUpdates["caregiverEmail"] = caregiver.email
+            if (caregiver.phone.isNotBlank()) patientUpdates["caregiverPhone"] = caregiver.phone
+            if (caregiver.avatarUrl.isNotBlank()) patientUpdates["caregiverAvatarUrl"] = caregiver.avatarUrl
+        }
+
         firestore.runBatch { batch ->
-            batch.update(
-                patientRef,
-                mapOf(
-                    "caregiverId" to caregiverId,
-                    "linkedCaregiverAt" to linkedAt
-                )
-            )
+            batch.update(patientRef, patientUpdates)
             batch.update(bindingSnapshot.reference, "caregiverId", caregiverId)
         }.await()
 

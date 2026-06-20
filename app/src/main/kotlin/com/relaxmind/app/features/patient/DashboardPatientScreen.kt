@@ -225,6 +225,7 @@ fun DashboardPatientScreen(
                                 ?.takeIf { it.isNotBlank() },
                             caregiverAvatar = caregiver?.avatarUrl ?: "",
                             caregiver = caregiver,
+                            isCaregiverLoading = isLoading && patient?.caregiverId != null && caregiver == null,
                             onLinkClick = onNavigateToLinkCaregiver
                         )
 
@@ -1261,11 +1262,16 @@ private fun CaregiverCard(
     caregiverName: String?,
     caregiverAvatar: String,
     caregiver: com.relaxmind.app.data.model.Caregiver?,
+    isCaregiverLoading: Boolean,
     onLinkClick: () -> Unit
 ) {
     var showModal by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val displayName = caregiverName ?: if (caregiverId != null) "Cargando datos del cuidador..." else "Cuidador"
+    val displayName = caregiverName ?: when {
+        caregiverId == null -> "Cuidador"
+        isCaregiverLoading -> "Cargando datos del cuidador..."
+        else -> "Datos del cuidador no disponibles"
+    }
 
     // Modal de contacto del cuidador
     if (showModal && caregiver != null) {
@@ -1473,7 +1479,12 @@ private fun CaregiverCard(
                         if (caregiver != null) {
                             showModal = true
                         } else {
-                            Toast.makeText(context, "Cargando datos del cuidador", Toast.LENGTH_SHORT).show()
+                            val message = if (isCaregiverLoading) {
+                                "Cargando datos del cuidador"
+                            } else {
+                                "No se pudieron cargar los datos del cuidador"
+                            }
+                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                         }
                     }
                     .padding(18.dp),
