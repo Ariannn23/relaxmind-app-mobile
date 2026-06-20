@@ -1276,12 +1276,17 @@ private fun CaregiverCard(
     // Modal de contacto del cuidador
     if (showModal && caregiver != null) {
         val caregiverFullName = "${caregiver.name} ${caregiver.lastName}".trim().ifBlank { "Cuidador" }
+        val caregiverCanCall = caregiver.phone.isNotBlank()
+        val caregiverDialogPurple = Color(0xFF4338A8)
+        val caregiverDialogLavender = Color(0xFFF7F4FF)
+        val caregiverDialogPill = Color(0xFFEDE9FE)
+        val caregiverDialogMuted = Color(0xFF8B86A8)
         AlertDialog(
             onDismissRequest = { showModal = false },
             confirmButton = {
                 Button(
                     onClick = {
-                        if (caregiver.phone.isNotBlank()) {
+                        if (caregiverCanCall) {
                             val intent = Intent(Intent.ACTION_DIAL).apply {
                                 data = Uri.parse("tel:${caregiver.phone}")
                             }
@@ -1290,17 +1295,18 @@ private fun CaregiverCard(
                             Toast.makeText(context, "El cuidador no tiene un número registrado", Toast.LENGTH_SHORT).show()
                         }
                     },
-                    enabled = caregiver.phone.isNotBlank(),
+                    enabled = caregiverCanCall,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF4338A8),
-                        disabledContainerColor = Color(0xFFE6E8EF)
+                        containerColor = caregiverDialogPurple,
+                        disabledContainerColor = caregiverDialogPill,
+                        disabledContentColor = caregiverDialogMuted
                     ),
                     shape = RoundedCornerShape(18.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Phone,
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = if (caregiverCanCall) Color.White else caregiverDialogMuted,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -1308,21 +1314,25 @@ private fun CaregiverCard(
                         text = "Llamar",
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = if (caregiverCanCall) Color.White else caregiverDialogMuted
                     )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showModal = false }) {
-                    Text("Cerrar", fontFamily = LexendFontFamily, color = Color(0xFF4338A8))
+                    Text("Cerrar", fontFamily = LexendFontFamily, color = caregiverDialogPurple)
                 }
             },
             shape = RoundedCornerShape(28.dp),
-            containerColor = Color.White,
+            containerColor = caregiverDialogLavender,
             title = null,
             text = {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(caregiverDialogLavender)
+                        .padding(top = 4.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Avatar
@@ -1332,7 +1342,7 @@ private fun CaregiverCard(
                         modifier = Modifier
                             .size(76.dp)
                             .clip(CircleShape)
-                            .border(2.dp, Color(0xFF4338A8).copy(alpha = 0.25f), CircleShape),
+                            .border(2.dp, caregiverDialogPurple.copy(alpha = 0.25f), CircleShape),
                         contentScale = ContentScale.Crop
                     )
                     Spacer(modifier = Modifier.height(12.dp))
@@ -1347,7 +1357,7 @@ private fun CaregiverCard(
                         modifier = Modifier
                             .padding(top = 4.dp)
                             .clip(RoundedCornerShape(50))
-                            .background(Color(0xFFF1EDFF))
+                            .background(caregiverDialogPill)
                             .padding(horizontal = 12.dp, vertical = 4.dp)
                     ) {
                         Text(
@@ -1355,7 +1365,7 @@ private fun CaregiverCard(
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 12.sp,
-                            color = Color(0xFF4338A8)
+                            color = caregiverDialogPurple
                         )
                     }
                     Spacer(modifier = Modifier.height(20.dp))
@@ -1381,12 +1391,13 @@ private fun CaregiverCard(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(14.dp))
-                                    .background(Color(0xFFF8F7FF))
+                                    .background(Color.White)
+                                    .border(1.dp, Color(0xFFE5E0F7), RoundedCornerShape(14.dp))
                                     .padding(horizontal = 16.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Icon(imageVector = icon, contentDescription = null, tint = Color(0xFF4338A8), modifier = Modifier.size(20.dp))
+                                Icon(imageVector = icon, contentDescription = null, tint = caregiverDialogPurple, modifier = Modifier.size(20.dp))
                                 Text(text = label, fontFamily = LexendFontFamily, fontSize = 14.sp, color = Color(0xFF2C3E50))
                             }
                             if (i < infoItems.lastIndex) Spacer(modifier = Modifier.height(8.dp))
