@@ -101,9 +101,10 @@ fun DashboardCaregiverScreen(
         Scaffold(
             containerColor = Color.Transparent,
             bottomBar = {
-                CaregiverBottomNavBar(
+                RelaxBottomNav(
                     selectedRoute = Screen.CaregiverDashboard.route,
-                    onNavigate = onNavigate
+                    onNavigate = onNavigate,
+                    role = AppRole.CAREGIVER
                 )
             },
             floatingActionButton = {
@@ -691,101 +692,5 @@ private fun PatientCard(
                 maxLines = 1
             )
         }
-    }
-}
-
-// ── Custom Bottom Nav ─────────────────────────────────────────────────────────
-@Composable
-private fun CaregiverBottomNavBar(
-    selectedRoute: String,
-    onNavigate: (String) -> Unit
-) {
-    val items = listOf(
-        Triple(Screen.CaregiverDashboard.route, Icons.Default.Home, "Dashboard"),
-        Triple(Screen.PatientsList.route, Icons.Default.Group, "Pacientes"),
-        Triple(Screen.AlertsHistory.route, Icons.Default.Notifications, "Alertas"),
-        Triple(Screen.CaregiverSettings.route, Icons.Default.Settings, "Ajustes")
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 12.dp)
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
-            color = Color.White,
-            shadowElevation = 16.dp,
-            tonalElevation = 0.dp
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                items.forEach { (route, icon, label) ->
-                    val isSelected = selectedRoute == route
-                    CaregiverNavItem(
-                        icon = icon,
-                        label = label,
-                        isSelected = isSelected,
-                        onClick = { if (!isSelected) onNavigate(route) }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CaregiverNavItem(
-    icon: ImageVector,
-    label: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val iconColor by animateColorAsState(
-        targetValue = if (isSelected) CaregiverIndigoDark else Color(0xFFB0B5C5),
-        animationSpec = tween(250),
-        label = "nav-color-$label"
-    )
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() },
-                onClick = onClick
-            )
-            .padding(horizontal = 12.dp, vertical = 4.dp)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = iconColor,
-            modifier = Modifier.size(22.dp)
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = label,
-            fontFamily = LexendFontFamily,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            fontSize = 10.sp,
-            color = iconColor
-        )
-        Spacer(modifier = Modifier.height(3.dp))
-        // Active indicator dot
-        Box(
-            modifier = Modifier
-                .size(if (isSelected) 5.dp else 0.dp)
-                .clip(CircleShape)
-                .background(CaregiverIndigoDark)
-        )
     }
 }

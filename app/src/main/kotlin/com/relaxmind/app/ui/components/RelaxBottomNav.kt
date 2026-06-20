@@ -78,9 +78,10 @@ fun RelaxBottomNav(
         BottomNavState.lastSelectedRoute = selectedRoute
     }
 
-    val navShape = if (role == AppRole.CAREGIVER) RoundedCornerShape(32.dp) else RoundedCornerShape(40.dp)
-    val navBgColor = if (role == AppRole.CAREGIVER) Color(0xFFFDFBFF) else Color(0xFFF4FAF7)
-    val navShadowColor = if (role == AppRole.CAREGIVER) Color(0xFF8A88A6).copy(alpha = 0.35f) else Color(0xFF68D391).copy(alpha = 0.15f)
+    val navShape = RoundedCornerShape(40.dp)
+    val navBgColor = if (role == AppRole.CAREGIVER) Color(0xFFFAF8FF) else Color(0xFFF4FAF7)
+    val navShadowColor = if (role == AppRole.CAREGIVER) Color(0xFF4338A8).copy(alpha = 0.16f) else Color(0xFF68D391).copy(alpha = 0.15f)
+    val navBorderColor = if (role == AppRole.CAREGIVER) Color(0xFFE5E0F7) else Color(0xFFE2F3EB)
 
     Box(
         modifier = Modifier
@@ -102,11 +103,7 @@ fun RelaxBottomNav(
                     spotColor = navShadowColor
                 )
                 .background(navBgColor, navShape)
-                .then(
-                    if (role == AppRole.PATIENT) {
-                        Modifier.border(1.dp, Color(0xFFE2F3EB), navShape)
-                    } else Modifier
-                )
+                .border(1.dp, navBorderColor, navShape)
         )
 
         // 2. Interactive Row (drawn on top of the background Box and its border)
@@ -121,91 +118,32 @@ fun RelaxBottomNav(
             items.forEach { item ->
                 val isSelected = animatedSelectedRoute == item.route
 
-                if (role == AppRole.PATIENT) {
-                    PatientNavItem(
-                        item = item,
-                        isSelected = isSelected,
-                        onClick = { onNavigate(item.route) }
-                    )
-                } else {
-                    NormalNavItem(
-                        item = item,
-                        isSelected = isSelected,
-                        onClick = { onNavigate(item.route) },
-                        role = role
-                    )
-                }
+                ElevatedNavItem(
+                    item = item,
+                    isSelected = isSelected,
+                    onClick = { onNavigate(item.route) },
+                    role = role
+                )
             }
         }
     }
 }
 
 @Composable
-private fun NormalNavItem(
+private fun ElevatedNavItem(
     item: RelaxNavItem,
     isSelected: Boolean,
     onClick: () -> Unit,
     role: AppRole
 ) {
-    val activeColor = if (role == AppRole.CAREGIVER) Color(0xFF2B6CB0) else PatientGreen
+    val activeColor = if (role == AppRole.CAREGIVER) Color(0xFF4338A8) else PatientGreen
     val inactiveColor = if (role == AppRole.CAREGIVER) Color(0xFF8A88A6) else Color(0xFF8FA89B)
-    val contentColor by animateColorAsState(
-        targetValue = if (isSelected) activeColor else inactiveColor,
-        label = "nav-item-color"
-    )
-
-    Column(
-        modifier = Modifier
-            .width(56.dp)
-            .fillMaxHeight()
-            .clickable(
-                onClick = onClick,
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = item.icon,
-            contentDescription = item.label,
-            tint = contentColor,
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = item.label,
-            fontFamily = LexendFontFamily,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-            fontSize = 11.sp,
-            color = contentColor
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        
-        if (role == AppRole.CAREGIVER) {
-            // Active indicator dot only for caregiver
-            Box(
-                modifier = Modifier
-                    .size(4.dp)
-                    .background(
-                        color = if (isSelected) activeColor else Color.Transparent,
-                        shape = CircleShape
-                    )
-            )
-        } else {
-            Spacer(modifier = Modifier.height(4.dp))
-        }
+    val outerColor = if (role == AppRole.CAREGIVER) Color(0xFFFAF8FF) else Color(0xFFF4FAF7)
+    val gradientColors = if (role == AppRole.CAREGIVER) {
+        listOf(Color(0xFF6D5DF6), Color(0xFF4338A8))
+    } else {
+        listOf(Color(0xFF68D391), Color(0xFF0F6E56))
     }
-}
-
-@Composable
-private fun PatientNavItem(
-    item: RelaxNavItem,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val activeColor = PatientGreen
-    val inactiveColor = Color(0xFF8FA89B)
 
     // Animated bouncy spring for lively elevation movement
     val offsetAnimation by animateFloatAsState(
@@ -270,13 +208,13 @@ private fun PatientNavItem(
                             .shadow(
                                 elevation = (4 * circleScaleAnimation).dp,
                                 shape = CircleShape,
-                                ambientColor = Color(0xFF68D391).copy(alpha = 0.15f),
-                                spotColor = Color(0xFF68D391).copy(alpha = 0.15f)
+                                ambientColor = activeColor.copy(alpha = 0.15f),
+                                spotColor = activeColor.copy(alpha = 0.15f)
                             )
-                            .background(Color(0xFFF4FAF7), CircleShape)
+                            .background(outerColor, CircleShape)
                     )
 
-                    // 2. Inner green gradient circle
+                    // 2. Inner role-colored gradient circle
                     Box(
                         modifier = Modifier
                             .offset(y = offsetAnimation.dp)
@@ -285,12 +223,12 @@ private fun PatientNavItem(
                             .shadow(
                                 elevation = (8 * circleScaleAnimation).dp,
                                 shape = CircleShape,
-                                ambientColor = PatientGreen.copy(alpha = 0.3f),
-                                spotColor = PatientGreen.copy(alpha = 0.3f)
+                                ambientColor = activeColor.copy(alpha = 0.3f),
+                                spotColor = activeColor.copy(alpha = 0.3f)
                             )
                             .background(
                                 brush = Brush.verticalGradient(
-                                    colors = listOf(Color(0xFF68D391), Color(0xFF0F6E56))
+                                    colors = gradientColors
                                 ),
                                 shape = CircleShape
                             )
