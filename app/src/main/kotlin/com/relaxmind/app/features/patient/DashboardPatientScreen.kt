@@ -166,8 +166,14 @@ fun DashboardPatientScreen(
                         // 2. Main Wellbeing Today Card
                         WellbeingTodayCard(
                             score = todayCheckIn?.score,
+                            category = todayCheckIn?.category
+                        )
+
+                        DailyCheckInStatusCard(
+                            completed = todayCheckIn != null,
+                            score = todayCheckIn?.score,
                             category = todayCheckIn?.category,
-                            onCheckInClick = onNavigateToCheckIn,
+                            onStartClick = onNavigateToCheckIn,
                             onProgressClick = { onNavigate(Screen.Progress.route) }
                         )
 
@@ -405,9 +411,7 @@ private fun SoftNotificationButton(
 @Composable
 private fun WellbeingTodayCard(
     score: Int?,
-    category: String?,
-    onCheckInClick: () -> Unit,
-    onProgressClick: () -> Unit
+    category: String?
 ) {
     Card(
         modifier = Modifier
@@ -529,7 +533,7 @@ private fun WellbeingTodayCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Left Column: Message and Action button
+                // Left Column: Message
                 Column(
                     modifier = Modifier.weight(1.1f),
                     verticalArrangement = Arrangement.Center
@@ -554,34 +558,6 @@ private fun WellbeingTodayCard(
                         lineHeight = 17.sp,
                         color = Color(0xFF5A5E6B)
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Pill Button
-                    Row(
-                        modifier = Modifier
-                            .shadow(2.dp, RoundedCornerShape(50))
-                            .background(Color.White, RoundedCornerShape(50))
-                            .clickable {
-                                if (score != null) onProgressClick() else onCheckInClick()
-                            }
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = if (score != null) "Ver progreso" else "Hacer check-in",
-                            fontFamily = LexendFontFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp,
-                            color = PatientGreen
-                        )
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = null,
-                            tint = PatientGreen,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
                 }
 
                 Spacer(modifier = Modifier.width(16.dp))
@@ -591,6 +567,103 @@ private fun WellbeingTodayCard(
                     score = score,
                     category = category,
                     modifier = Modifier.weight(0.9f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DailyCheckInStatusCard(
+    completed: Boolean,
+    score: Int?,
+    category: String?,
+    onStartClick: () -> Unit,
+    onProgressClick: () -> Unit
+) {
+    val action = if (completed) onProgressClick else onStartClick
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(26.dp),
+                ambientColor = PatientGreen.copy(alpha = 0.14f),
+                spotColor = PatientGreen.copy(alpha = 0.16f)
+            )
+            .clickable(onClick = action),
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(if (completed) PatientGreen else SoftMint),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (completed) RelaxIcons.Check else RelaxIcons.Meditation,
+                    contentDescription = null,
+                    tint = if (completed) Color.White else PatientGreen,
+                    modifier = Modifier.size(23.dp)
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Check-in diario",
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = TextPrimary
+                )
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = if (completed) {
+                        "Completado hoy${score?.let { " · $it/100" } ?: ""}${category?.let { " · $it" } ?: ""}"
+                    } else {
+                        "Registra cómo te sientes para actualizar tu bienestar."
+                    },
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    color = TextSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .shadow(2.dp, RoundedCornerShape(18.dp))
+                    .background(if (completed) Color(0xFFE8F7F1) else PatientGreen, RoundedCornerShape(18.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                if (completed) {
+                    Icon(
+                        imageVector = RelaxIcons.Check,
+                        contentDescription = null,
+                        tint = PatientGreen,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Text(
+                    text = if (completed) "Listo" else "Iniciar",
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    color = if (completed) PatientGreen else Color.White
                 )
             }
         }
@@ -714,7 +787,12 @@ private fun ParaTiHoySection(
                 color = TextPrimary
             )
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = "🌿", fontSize = 16.sp)
+            Icon(
+                imageVector = RelaxIcons.Meditation,
+                contentDescription = null,
+                tint = PatientGreen,
+                modifier = Modifier.size(18.dp)
+            )
         }
 
         Row(
@@ -1359,7 +1437,7 @@ private fun NearbyHealthCard(
                 }
                 Column {
                     Text(
-                        text = "🏥 Centros de Salud Cercanos",
+                        text = "Centros de Salud Cercanos",
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
