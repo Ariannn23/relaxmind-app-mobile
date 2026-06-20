@@ -619,26 +619,37 @@ private fun MonthlyProgressCard(
                             } else {
                                 val dayNumber = cellIndex - emptyCellsBefore + 1
                                 val score = checkIns[dayNumber]
-                                val isCellToday = LocalDate.now().year == year &&
-                                                  LocalDate.now().monthValue == month &&
-                                                  LocalDate.now().dayOfMonth == dayNumber
-
                                 val cellColor = WellnessScoreCalculator.getScoreColor(score)
+                                val dayTextColor = if (
+                                    score != null &&
+                                    cellColor != ScoreYellow &&
+                                    cellColor != ScoreGray &&
+                                    cellColor != ScoreGreenLight
+                                ) {
+                                    Color.White
+                                } else {
+                                    TextPrimary
+                                }
 
                                 Box(
                                     modifier = Modifier
                                         .size(34.dp)
                                         .clip(CircleShape)
                                         .background(cellColor)
-                                        .then(
-                                            if (isCellToday) {
-                                                Modifier.border(2.dp, PatientGreen, CircleShape)
-                                            } else Modifier
-                                        )
                                         .clickable(enabled = score != null) {
                                             score?.let { onDayClick(dayNumber, it) }
-                                        }
-                                )
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = dayNumber.toString(),
+                                        fontFamily = LexendFontFamily,
+                                        fontWeight = if (score != null) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 12.sp,
+                                        color = dayTextColor,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
                             }
                         }
                         // Padding row if short
