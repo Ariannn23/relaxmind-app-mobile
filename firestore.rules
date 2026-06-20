@@ -31,13 +31,27 @@ service cloud.firestore {
         get(/databases/$(database)/documents/patients/$(patientId)).data.caregiverId == request.auth.uid;
     }
 
+    function isLinkedPatientForCaregiver(caregiverId) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/patients/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/patients/$(request.auth.uid)).data.caregiverId == caregiverId;
+    }
+
     function caregiverLinkUpdateOnly() {
       return signedIn()
         && (!('caregiverId' in resource.data) || resource.data.caregiverId == null)
         && request.resource.data.caregiverId == request.auth.uid
         && request.resource.data.linkedCaregiverAt is string
         && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['caregiverId', 'linkedCaregiverAt']);
+          .hasOnly([
+            'caregiverId',
+            'linkedCaregiverAt',
+            'caregiverName',
+            'caregiverLastName',
+            'caregiverEmail',
+            'caregiverPhone',
+            'caregiverAvatarUrl'
+          ]);
     }
 
     match /patients/{patientId} {
@@ -51,7 +65,7 @@ service cloud.firestore {
 
     match /caregivers/{caregiverId} {
       allow create: if validBaseProfile(caregiverId, 'caregiver');
-      allow read: if isSelf(caregiverId);
+      allow read: if isSelf(caregiverId) || isLinkedPatientForCaregiver(caregiverId);
       allow update: if isSelf(caregiverId) && unchangedProtectedFields();
       allow delete: if false;
     }
