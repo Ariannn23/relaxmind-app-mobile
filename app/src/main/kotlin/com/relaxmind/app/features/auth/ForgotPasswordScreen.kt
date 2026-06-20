@@ -1,12 +1,8 @@
 package com.relaxmind.app.features.auth
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,35 +12,27 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.LockReset
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import com.relaxmind.app.ui.components.RelaxToastHost
-import com.relaxmind.app.ui.components.RelaxToastState
-import com.relaxmind.app.ui.components.rememberRelaxToastState
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -54,46 +42,38 @@ import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.ButtonVariant
 import com.relaxmind.app.ui.components.FullScreenLoadingOverlay
 import com.relaxmind.app.ui.components.RelaxButton
-import com.relaxmind.app.ui.components.RelaxIcons
+import com.relaxmind.app.ui.components.auth.RelaxMindAuthTextField
 import com.relaxmind.app.ui.components.RelaxTopBar
 import com.relaxmind.app.ui.themes.PatientGreen
 import com.relaxmind.app.ui.themes.RelaxMindTheme
-import com.relaxmind.app.ui.themes.SOSCoral
-import kotlin.math.max
 
 @Composable
-fun EmailVerificationScreen(
+fun ForgotPasswordScreen(
     viewModel: AuthViewModel = viewModel(),
-    email: String = "tu correo",
-    autoSendCode: Boolean = true,
-    onNavigateBack: () -> Unit,
-    onVerified: () -> Unit
+    onNavigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val timerSeconds by viewModel.timerSeconds.collectAsState()
-    val toastState = rememberRelaxToastState()
-
-    LaunchedEffect(Unit) {
-        viewModel.clearSuccess()
-        if (autoSendCode) viewModel.sendVerificationLink()
-    }
+    val snackbarHostState = remember { SnackbarHostState() }
+    var email by remember { mutableStateOf("") }
+    var emailSent by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.success) {
         if (uiState.success) {
             viewModel.clearSuccess()
-            onVerified()
+            emailSent = true
         }
     }
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
-            toastState.showError(it)
+            snackbarHostState.showSnackbar(it)
             viewModel.clearError()
         }
     }
 
     Scaffold(
-        topBar = { RelaxTopBar(title = "", onBackClick = onNavigateBack) }
+        topBar = { RelaxTopBar(title = "", onBackClick = onNavigateBack) },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -108,52 +88,66 @@ fun EmailVerificationScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(modifier = Modifier.height(48.dp))
-                EmailHero()
+                ForgotPasswordHero()
                 Spacer(modifier = Modifier.height(30.dp))
                 Text(
-                    text = "Verifica tu correo",
+                    text = "Recuperar Contraseña",
                     style = MaterialTheme.typography.headlineLarge,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "Te hemos enviado un enlace de confirmación a $email. Haz clic en él para verificar tu cuenta.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.62f),
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(34.dp))
-                Spacer(modifier = Modifier.height(34.dp))
-                val resendEnabled = timerSeconds == 0 && !uiState.isLoading
-                TextButton(
-                    enabled = resendEnabled,
-                    onClick = { viewModel.resendVerificationLink() }
-                ) {
+                
+                if (emailSent) {
                     Text(
-                        text = "Reenviar enlace de verificación",
-                        style = MaterialTheme.typography.labelLarge
+                        text = "Te hemos enviado un enlace de recuperación a $email. Revisa tu bandeja de entrada o spam.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.62f),
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(34.dp))
+                    RelaxButton(
+                        text = "Volver al inicio",
+                        onClick = onNavigateBack,
+                        modifier = Modifier.fillMaxWidth(),
+                        variant = ButtonVariant.PRIMARY,
+                        role = AppRole.PATIENT
+                    )
+                } else {
+                    Text(
+                        text = "Ingresa tu correo electrónico registrado y te enviaremos un enlace para restablecer tu contraseña.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.62f),
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(34.dp))
+                    RelaxMindAuthTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        placeholder = "Correo electrónico",
+                        leadingIcon = Icons.Default.Email,
+                        keyboardType = KeyboardType.Email,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    RelaxButton(
+                        text = "Enviar enlace",
+                        onClick = { viewModel.sendPasswordResetEmail(email.trim()) },
+                        modifier = Modifier.fillMaxWidth(),
+                        variant = ButtonVariant.PRIMARY,
+                        role = AppRole.PATIENT,
+                        enabled = email.isNotBlank() && !uiState.isLoading
                     )
                 }
-                Spacer(modifier = Modifier.weight(1f))
-                RelaxButton(
-                    text = "Ya hice clic en el enlace",
-                    onClick = { viewModel.checkEmailVerified() },
-                    modifier = Modifier.fillMaxWidth(),
-                    variant = ButtonVariant.PRIMARY,
-                    role = AppRole.PATIENT,
-                    enabled = !uiState.isLoading
-                )
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
             if (uiState.isLoading) FullScreenLoadingOverlay()
-            RelaxToastHost(state = toastState)
         }
     }
 }
 
 @Composable
-private fun EmailHero() {
+private fun ForgotPasswordHero() {
     Box(modifier = Modifier.size(176.dp), contentAlignment = Alignment.Center) {
         Box(
             modifier = Modifier
@@ -169,7 +163,7 @@ private fun EmailHero() {
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = RelaxIcons.Email,
+                imageVector = Icons.Default.LockReset,
                 contentDescription = null,
                 tint = Color.White,
                 modifier = Modifier.size(58.dp)
@@ -178,28 +172,12 @@ private fun EmailHero() {
     }
 }
 
-// Removed OtpBox
-
+@Preview(name = "ForgotPasswordScreen", showBackground = true, showSystemUi = true)
 @Composable
-private fun TimerText(timerSeconds: Int) {
-    val minutes = timerSeconds / 60
-    val seconds = timerSeconds % 60
-    Text(
-        text = "El código expira en $minutes:${seconds.toString().padStart(2, '0')}",
-        color = if (timerSeconds in 1..29) SOSCoral else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.62f),
-        style = MaterialTheme.typography.bodyLarge
-    )
-}
-
-@Preview(name = "EmailVerificationScreen", showBackground = true, showSystemUi = true)
-@Composable
-private fun EmailVerificationScreenPreview() {
+private fun ForgotPasswordScreenPreview() {
     RelaxMindTheme(darkTheme = false) {
-        EmailVerificationScreen(
-            email = "paciente@mail.com",
-            autoSendCode = false,
-            onNavigateBack = {},
-            onVerified = {}
+        ForgotPasswordScreen(
+            onNavigateBack = {}
         )
     }
 }

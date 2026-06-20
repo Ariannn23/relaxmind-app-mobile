@@ -17,6 +17,7 @@ import com.relaxmind.app.features.auth.EmailVerificationScreen
 import com.relaxmind.app.features.auth.LoginScreen
 import com.relaxmind.app.features.auth.NotificationPermissionScreen
 import com.relaxmind.app.features.auth.RegisterScreen
+import com.relaxmind.app.features.auth.ForgotPasswordScreen
 import com.relaxmind.app.features.caregiver.AlertsHistoryScreen
 import com.relaxmind.app.features.caregiver.DashboardCaregiverScreen
 import com.relaxmind.app.features.caregiver.PatientDetailScreen
@@ -170,6 +171,7 @@ fun AppNavGraph(
         }
         composable(Screen.EmailVerification.route) {
             EmailVerificationScreen(
+                autoSendCode = false,
                 onNavigateBack = { navController.popBackStack() },
                 onVerified = {
                     navController.navigate(Screen.AvatarSetup.route) {
@@ -203,7 +205,11 @@ fun AppNavGraph(
                 }
             )
         }
-        composable(Screen.ForgotPassword.route) { PlaceholderScreen("Pantalla Forgot Password") }
+        composable(Screen.ForgotPassword.route) { 
+            ForgotPasswordScreen(
+                onNavigateBack = { navController.popBackStack() }
+            ) 
+        }
 
         composable(Screen.PatientDashboard.route) {
             DashboardPatientScreen(

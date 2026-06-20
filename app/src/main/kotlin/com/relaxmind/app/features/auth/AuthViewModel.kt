@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.time.Instant
 
 // ---------------------------------------------------------------------------
@@ -303,73 +304,56 @@ class AuthViewModel(
 
     // ── OTP / Verification ─────────────────────────────────────────────────
 
-    /**
-     * Simulates sending a 6-digit OTP. In production this would be replaced
-     * by a real SMS/OTP backend call; Firebase itself uses email deep-links.
-     *
-     * The function generates a random code, starts the 120-second countdown,
-     * and (in debug builds) logs the code so it can be tested manually.
-     */
-    fun sendVerificationCode() {
-        pendingOtp = (100_000..999_999).random().toString()
-        Log.d("RelaxMindOtp", "Verification OTP: $pendingOtp")
-        _resendCount.value = 0
-        startTimer()
-
+    fun sendVerificationLink() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
-
-            // Reuse Firebase email verification as the real delivery mechanism.
             val result = authService.sendVerificationEmail()
-
-            _uiState.update {
-                if (result.isFailure) {
+            if (result.isFailure) {
+                _uiState.update {
                     it.copy(
-                        isLoading = false,
                         error = result.exceptionOrNull()?.localizedMessage
-                            ?: "Error al enviar el código."
+                            ?: "Error al enviar enlace de verificación."
                     )
-                } else {
-                    it.copy(isLoading = false)
                 }
             }
         }
     }
 
-    /** Validates the 6-digit OTP entered by the user. */
-    fun verifyCode(code: String) {
-        val codeError = ValidationUtils.validateOtpCode(code)
-        if (codeError != null) {
-            _uiState.update { it.copy(error = codeError) }
-            return
+    /**
+     * Checks if the user's email is verified.
+     */
+    fun checkEmailVerified() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            val user = authService.getCurrentUser()
+            if (user == null) {
+                _uiState.update { it.copy(isLoading = false, error = "No hay usuario en sesión.") }
+                return@launch
+            }
+            
+            try {
+                user.reload().await()
+                if (user.isEmailVerified) {
+                    val role = resolveCurrentRole(user.uid).getOrNull()
+                    if (role == "caregiver") {
+                        firestoreRepository.updateCaregiver(user.uid, mapOf("emailVerified" to true))
+                    } else {
+                        firestoreRepository.updatePatient(user.uid, mapOf("emailVerified" to true))
+                    }
+                    
+                    _uiState.update { it.copy(isLoading = false, success = true) }
+                } else {
+                    _uiState.update { it.copy(isLoading = false, error = "Aún no has verificado tu correo. Revisa tu bandeja de entrada.") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = "Error al verificar el correo.") }
+            }
         }
-
-        if (code != pendingOtp) {
-            _uiState.update { it.copy(error = "El código ingresado no es correcto.") }
-            return
-        }
-
-        // Code is valid
-        timerJob?.cancel()
-        _timerSeconds.value = 0
-        _uiState.update { it.copy(success = true, error = null) }
     }
 
     /**
-     * Resends the verification code up to [RESEND_MAX] times.
-     * Resets the countdown on each successful resend.
+     * Resends the verification link.
      */
-    fun resendCode() {
-        if (_resendCount.value >= RESEND_MAX) {
-            _uiState.update {
-                it.copy(error = "Has alcanzado el límite máximo de reenvíos ($RESEND_MAX).")
-            }
-            return
-        }
-
-        _resendCount.update { it + 1 }
-        pendingOtp = (100_000..999_999).random().toString()
-        Log.d("RelaxMindOtp", "Verification OTP: $pendingOtp")
+    fun resendVerificationLink() {
         startTimer()
 
         viewModelScope.launch {
@@ -380,10 +364,36 @@ class AuthViewModel(
                     it.copy(
                         isLoading = false,
                         error = result.exceptionOrNull()?.localizedMessage
-                            ?: "Error al reenviar el código."
+                            ?: "Error al reenviar el enlace."
                     )
                 } else {
-                    it.copy(isLoading = false)
+                    it.copy(isLoading = false, success = true)
+                }
+            }
+        }
+    }
+
+    /**
+     * Sends a password reset email.
+     */
+    fun sendPasswordResetEmail(email: String) {
+        if (email.isBlank()) {
+            _uiState.update { it.copy(error = "Ingresa un correo electrónico.") }
+            return
+        }
+        
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            val result = authService.resetPassword(email)
+            _uiState.update {
+                if (result.isFailure) {
+                    it.copy(
+                        isLoading = false,
+                        error = result.exceptionOrNull()?.localizedMessage
+                            ?: "Error al enviar el correo de recuperación."
+                    )
+                } else {
+                    it.copy(isLoading = false, success = true)
                 }
             }
         }
