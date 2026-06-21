@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -67,7 +68,8 @@ private val DiaryPurple = Color(0xFF8B5CF6)
 @Composable
 fun ScheduleScreen(
     viewModel: PatientViewModel = viewModel(),
-    onNavigate: (String) -> Unit
+    onNavigate: (String) -> Unit,
+    showBottomNav: Boolean = true
 ) {
     val selectedDateAppointments by viewModel.selectedDateAppointments.collectAsState()
     val monthlyAppointments by viewModel.monthlyAppointments.collectAsState()
@@ -105,17 +107,19 @@ fun ScheduleScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val tabs = listOf("Semana", "Calendario")
+    val tabs = listOf(stringResource(id = R.string.schedule_week), stringResource(id = R.string.schedule_calendar))
 
     Scaffold(
         containerColor = Color.Transparent,
         bottomBar = {
-            RelaxBottomNav(
-                selectedRoute = "patient/schedule",
-                onNavigate = onNavigate,
-                role = AppRole.PATIENT
-            )
-        }
+                if (showBottomNav) {
+                    RelaxBottomNav(
+                        selectedRoute = "patient/schedule",
+                        onNavigate = onNavigate,
+                        role = AppRole.PATIENT
+                    )
+                }
+            }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -316,7 +320,7 @@ private fun ScheduleHeader(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Agenda",
+                    text = stringResource(id = R.string.schedule_title),
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 32.sp,
@@ -325,7 +329,7 @@ private fun ScheduleHeader(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = when (selectedTabIndex) {
-                        0 -> "Tu semana, organizada y en calma"
+                        0 -> stringResource(id = R.string.schedule_subtitle_week)
                         else -> "Tus eventos, hábitos y momentos importantes"
                     },
                     fontFamily = LexendFontFamily,
@@ -513,7 +517,7 @@ private fun WeeklyView(
                     color = TextPrimary
                 )
                 Text(
-                    text = if (appointments.isEmpty()) "Sin eventos programados" else "${appointments.size} eventos programados",
+                    text = if (appointments.isEmpty()) stringResource(id = R.string.schedule_no_events) else stringResource(id = R.string.schedule_events_count, appointments.size),
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Medium,
                     fontSize = 12.sp,

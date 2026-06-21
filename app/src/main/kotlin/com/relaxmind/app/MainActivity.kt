@@ -1,12 +1,12 @@
 package com.relaxmind.app
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.google.android.libraries.places.api.Places
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
@@ -17,11 +17,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.rememberNavController
 import com.relaxmind.app.data.remote.FirebaseAuthService
 import com.relaxmind.app.data.remote.FirestoreRepository
 import com.relaxmind.app.ui.themes.RelaxMindTheme
 import com.relaxmind.app.ui.themes.ThemeState
+import com.relaxmind.app.ui.components.RelaxLoadingScreen
 import com.relaxmind.app.utils.OnboardingPreferences
 import com.google.firebase.messaging.FirebaseMessaging
 import androidx.compose.runtime.CompositionLocalProvider
@@ -53,10 +56,20 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val darkMode by ThemeState.darkMode.collectAsState()
+            val language by ThemeState.language.collectAsState()
+            val localizedContext = remember(language) { createLocalizedContext(language) }
+            val localizedConfiguration = localizedContext.resources.configuration
             val toastHostState = remember { RelaxToastHostState() }
 
+            LaunchedEffect(language) {
+                updateAppLocale(language)
+            }
+
             RelaxMindTheme(darkTheme = darkMode) {
-                CompositionLocalProvider(LocalRelaxToast provides toastHostState) {
+                CompositionLocalProvider(
+                    LocalConfiguration provides localizedConfiguration,
+                    LocalRelaxToast provides toastHostState
+                ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         Surface(
                             modifier = Modifier.fillMaxSize(),
@@ -106,14 +119,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     if (isCheckingSession) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                        RelaxLoadingScreen()
                     } else {
                         val navController = rememberNavController()
                         AppNavGraph(
@@ -179,6 +185,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun createLocalizedContext(lang: String): Context {
+        val locale = java.util.Locale(lang)
+        java.util.Locale.setDefault(locale)
+        val configuration = resources.configuration
+        configuration.setLocale(locale)
+        return createConfigurationContext(configuration)
+    }
+
     private fun updateFcmToken(role: String) {
         val user = authService.getCurrentUser()
         if (user == null) {
@@ -207,4 +221,10 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        com.relaxmind.app.utils.SoundPlayerManager.stopAll()
+    }
 }
+

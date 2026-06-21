@@ -1,4 +1,4 @@
-package com.relaxmind.app.features.patient
+﻿package com.relaxmind.app.features.patient
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -67,6 +68,7 @@ import com.relaxmind.app.data.model.MeditationExercise
 import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.LoadingIndicator
 import com.relaxmind.app.ui.components.RelaxBottomNav
+import com.relaxmind.app.ui.components.ScreenHeader
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.LexendFontFamily
 import com.relaxmind.app.ui.themes.LexendTypography
@@ -78,9 +80,9 @@ import com.relaxmind.app.ui.themes.SoftLavender
 import com.relaxmind.app.ui.themes.TextPrimary
 import com.relaxmind.app.ui.themes.TextSecondary
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 // 1. DYNAMIC 3D CLAY ICONS IN COMPOSE CANVAS
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 @Composable
 fun LungsIcon(modifier: Modifier = Modifier) {
@@ -410,9 +412,9 @@ fun DiaphragmaticIcon(modifier: Modifier = Modifier) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 // 2. BANNER DECORATIVE ICONS (STAR & WIND)
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 @Composable
 fun ClayStarIcon(modifier: Modifier = Modifier) {
@@ -547,9 +549,9 @@ fun WindLeafIcon(modifier: Modifier = Modifier) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 // 3. AUXILIARY CARD DRAWABLES (CLOCK & CATEGORY ICONS)
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 @Composable
 fun ClockIcon(
@@ -669,9 +671,9 @@ fun CategoryIcon(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 // 4. ROUTER FOR MEDITATION ICON TYPE
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 @Composable
 fun MeditationExerciseIcon(
@@ -712,54 +714,20 @@ private fun getExerciseDisplayConfig(exercise: MeditationExercise): Triple<Color
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 // 5. REDESIGNED COMPOSABLES & MAIN LAYOUT
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 @Composable
 fun MeditateHeader(
-    onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        // Left Back Button
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .size(46.dp)
-                .shadow(
-                    elevation = 4.dp,
-                    shape = CircleShape,
-                    ambientColor = Color(0xFF8A88A6).copy(alpha = 0.15f),
-                    spotColor = Color(0xFF8A88A6).copy(alpha = 0.15f)
-                )
-                .background(Color.White, CircleShape)
-                .clickable(onClick = onBackClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Volver al inicio",
-                tint = TextPrimary,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-        
-        // Center Title
-        Text(
-            text = "Meditar",
-            fontFamily = LexendFontFamily,
-            fontWeight = FontWeight.ExtraBold,
-            fontSize = 30.sp,
-            color = TextPrimary,
-            textAlign = TextAlign.Center
-        )
-    }
+    ScreenHeader(
+        title = "Meditar",
+        subtitle = "Respira hondo, relájate y encuentra tu centro",
+        modifier = modifier,
+        horizontalPadding = 0.dp
+    )
 }
 
 @Composable
@@ -817,7 +785,7 @@ fun GoalBannerCard(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = "Tu meta de hoy:",
+                    text = stringResource(id = R.string.meditate_today_goal),
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Medium,
                     fontSize = 14.sp,
@@ -932,7 +900,7 @@ fun MeditationExerciseCard(
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = "META DE HOY",
+                                text = stringResource(id = R.string.meditate_goal_badge),
                                 fontFamily = LexendFontFamily,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 9.sp,
@@ -989,14 +957,15 @@ fun MeditationExerciseCard(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 // 6. MAIN MEDITATE SCREEN COMPOSABLE
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 @Composable
 fun MeditateScreen(
     viewModel: PatientViewModel = viewModel(),
-    onNavigate: (String) -> Unit
+    onNavigate: (String) -> Unit,
+    showBottomNav: Boolean = true
 ) {
     val isLoading by viewModel.isLoading.collectAsState()
     val exercises by viewModel.meditationExercises.collectAsState()
@@ -1016,11 +985,13 @@ fun MeditateScreen(
         Scaffold(
             containerColor = Color.White,
             bottomBar = {
-                RelaxBottomNav(
-                    selectedRoute = "patient/meditate",
-                    onNavigate = onNavigate,
-                    role = AppRole.PATIENT
-                )
+                if (showBottomNav) {
+                    RelaxBottomNav(
+                        selectedRoute = "patient/meditate",
+                        onNavigate = onNavigate,
+                        role = AppRole.PATIENT
+                    )
+                }
             }
         ) { innerPadding ->
             Box(
@@ -1041,14 +1012,8 @@ fun MeditateScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // Margin top
-                        item { Spacer(modifier = Modifier.height(20.dp)) }
-                        
-                        // Centered Meditar title & Back Button
                         item {
-                            MeditateHeader(
-                                onBackClick = { onNavigate("patient/dashboard") }
-                            )
+                            MeditateHeader()
                         }
                         
                         item { Spacer(modifier = Modifier.height(4.dp)) }
@@ -1104,3 +1069,4 @@ fun MeditateScreen(
         }
     }
 }
+

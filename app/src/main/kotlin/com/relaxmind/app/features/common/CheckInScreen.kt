@@ -1,7 +1,10 @@
 package com.relaxmind.app.features.common
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -52,18 +55,25 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.ButtonVariant
 import com.relaxmind.app.ui.components.FullScreenLoadingOverlay
@@ -153,7 +163,7 @@ fun CheckInScreen(
     // If final success, show animated result screen
     if (uiState is CheckInUiState.Success) {
         val successState = uiState as CheckInUiState.Success
-        CheckInResultView(
+        AnimatedCheckInResultView(
             score = successState.score,
             category = successState.category,
             onDismiss = onFinished
@@ -519,6 +529,8 @@ private fun EnergyStepView(
     value: Int,
     onValueChange: (Int) -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
+    var lastHapticValue by remember { mutableStateOf(value) }
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         CheckInStepTitle(
             title = "¿Cuánta energía sientes hoy?",
@@ -562,7 +574,14 @@ private fun EnergyStepView(
             )
             Slider(
                 value = value.toFloat(),
-                onValueChange = { onValueChange(it.roundToInt()) },
+                onValueChange = {
+                    val roundedValue = it.roundToInt()
+                    if (roundedValue != lastHapticValue) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        lastHapticValue = roundedValue
+                    }
+                    onValueChange(roundedValue)
+                },
                 valueRange = 1f..10f,
                 steps = 8,
                 colors = SliderDefaults.colors(
@@ -633,6 +652,8 @@ private fun StressStepView(
     value: Int,
     onValueChange: (Int) -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
+    var lastHapticValue by remember { mutableStateOf(value) }
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         CheckInStepTitle(
             title = "¿Cuánto estrés sientes?",
@@ -681,7 +702,14 @@ private fun StressStepView(
             )
             Slider(
                 value = value.toFloat(),
-                onValueChange = { onValueChange(it.roundToInt()) },
+                onValueChange = {
+                    val roundedValue = it.roundToInt()
+                    if (roundedValue != lastHapticValue) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        lastHapticValue = roundedValue
+                    }
+                    onValueChange(roundedValue)
+                },
                 valueRange = 1f..10f,
                 steps = 8,
                 colors = SliderDefaults.colors(
@@ -1080,3 +1108,140 @@ private fun CheckInResultView(
         }
     }
 }
+
+@Composable
+private fun AnimatedCheckInResultView(
+    score: Int,
+    category: String,
+    onDismiss: () -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    var showCategory by remember { mutableStateOf(false) }
+    val animatedScore by animateIntAsState(
+        targetValue = score,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "checkin-score-counter"
+    )
+    val categoryAlpha by animateFloatAsState(
+        targetValue = if (showCategory) 1f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 420),
+        label = "checkin-category-alpha"
+    )
+    val composition by rememberLottieComposition(
+        LottieCompositionSpec.JsonString(if (score >= 50) CheckInCelebrationLottieJson else CheckInCalmLottieJson)
+    )
+    val lottieProgress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = 1,
+        restartOnPlay = true
+    )
+
+    LaunchedEffect(score) {
+        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        kotlinx.coroutines.delay(520)
+        showCategory = true
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            LottieAnimation(
+                composition = composition,
+                progress = { lottieProgress },
+                modifier = Modifier.size(116.dp)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "¡Check-in completado!",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = PatientGreen
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "Tu nivel de bienestar de hoy",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.Gray
+            )
+            Spacer(modifier = Modifier.height(34.dp))
+
+            Box(
+                modifier = Modifier
+                    .size(200.dp)
+                    .border(6.dp, PatientGreen.copy(alpha = 0.12f), CircleShape)
+                    .border(12.dp, PatientGreen, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = animatedScore.toString(),
+                        style = MaterialTheme.typography.displayLarge.copy(fontSize = 80.sp),
+                        fontWeight = FontWeight.ExtraBold,
+                        color = PatientGreen
+                    )
+                    Text(
+                        text = "/ 100",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.Gray
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(34.dp))
+            Text(
+                text = "Estado: $category",
+                modifier = Modifier.alpha(categoryAlpha),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = PatientGreen
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "¡Buen trabajo tomándote un momento para ti hoy!",
+                modifier = Modifier.alpha(categoryAlpha),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.Gray,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(64.dp))
+            RelaxButton(
+                text = "Ver mi dashboard",
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                variant = ButtonVariant.PRIMARY,
+                role = AppRole.PATIENT
+            )
+        }
+    }
+}
+
+private const val CheckInCelebrationLottieJson = """
+{
+  "v":"5.7.4","fr":30,"ip":0,"op":60,"w":220,"h":220,"nm":"check-celebration","ddd":0,"assets":[],
+  "layers":[
+    {"ddd":0,"ind":1,"ty":4,"nm":"circle","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[110,110,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":0,"s":[30,30,100]},{"t":28,"s":[112,112,100]},{"t":60,"s":[100,100,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[118,118]}},{"ty":"fl","c":{"a":0,"k":[0.407,0.827,0.568,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":60,"st":0,"bm":0},
+    {"ddd":0,"ind":2,"ty":4,"nm":"check","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[110,114,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":10,"s":[20,20,100]},{"t":34,"s":[110,110,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"sh","ks":{"a":0,"k":{"i":[[0,0],[0,0],[0,0]],"o":[[0,0],[0,0],[0,0]],"v":[[-34,-2],[-10,24],[38,-30]],"c":false}}},{"ty":"st","c":{"a":0,"k":[1,1,1,1]},"o":{"a":0,"k":100},"w":{"a":0,"k":12},"lc":2,"lj":2},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":60,"st":0,"bm":0}
+  ]
+}
+"""
+
+private const val CheckInCalmLottieJson = """
+{
+  "v":"5.7.4","fr":30,"ip":0,"op":60,"w":220,"h":220,"nm":"calm-check","ddd":0,"assets":[],
+  "layers":[
+    {"ddd":0,"ind":1,"ty":4,"nm":"soft-circle","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[110,110,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":0,"s":[76,76,100]},{"t":30,"s":[104,104,100]},{"t":60,"s":[96,96,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[124,124]}},{"ty":"fl","c":{"a":0,"k":[0.949,0.824,0.263,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":60,"st":0,"bm":0},
+    {"ddd":0,"ind":2,"ty":4,"nm":"breath-check","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[110,112,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":10,"s":[55,55,100]},{"t":42,"s":[100,100,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"sh","ks":{"a":0,"k":{"i":[[0,0],[0,0],[0,0]],"o":[[0,0],[0,0],[0,0]],"v":[[-34,-2],[-10,24],[38,-30]],"c":false}}},{"ty":"st","c":{"a":0,"k":[1,1,1,1]},"o":{"a":0,"k":100},"w":{"a":0,"k":12},"lc":2,"lj":2},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":60,"st":0,"bm":0}
+  ]
+}
+"""

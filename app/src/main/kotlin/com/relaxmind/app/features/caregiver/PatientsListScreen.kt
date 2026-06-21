@@ -65,10 +65,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import com.relaxmind.app.R
+import com.relaxmind.app.ui.components.getAvatarDrawableRes
 import com.relaxmind.app.Screen
 import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxButton
+import com.relaxmind.app.ui.components.RelaxLoadingContent
+import com.relaxmind.app.ui.components.ScreenHeader
 import com.relaxmind.app.ui.components.RelaxToastHost
 import com.relaxmind.app.ui.components.rememberRelaxToastState
 import com.relaxmind.app.ui.themes.*
@@ -90,7 +97,8 @@ fun PatientsListScreen(
     viewModel: CaregiverViewModel = viewModel(),
     onNavigate: (String) -> Unit,
     onPatientClick: (String) -> Unit,
-    onScanQr: () -> Unit
+    onScanQr: () -> Unit,
+    showBottomNav: Boolean = true
 ) {
     val patients by viewModel.patients.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -126,12 +134,14 @@ fun PatientsListScreen(
     Scaffold(
         containerColor = BackgroundWhite,
         bottomBar = {
-            RelaxBottomNav(
-                selectedRoute = Screen.PatientsList.route,
-                onNavigate = onNavigate,
-                role = AppRole.CAREGIVER
-            )
-        }
+                if (showBottomNav) {
+                    RelaxBottomNav(
+                        selectedRoute = Screen.PatientsList.route,
+                        onNavigate = onNavigate,
+                        role = AppRole.CAREGIVER
+                    )
+                }
+            }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -140,7 +150,10 @@ fun PatientsListScreen(
                 .background(BackgroundWhite)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                PatientsHeader(onBackClick = { onNavigate(Screen.CaregiverDashboard.route) })
+                ScreenHeader(
+                    title = "Pacientes",
+                    subtitle = "Personas vinculadas a tu cuidado"
+                )
                 
                 LazyColumn(
                     modifier = Modifier
@@ -205,7 +218,7 @@ fun PatientsHeader(onBackClick: () -> Unit) {
         Spacer(modifier = Modifier.weight(1f))
 
         Text(
-            text = "Mis Pacientes",
+            text = stringResource(id = R.string.patients_title),
             fontFamily = LexendFontFamily,
             fontWeight = FontWeight.ExtraBold,
             fontSize = 22.sp,
@@ -248,7 +261,7 @@ fun PatientSearchBar(
             Box(modifier = Modifier.weight(1f)) {
                 if (query.isEmpty()) {
                     Text(
-                        text = "Buscar paciente...",
+                        text = stringResource(id = R.string.patients_search_hint),
                         fontFamily = LexendFontFamily,
                         color = TextSecondary.copy(alpha = 0.7f),
                         fontSize = 16.sp
@@ -315,7 +328,7 @@ fun PatientCard(
                     Text(
                         text = fullName,
                         fontFamily = LexendFontFamily,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Bold, 
                         fontSize = 18.sp,
                         color = TextPrimary,
                         maxLines = 1,
@@ -416,12 +429,21 @@ fun PatientAvatarWithStatus(
             .border(3.dp, borderColor, CircleShape)
             .background(SoftLavender)
     ) {
-        AsyncImage(
-            model = avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=$name&background=F1EDFF&color=4338A8&size=200" },
-            contentDescription = "Avatar de $name",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize().clip(CircleShape)
-        )
+        if (avatarUrl.startsWith("relaxmind://avatar/")) {
+            Image(
+                painter = painterResource(id = getAvatarDrawableRes(avatarUrl)),
+                contentDescription = "Avatar de $name",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().clip(CircleShape)
+            )
+        } else {
+            AsyncImage(
+                model = avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=$name&background=F1EDFF&color=4338A8&size=200" },
+                contentDescription = "Avatar de $name",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().clip(CircleShape)
+            )
+        }
     }
 }
 
@@ -503,9 +525,9 @@ fun EmptyPatientsState(onScanQr: () -> Unit) {
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
-                color = TextPrimary,
-                textAlign = TextAlign.Center
+                color = TextPrimary
             )
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Pide al paciente que genere un código QR o un código de 6 dígitos para vincularse contigo.",
                 fontFamily = LexendFontFamily,
@@ -513,9 +535,8 @@ fun EmptyPatientsState(onScanQr: () -> Unit) {
                 color = TextSecondary,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(8.dp))
             RelaxButton(
-                text = "Vincular paciente",
+                text = stringResource(id = R.string.patients_link_now),
                 onClick = onScanQr,
                 role = AppRole.CAREGIVER
             )
@@ -557,13 +578,9 @@ fun PatientsLoadingSkeleton() {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(40.dp))
-        CircularProgressIndicator(color = CaregiverIndigo)
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Cargando pacientes...",
-            fontFamily = LexendFontFamily,
-            color = CaregiverIndigo,
-            fontWeight = FontWeight.Medium
+        RelaxLoadingContent(
+            message = stringResource(id = R.string.patients_loading),
+            compact = true
         )
     }
 }

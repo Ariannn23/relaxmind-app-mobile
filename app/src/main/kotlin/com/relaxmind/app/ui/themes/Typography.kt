@@ -22,12 +22,12 @@ private val OutfitFont = GoogleFont("Outfit")
 private val UrbanistFont = GoogleFont("Urbanist")
 private val MontserratFont = GoogleFont("Montserrat")
 
-private val Outfit = FontFamily(
+val Outfit = FontFamily(
     GoogleFontResource(googleFont = OutfitFont, fontProvider = GoogleFontsProvider, weight = FontWeight.Bold),
     GoogleFontResource(googleFont = OutfitFont, fontProvider = GoogleFontsProvider, weight = FontWeight.SemiBold)
 )
 
-private val Urbanist = FontFamily(
+val Urbanist = FontFamily(
     GoogleFontResource(googleFont = UrbanistFont, fontProvider = GoogleFontsProvider, weight = FontWeight.Normal)
 )
 

@@ -2,13 +2,17 @@ package com.relaxmind.app
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
@@ -23,7 +27,7 @@ import com.relaxmind.app.features.caregiver.AlertsHistoryScreen
 import com.relaxmind.app.features.caregiver.DashboardCaregiverScreen
 import com.relaxmind.app.features.caregiver.PatientDetailScreen
 import com.relaxmind.app.features.caregiver.PatientsListScreen
-import com.relaxmind.app.features.caregiver.ScanQRScreen
+import com.relaxmind.app.features.caregiver.CaregiverLinkPatientScreen
 import com.relaxmind.app.features.common.WelcomeScreen
 import com.relaxmind.app.features.common.CheckInScreen
 import com.relaxmind.app.features.patient.DashboardPatientScreen
@@ -36,7 +40,10 @@ import com.relaxmind.app.features.patient.CreateAppointmentScreen
 import com.relaxmind.app.features.patient.AppointmentDetailScreen
 import com.relaxmind.app.features.patient.DiaryScreen
 import com.relaxmind.app.features.patient.DiaryEntryScreen
-import com.relaxmind.app.features.patient.LinkCaregiverScreen
+import com.relaxmind.app.features.patient.PatientLinkCaregiverScreen
+import com.relaxmind.app.features.patient.RelaxSoundsScreen
+import com.relaxmind.app.features.common.LibraryScreen
+import com.relaxmind.app.features.common.ArticleDetailScreen
 import com.relaxmind.app.features.patient.SOSPatientScreen
 import com.relaxmind.app.features.patient.lumi.LumiChatScreen
 import com.relaxmind.app.features.patient.lumi.LumiHistoryScreen
@@ -44,6 +51,9 @@ import com.relaxmind.app.features.patient.EditProfileScreen
 import com.relaxmind.app.features.caregiver.EditProfileCaregiverScreen
 import com.relaxmind.app.features.patient.NearbyHealthScreen
 import com.relaxmind.app.features.caregiver.SOSAlertScreen
+import com.relaxmind.app.features.common.TermsAndConditionsScreen
+import com.relaxmind.app.ui.components.AppRole
+import com.relaxmind.app.ui.components.RelaxBottomNav
 
 sealed class Screen(val route: String) {
     data object Welcome : Screen("welcome")
@@ -102,6 +112,20 @@ sealed class Screen(val route: String) {
     data object ScanQR : Screen("caregiver/scan-qr")
     data object CaregiverSettings : Screen("caregiver/settings")
     data object CaregiverEditProfile : Screen("caregiver/profile/edit")
+    data object TermsAndConditions : Screen("common/terms-and-conditions/{role}") {
+        const val RoleArg = "role"
+        fun createRoute(role: String): String = "common/terms-and-conditions/$role"
+    }
+    data object RelaxSounds : Screen("patient/relax-sounds")
+    data object Library : Screen("common/library/{role}") {
+        const val RoleArg = "role"
+        fun createRoute(role: String): String = "common/library/$role"
+    }
+    data object ArticleDetail : Screen("common/article/{articleId}/{role}") {
+        const val ArticleIdArg = "articleId"
+        const val RoleArg = "role"
+        fun createRoute(articleId: String, role: String): String = "common/article/$articleId/$role"
+    }
 }
 
 fun resolveStartDestination(
@@ -123,10 +147,42 @@ fun AppNavGraph(
     navController: NavHostController,
     startDestination: String
 ) {
-    NavHost(
-        navController = navController,
-        startDestination = startDestination
-    ) {
+    val currentBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = currentBackStackEntry?.destination?.route
+    val bottomNavRole = currentRoute.bottomNavRole()
+    val selectedBottomRoute = currentRoute.selectedBottomRoute()
+
+    fun navigateBottomTab(route: String) {
+        if (route == selectedBottomRoute) return
+
+        val rootRoute = when {
+            route.startsWith("caregiver/") -> Screen.CaregiverDashboard.route
+            else -> Screen.PatientDashboard.route
+        }
+
+        navController.navigate(route) {
+            popUpTo(rootRoute) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
+    Scaffold(
+        bottomBar = {
+            if (bottomNavRole != null && selectedBottomRoute != null) {
+                RelaxBottomNav(
+                    selectedRoute = selectedBottomRoute,
+                    onNavigate = { route -> navigateBottomTab(route) },
+                    role = bottomNavRole
+                )
+            }
+        }
+    ) { shellPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = startDestination,
+            modifier = Modifier.padding(shellPadding)
+        ) {
         composable(Screen.Welcome.route) {
             WelcomeScreen(
                 onFinish = {
@@ -227,7 +283,8 @@ fun AppNavGraph(
                         launchSingleTop = true
                         restoreState = true
                     }
-                }
+                },
+                showBottomNav = false
             )
         }
         composable(Screen.CheckIn.route) {
@@ -260,7 +317,8 @@ fun AppNavGraph(
                         launchSingleTop = true
                         restoreState = true
                     }
-                }
+                },
+                showBottomNav = false
             )
         }
         composable(
@@ -281,7 +339,8 @@ fun AppNavGraph(
                         launchSingleTop = true
                         restoreState = true
                     }
-                }
+                },
+                showBottomNav = false
             )
         }
         composable(Screen.Schedule.route) {
@@ -292,7 +351,8 @@ fun AppNavGraph(
                         launchSingleTop = true
                         restoreState = true
                     }
-                }
+                },
+                showBottomNav = false
             )
         }
         composable(Screen.CreateAppointment.route) {
@@ -363,7 +423,8 @@ fun AppNavGraph(
                         launchSingleTop = true
                         restoreState = true
                     }
-                }
+                },
+                showBottomNav = false
             )
         }
         composable(Screen.EditProfile.route) {
@@ -372,7 +433,7 @@ fun AppNavGraph(
             )
         }
         composable(Screen.LinkCaregiver.route) {
-            LinkCaregiverScreen(
+            PatientLinkCaregiverScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onLinked = {
                     navController.navigate(Screen.PatientDashboard.route) {
@@ -403,7 +464,8 @@ fun AppNavGraph(
                 },
                 onScanQr = { navController.navigate(Screen.ScanQR.route) },
                 onPatientClick = { patientId -> navController.navigate(Screen.PatientDetail.createRoute(patientId)) },
-                onAlertsClick = { navController.navigate(Screen.AlertsHistory.route) }
+                onAlertsClick = { navController.navigate(Screen.AlertsHistory.route) },
+                showBottomNav = false
             )
         }
         composable(Screen.PatientsList.route) {
@@ -416,7 +478,8 @@ fun AppNavGraph(
                     }
                 },
                 onPatientClick = { patientId -> navController.navigate(Screen.PatientDetail.createRoute(patientId)) },
-                onScanQr = { navController.navigate(Screen.ScanQR.route) }
+                onScanQr = { navController.navigate(Screen.ScanQR.route) },
+                showBottomNav = false
             )
         }
         composable(
@@ -434,7 +497,8 @@ fun AppNavGraph(
                         launchSingleTop = true
                         restoreState = true
                     }
-                }
+                },
+                showBottomNav = false
             )
         }
         composable(Screen.AlertsHistory.route) {
@@ -445,7 +509,8 @@ fun AppNavGraph(
                         launchSingleTop = true
                         restoreState = true
                     }
-                }
+                },
+                showBottomNav = false
             )
         }
         composable(
@@ -459,7 +524,7 @@ fun AppNavGraph(
             )
         }
         composable(Screen.ScanQR.route) {
-            ScanQRScreen(
+            CaregiverLinkPatientScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onLinked = {
                     navController.navigate(Screen.CaregiverDashboard.route) {
@@ -482,7 +547,8 @@ fun AppNavGraph(
                         launchSingleTop = true
                         restoreState = true
                     }
-                }
+                },
+                showBottomNav = false
             )
         }
         composable(Screen.CaregiverEditProfile.route) {
@@ -490,7 +556,80 @@ fun AppNavGraph(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
+        composable(
+            route = Screen.TermsAndConditions.route,
+            arguments = listOf(navArgument(Screen.TermsAndConditions.RoleArg) { type = NavType.StringType })
+        ) { backStackEntry ->
+            val role = backStackEntry.arguments?.getString(Screen.TermsAndConditions.RoleArg) ?: "patient"
+            TermsAndConditionsScreen(
+                role = role,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(Screen.RelaxSounds.route) {
+            RelaxSoundsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = Screen.Library.route,
+            arguments = listOf(navArgument(Screen.Library.RoleArg) { type = NavType.StringType })
+        ) { backStackEntry ->
+            val role = backStackEntry.arguments?.getString(Screen.Library.RoleArg) ?: "patient"
+            LibraryScreen(
+                role = role,
+                onNavigateToDetail = { articleId ->
+                    navController.navigate(Screen.ArticleDetail.createRoute(articleId, role))
+                },
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = Screen.ArticleDetail.route,
+            arguments = listOf(
+                navArgument(Screen.ArticleDetail.ArticleIdArg) { type = NavType.StringType },
+                navArgument(Screen.ArticleDetail.RoleArg) { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val articleId = backStackEntry.arguments?.getString(Screen.ArticleDetail.ArticleIdArg) ?: ""
+            val role = backStackEntry.arguments?.getString(Screen.ArticleDetail.RoleArg) ?: "patient"
+            ArticleDetailScreen(
+                articleId = articleId,
+                role = role,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        }
     }
+}
+
+private val patientBottomRoutes = setOf(
+    Screen.PatientDashboard.route,
+    Screen.Meditate.route,
+    Screen.Progress.route,
+    Screen.Schedule.route,
+    Screen.PatientSettings.route
+)
+
+private val caregiverBottomRoutes = setOf(
+    Screen.CaregiverDashboard.route,
+    Screen.PatientsList.route,
+    Screen.PatientDetail.route,
+    Screen.AlertsHistory.route,
+    Screen.CaregiverSettings.route
+)
+
+private fun String?.bottomNavRole(): AppRole? = when (this) {
+    in patientBottomRoutes -> AppRole.PATIENT
+    in caregiverBottomRoutes -> AppRole.CAREGIVER
+    else -> null
+}
+
+private fun String?.selectedBottomRoute(): String? = when (this) {
+    Screen.PatientDetail.route -> Screen.PatientsList.route
+    in patientBottomRoutes -> this
+    in caregiverBottomRoutes -> this
+    else -> null
 }
 
 @Composable

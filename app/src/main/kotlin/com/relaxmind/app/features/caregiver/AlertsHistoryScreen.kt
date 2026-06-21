@@ -64,12 +64,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.relaxmind.app.R
 import com.relaxmind.app.Screen
 import com.relaxmind.app.data.model.CaregiverAlert
 import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.RelaxBottomNav
+import com.relaxmind.app.ui.components.RelaxLoadingContent
+import com.relaxmind.app.ui.components.ScreenHeader
 import com.relaxmind.app.ui.components.RelaxToastHost
 import com.relaxmind.app.ui.components.rememberRelaxToastState
 import com.relaxmind.app.ui.themes.AlertRed
@@ -111,7 +115,8 @@ private enum class AlertDateRange(val label: String) {
 @Composable
 fun AlertsHistoryScreen(
     viewModel: CaregiverViewModel = viewModel(),
-    onNavigate: (String) -> Unit
+    onNavigate: (String) -> Unit,
+    showBottomNav: Boolean = true
 ) {
     val alerts by viewModel.allAlerts.collectAsState()
     val patients by viewModel.patients.collectAsState()
@@ -170,12 +175,14 @@ fun AlertsHistoryScreen(
     Scaffold(
         containerColor = Color.White,
         bottomBar = {
-            RelaxBottomNav(
-                selectedRoute = Screen.AlertsHistory.route,
-                onNavigate = onNavigate,
-                role = AppRole.CAREGIVER
-            )
-        }
+                if (showBottomNav) {
+                    RelaxBottomNav(
+                        selectedRoute = Screen.AlertsHistory.route,
+                        onNavigate = onNavigate,
+                        role = AppRole.CAREGIVER
+                    )
+                }
+            }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -190,11 +197,15 @@ fun AlertsHistoryScreen(
                     .fillMaxSize()
                     .systemBarsPadding()
                     .imePadding()
-                    .padding(horizontal = 22.dp),
+                    .padding(horizontal = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 item {
-                    AlertsHeader(onBackClick = { onNavigate(Screen.CaregiverDashboard.route) })
+                    ScreenHeader(
+                        title = "Alertas",
+                        subtitle = "Historial y seguimiento de tus pacientes",
+                        horizontalPadding = 0.dp
+                    )
                 }
                 item {
                     AlertFilterChips(
@@ -234,7 +245,10 @@ fun AlertsHistoryScreen(
                                     .padding(top = 60.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator(color = CaregiverIndigo)
+                                RelaxLoadingContent(
+                                    message = stringResource(id = R.string.alerts_loading),
+                                    compact = true
+                                )
                             }
                         }
                     }
@@ -318,7 +332,7 @@ private fun AlertsHeader(onBackClick: () -> Unit) {
         }
         Spacer(modifier = Modifier.width(12.dp))
         Text(
-            text = "Historial de Alertas",
+            text = stringResource(id = R.string.alerts_history_title),
             fontFamily = LexendFontFamily,
             fontWeight = FontWeight.Bold,
             fontSize = 22.sp,
@@ -426,7 +440,7 @@ private fun PatientFilterDropdown(
                 )
                 Spacer(modifier = Modifier.width(14.dp))
                 Text(
-                    text = "Paciente: $selectedPatientName",
+                    text = stringResource(id = R.string.alerts_patient_filter, selectedPatientName),
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
@@ -472,7 +486,7 @@ private fun AlertDateRangeChips(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
-            text = "Rango de fechas",
+            text = stringResource(id = R.string.alerts_date_range),
             fontFamily = LexendFontFamily,
             fontWeight = FontWeight.SemiBold,
             fontSize = 13.sp,
@@ -638,7 +652,7 @@ private fun AlertStatusBadge(resolved: Boolean) {
         border = BorderStroke(1.dp, borderColor)
     ) {
         Text(
-            text = if (resolved) "RESUELTA" else "PENDIENTE",
+            text = if (resolved) stringResource(id = R.string.alerts_resolved) else stringResource(id = R.string.alerts_pending),
             fontFamily = LexendFontFamily,
             fontWeight = FontWeight.Bold,
             fontSize = 12.sp,

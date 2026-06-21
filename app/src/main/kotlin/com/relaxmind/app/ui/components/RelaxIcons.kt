@@ -196,35 +196,40 @@ object RelaxIcons {
     }
 
     val Meditation: ImageVector = outlinedIcon("RelaxMeditation") {
-        path(fill = SolidColor(Color.Black)) {
-            // Central petal (vertical drop)
-            moveTo(12f, 5f)
-            quadTo(15f, 11f, 12f, 19f)
-            quadTo(9f, 11f, 12f, 5f)
-            close()
+        // Line 1: top flowing breeze line
+        path(stroke = SolidColor(Color.Black), strokeLineWidth = 1.8f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(4f, 7f)
+            horizontalLineTo(15f)
+            quadTo(17.5f, 7f, 17.5f, 5f)
+            quadTo(17.5f, 3f, 15.5f, 3f)
+            quadTo(13.5f, 3f, 13.5f, 5f)
+        }
+        // Line 2: middle flowing breeze line (longer)
+        path(stroke = SolidColor(Color.Black), strokeLineWidth = 1.8f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(2f, 12f)
+            horizontalLineTo(19f)
+            quadTo(21.5f, 12f, 21.5f, 14f)
+            quadTo(21.5f, 16f, 19.5f, 16f)
+            quadTo(17.5f, 16f, 17.5f, 14f)
+        }
+        // Line 3: bottom flowing breeze line
+        path(stroke = SolidColor(Color.Black), strokeLineWidth = 1.8f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(5f, 17f)
+            horizontalLineTo(12f)
+            quadTo(14f, 17f, 14f, 19f)
+            quadTo(14f, 21f, 12f, 21f)
+            quadTo(10f, 21f, 10f, 19f)
+        }
+    }
 
-            // Left inner petal
-            moveTo(11.5f, 10f)
-            quadTo(7f, 10f, 7f, 16f)
-            quadTo(10f, 17.5f, 11.5f, 14f)
-            close()
-
-            // Right inner petal
-            moveTo(12.5f, 10f)
-            quadTo(17f, 10f, 17f, 16f)
-            quadTo(14f, 17.5f, 12.5f, 14f)
-            close()
-
-            // Left outer petal (horizontal base curve)
-            moveTo(8f, 15f)
-            quadTo(4f, 15f, 4f, 18f)
-            quadTo(7f, 19f, 9.5f, 17f)
-            close()
-
-            // Right outer petal (horizontal base curve)
-            moveTo(16f, 15f)
-            quadTo(20f, 15f, 20f, 18f)
-            quadTo(17f, 19f, 14.5f, 17f)
+    val QuickSpark: ImageVector = outlinedIcon("RelaxQuickSpark") {
+        path(stroke = SolidColor(Color.Black), strokeLineWidth = 1.8f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+            moveTo(13f, 2f)
+            lineTo(4f, 14f)
+            horizontalLineTo(11f)
+            verticalLineTo(22f)
+            lineTo(20f, 10f)
+            horizontalLineTo(13f)
             close()
         }
     }

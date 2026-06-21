@@ -2,6 +2,7 @@ package com.relaxmind.app.features.patient
 
 import android.annotation.SuppressLint
 import android.os.Looper
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -31,6 +32,7 @@ class SOSPatientViewModel(
 
     private var currentAlertId: String? = null
     private var locationCallback: LocationCallback? = null
+    private var isCreatingAlert = false
 
     init {
         loadData()
@@ -75,6 +77,7 @@ class SOSPatientViewModel(
         }
 
         _uiState.value = state.copy(isSOSActive = true)
+        createOrUpdateAlert(latitude = null, longitude = null)
 
         val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
             .setMinUpdateIntervalMillis(5000)
@@ -88,16 +91,35 @@ class SOSPatientViewModel(
             }
         }
 
-        fusedLocationClient.requestLocationUpdates(
-            locationRequest,
-            locationCallback!!,
-            Looper.getMainLooper()
-        )
+        runCatching {
+            fusedLocationClient.requestLocationUpdates(
+                locationRequest,
+                locationCallback!!,
+                Looper.getMainLooper()
+            )
+        }.onFailure { throwable ->
+            Log.w("SOSPatientViewModel", "No se pudieron iniciar las actualizaciones de ubicación.", throwable)
+        }
     }
 
     private fun updateLocation(lat: Double, lng: Double) {
+        createOrUpdateAlert(latitude = lat, longitude = lng)
+    }
+
+    private var pendingLatitude: Double? = null
+    private var pendingLongitude: Double? = null
+
+    private fun createOrUpdateAlert(latitude: Double?, longitude: Double?) {
         val alertId = currentAlertId
         if (alertId == null) {
+            if (isCreatingAlert) {
+                if (latitude != null && longitude != null) {
+                    pendingLatitude = latitude
+                    pendingLongitude = longitude
+                }
+                return
+            }
+            isCreatingAlert = true
             val state = _uiState.value
             val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
             val newAlert = CaregiverAlert(
@@ -109,8 +131,8 @@ class SOSPatientViewModel(
                 message = "El paciente ha activado el botón de emergencia.",
                 severity = "critical",
                 resolved = false,
-                latitude = lat,
-                longitude = lng,
+                latitude = latitude,
+                longitude = longitude,
                 createdAtText = dateFormat.format(Date())
             )
 
@@ -118,11 +140,24 @@ class SOSPatientViewModel(
                 val result = firestoreRepository.createAlert(newAlert)
                 if (result.isSuccess) {
                     currentAlertId = result.getOrNull()
+                    if (pendingLatitude != null && pendingLongitude != null) {
+                        createOrUpdateAlert(pendingLatitude, pendingLongitude)
+                        pendingLatitude = null
+                        pendingLongitude = null
+                    }
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isSOSActive = false,
+                        error = result.exceptionOrNull()?.localizedMessage ?: "No se pudo enviar la alerta SOS."
+                    )
                 }
+                isCreatingAlert = false
             }
         } else {
-            viewModelScope.launch {
-                firestoreRepository.updateAlertLocation(alertId, lat, lng)
+            if (latitude != null && longitude != null) {
+                viewModelScope.launch {
+                    firestoreRepository.updateAlertLocation(alertId, latitude, longitude)
+                }
             }
         }
     }

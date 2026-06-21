@@ -35,10 +35,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.relaxmind.app.ui.components.FullScreenLoadingOverlay
-import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.*
 
 private data class EmotionOption(val label: String)
@@ -87,7 +95,7 @@ fun DiaryEntryScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            SoftGradientBackground(animateBlobs = true)
+            DiaryAnimatedBackground()
 
             Column(
                 modifier = Modifier
@@ -170,11 +178,11 @@ fun DiaryEntryScreen(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(20.dp))
                                         .background(
-                                            if (isSelected) PatientGreen else Color.White
+                                            if (isSelected) DiaryOrange else Color.White
                                         )
                                         .border(
                                             width = 1.dp,
-                                            color = if (isSelected) PatientGreen else BorderSoft,
+                                            color = if (isSelected) DiaryOrange else BorderSoft,
                                             shape = RoundedCornerShape(20.dp)
                                         )
                                         .clickable { selectedCategory = cat }
@@ -213,11 +221,11 @@ fun DiaryEntryScreen(
                                 val isSelected = option.label == selectedEmotion
                                 Card(
                                     colors = CardDefaults.cardColors(
-                                        containerColor = if (isSelected) MintPill else Color.White
+                                        containerColor = if (isSelected) DiaryOrangeLight else Color.White
                                     ),
                                     border = androidx.compose.foundation.BorderStroke(
                                         width = if (isSelected) 1.5.dp else 1.dp,
-                                        color = if (isSelected) PatientGreen else BorderSoft
+                                        color = if (isSelected) DiaryOrange else BorderSoft
                                     ),
                                     shape = RoundedCornerShape(18.dp),
                                     modifier = Modifier
@@ -236,7 +244,7 @@ fun DiaryEntryScreen(
                                         // Custom Drawn Emotion Sticker Face
                                         EmotionSticker(
                                             emotion = option.label,
-                                            tint = if (isSelected) PatientGreen else TextSecondary,
+                                            tint = if (isSelected) DiaryOrange else TextSecondary,
                                             modifier = Modifier.size(46.dp)
                                         )
 
@@ -245,7 +253,7 @@ fun DiaryEntryScreen(
                                         Text(
                                             text = option.label,
                                             fontFamily = LexendFontFamily,
-                                            color = if (isSelected) PatientGreen else TextPrimary,
+                                            color = if (isSelected) DiaryOrange else TextPrimary,
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                             fontSize = 11.sp
                                         )
@@ -378,7 +386,7 @@ fun DiaryEntryScreen(
                                 item {
                                     Card(
                                         colors = CardDefaults.cardColors(containerColor = Color.White),
-                                        border = BorderStroke(1.5.dp, PatientGreen),
+                                        border = BorderStroke(1.5.dp, DiaryOrange),
                                         shape = RoundedCornerShape(18.dp),
                                         modifier = Modifier
                                             .size(110.dp)
@@ -396,14 +404,14 @@ fun DiaryEntryScreen(
                                             Icon(
                                                 imageVector = Icons.Default.Add,
                                                 contentDescription = "Agregar foto",
-                                                tint = PatientGreen,
+                                                tint = DiaryOrange,
                                                 modifier = Modifier.size(28.dp)
                                             )
                                             Spacer(modifier = Modifier.height(6.dp))
                                             Text(
                                                 text = "Agregar foto",
                                                 fontFamily = LexendFontFamily,
-                                                color = PatientGreen,
+                                                color = DiaryOrange,
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold
                                             )
@@ -620,6 +628,171 @@ private fun EmotionSticker(
                 }
                 drawPath(path = smile, color = tint, style = Stroke(width = 1.8.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
             }
+        }
+    }
+}
+
+@Composable
+private fun DiaryAnimatedBackground() {
+    val infiniteTransition = rememberInfiniteTransition(label = "diary-bg-anim")
+    
+    val floatOffset1 by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 18f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(4500, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "float1"
+    )
+    val floatOffset2 by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = -25f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(6000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "float2"
+    )
+    val alphaAnim by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alpha"
+    )
+    val rotationAnim by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(12000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rotation"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackgroundWhite)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(360.dp)
+                .offset(x = (-100).dp, y = (-80).dp)
+                .blur(100.dp)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            DiaryOrangeLight.copy(alpha = 0.28f),
+                            DiaryPeach.copy(alpha = 0.12f),
+                            Color.Transparent
+                        )
+                    ),
+                    shape = CircleShape
+                )
+        )
+
+        Box(
+            modifier = Modifier
+                .size(300.dp)
+                .offset(x = 180.dp, y = 350.dp)
+                .blur(90.dp)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            DiaryOrangeLight.copy(alpha = 0.22f),
+                            DiaryPeach.copy(alpha = 0.1f),
+                            Color.Transparent
+                        )
+                    ),
+                    shape = CircleShape
+                )
+        )
+
+        Box(
+            modifier = Modifier
+                .size(320.dp)
+                .offset(x = (-50).dp, y = 700.dp)
+                .blur(95.dp)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            DiaryOrangeLight.copy(alpha = 0.25f),
+                            Color.Transparent
+                        )
+                    ),
+                    shape = CircleShape
+                )
+        )
+
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+
+            fun drawSparkle(cx: Float, cy: Float, size: Float, rotationDegrees: Float, alpha: Float) {
+                val path = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(cx, cy - size)
+                    quadraticBezierTo(cx, cy, cx + size, cy)
+                    quadraticBezierTo(cx, cy, cx, cy + size)
+                    quadraticBezierTo(cx, cy, cx - size, cy)
+                    quadraticBezierTo(cx, cy, cx, cy - size)
+                    close()
+                }
+                
+                rotate(degrees = rotationDegrees, pivot = androidx.compose.ui.geometry.Offset(cx, cy)) {
+                    drawPath(
+                        path = path,
+                        color = DiaryOrange.copy(alpha = alpha),
+                    )
+                }
+            }
+
+            drawSparkle(
+                cx = w * 0.15f,
+                cy = h * 0.25f + floatOffset1.dp.toPx(),
+                size = 18.dp.toPx(),
+                rotationDegrees = rotationAnim,
+                alpha = 0.18f * alphaAnim
+            )
+
+            drawSparkle(
+                cx = w * 0.82f,
+                cy = h * 0.15f + floatOffset2.dp.toPx(),
+                size = 24.dp.toPx(),
+                rotationDegrees = -rotationAnim * 0.5f,
+                alpha = 0.22f * alphaAnim
+            )
+
+            drawSparkle(
+                cx = w * 0.78f,
+                cy = h * 0.72f + floatOffset1.dp.toPx(),
+                size = 15.dp.toPx(),
+                rotationDegrees = rotationAnim * 1.2f,
+                alpha = 0.15f * alphaAnim
+            )
+
+            drawSparkle(
+                cx = w * 0.22f,
+                cy = h * 0.8f + floatOffset2.dp.toPx(),
+                size = 20.dp.toPx(),
+                rotationDegrees = -rotationAnim,
+                alpha = 0.20f * alphaAnim
+            )
+            
+            drawCircle(
+                color = DiaryOrange.copy(alpha = 0.05f),
+                radius = 12.dp.toPx(),
+                center = androidx.compose.ui.geometry.Offset(w * 0.45f, h * 0.48f + floatOffset1.dp.toPx() * 0.8f)
+            )
+            
+            drawCircle(
+                color = DiaryOrange.copy(alpha = 0.04f),
+                radius = 8.dp.toPx(),
+                center = androidx.compose.ui.geometry.Offset(w * 0.88f, h * 0.48f + floatOffset2.dp.toPx() * 1.2f)
+            )
         }
     }
 }

@@ -68,13 +68,13 @@ fun SettingsCaregiverScreen(
     viewModel: CaregiverViewModel = viewModel(),
     onNavigateToEditProfile: () -> Unit,
     onLogout: () -> Unit,
-    onNavigate: (String) -> Unit
+    onNavigate: (String) -> Unit,
+    showBottomNav: Boolean = true
 ) {
     val context = LocalContext.current
     val isLoading by viewModel.isLoading.collectAsState()
     val caregiver by viewModel.caregiver.collectAsState()
 
-    var showLanguageBottomSheet by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
 
@@ -89,11 +89,13 @@ fun SettingsCaregiverScreen(
         Scaffold(
             containerColor = Color.White,
             bottomBar = {
-                RelaxBottomNav(
-                    selectedRoute = "caregiver/settings",
-                    onNavigate = onNavigate,
-                    role = AppRole.CAREGIVER
-                )
+                if (showBottomNav) {
+                    RelaxBottomNav(
+                        selectedRoute = "caregiver/settings",
+                        onNavigate = onNavigate,
+                        role = AppRole.CAREGIVER
+                    )
+                }
             }
         ) { innerPadding ->
             Box(
@@ -141,15 +143,6 @@ fun SettingsCaregiverScreen(
                                     icon = Icons.Filled.DarkMode,
                                     checked = currCaregiver.darkMode,
                                     onToggle = { viewModel.updateDarkMode(it) }
-                                )
-                                CaregiverSettingsDivider()
-
-                                // Idioma
-                                CaregiverSettingsNavigationRow(
-                                    label = "Idioma",
-                                    icon = Icons.Filled.Language,
-                                    trailingText = if (currCaregiver.language == "en") "English" else "Español",
-                                    onClick = { showLanguageBottomSheet = true }
                                 )
                                 CaregiverSettingsDivider()
 
@@ -250,72 +243,7 @@ fun SettingsCaregiverScreen(
         }
     }
 
-    if (showLanguageBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showLanguageBottomSheet = false },
-            sheetState = rememberModalBottomSheetState(),
-            containerColor = Color.White,
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp)
-            ) {
-                Text(
-                    text = "Selecciona tu idioma",
-                    fontFamily = LexendFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    color = TextPrimary
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable {
-                            viewModel.updateLanguage("es")
-                            showLanguageBottomSheet = false
-                            relaunchActivity(context)
-                        }
-                        .padding(vertical = 14.dp, horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Español (ES)",
-                        fontFamily = LexendFontFamily,
-                        fontWeight = if (caregiver?.language == "es") FontWeight.SemiBold else FontWeight.Normal,
-                        fontSize = 16.sp,
-                        color = if (caregiver?.language == "es") CaregiverIndigo else TextPrimary
-                    )
-                }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable {
-                            viewModel.updateLanguage("en")
-                            showLanguageBottomSheet = false
-                            relaunchActivity(context)
-                        }
-                        .padding(vertical = 14.dp, horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "English (EN)",
-                        fontFamily = LexendFontFamily,
-                        fontWeight = if (caregiver?.language == "en") FontWeight.SemiBold else FontWeight.Normal,
-                        fontSize = 16.sp,
-                        color = if (caregiver?.language == "en") CaregiverIndigo else TextPrimary
-                    )
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-        }
-    }
+    // Language bottom sheet removed
 
     if (showDeleteAccountDialog) {
         var deleteErrorMessage by remember { mutableStateOf<String?>(null) }

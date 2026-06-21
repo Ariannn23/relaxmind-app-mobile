@@ -65,7 +65,8 @@ fun DashboardCaregiverScreen(
     onNavigate: (String) -> Unit,
     onScanQr: () -> Unit,
     onPatientClick: (String) -> Unit,
-    onAlertsClick: () -> Unit
+    onAlertsClick: () -> Unit,
+    showBottomNav: Boolean = true
 ) {
     val caregiver by viewModel.caregiver.collectAsState()
     val patients by viewModel.patients.collectAsState()
@@ -101,17 +102,37 @@ fun DashboardCaregiverScreen(
                 )
         )
 
+        var showLimitDialog by remember { mutableStateOf(false) }
+
+        if (showLimitDialog) {
+            AlertDialog(
+                onDismissRequest = { showLimitDialog = false },
+                title = { Text("Límite alcanzado", fontFamily = LexendFontFamily, fontWeight = FontWeight.Bold, color = TextPrimary) },
+                text = { Text("Has alcanzado el límite máximo de 5 pacientes vinculados.", fontFamily = LexendFontFamily, color = TextSecondary) },
+                confirmButton = { TextButton(onClick = { showLimitDialog = false }) { Text("Entendido", fontFamily = LexendFontFamily, color = CaregiverIndigo, fontWeight = FontWeight.Bold) } },
+                containerColor = Color.White
+            )
+        }
+
         Scaffold(
             containerColor = Color.Transparent,
             bottomBar = {
-                RelaxBottomNav(
-                    selectedRoute = Screen.CaregiverDashboard.route,
-                    onNavigate = onNavigate,
-                    role = AppRole.CAREGIVER
-                )
+                if (showBottomNav) {
+                    RelaxBottomNav(
+                        selectedRoute = Screen.CaregiverDashboard.route,
+                        onNavigate = onNavigate,
+                        role = AppRole.CAREGIVER
+                    )
+                }
             },
             floatingActionButton = {
-                CaregiverFAB(onScanQr = onScanQr)
+                CaregiverFAB(onScanQr = {
+                    if (patients.size >= 5) {
+                        showLimitDialog = true
+                    } else {
+                        onScanQr()
+                    }
+                })
             }
         ) { innerPadding ->
             Box(
@@ -722,3 +743,4 @@ private fun PatientCard(
         }
     }
 }
+

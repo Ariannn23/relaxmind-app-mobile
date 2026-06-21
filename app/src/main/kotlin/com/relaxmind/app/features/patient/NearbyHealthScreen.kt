@@ -36,6 +36,8 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import com.relaxmind.app.data.model.NearbyHealthCenter
+import com.relaxmind.app.ui.components.LoadingIndicator
+import com.relaxmind.app.ui.components.RelaxLoadingContent
 import com.relaxmind.app.ui.themes.LexendFontFamily
 import com.relaxmind.app.ui.themes.PatientGreen
 import com.relaxmind.app.ui.themes.TextPrimary
@@ -134,7 +136,7 @@ fun NearbyHealthScreen(
                                     .background(Color.LightGray.copy(alpha = 0.3f)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator(color = PatientGreen)
+                                LoadingIndicator()
                             }
                         }
                     }
@@ -163,8 +165,14 @@ fun NearbyHealthScreen(
 
                     // Loading State
                     if (isLoading && healthCenters.isEmpty()) {
-                        Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = PatientGreen)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(260.dp)
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            RelaxLoadingContent(compact = true)
                         }
                     }
 

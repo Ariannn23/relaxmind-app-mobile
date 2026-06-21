@@ -63,6 +63,9 @@ class CaregiverViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
 
+    private val _linkedPatientName = MutableStateFlow<String?>(null)
+    val linkedPatientName = _linkedPatientName.asStateFlow()
+
     private var patientsListener: ListenerRegistration? = null
     private var alertsListener: ListenerRegistration? = null
     private var patientAlertsListener: ListenerRegistration? = null
@@ -74,7 +77,6 @@ class CaregiverViewModel(
 
     fun observeCaregiverData() {
         val caregiverId = authService.getCurrentUser()?.uid ?: return
-        if (patientsListener != null && alertsListener != null) return
 
         viewModelScope.launch {
             _isLoading.value = true
@@ -86,6 +88,8 @@ class CaregiverViewModel(
 
             _isLoading.value = false
         }
+
+        if (patientsListener != null && alertsListener != null) return
 
         patientsListener = firestoreRepository.listenPatientsForCaregiver(
             caregiverId = caregiverId,
@@ -165,7 +169,10 @@ class CaregiverViewModel(
             _error.value = null
 
             firestoreRepository.linkPatientWithCode(sanitizedCode, caregiverId)
-                .onSuccess {
+                .onSuccess { patientId ->
+                    firestoreRepository.getPatientById(patientId).onSuccess { p ->
+                        _linkedPatientName.value = "${p?.name.orEmpty()} ${p?.lastName.orEmpty()}".trim().ifBlank { "Paciente" }
+                    }
                     _message.value = "Vinculación exitosa"
                     loadDashboard()
                     onSuccess()
@@ -271,7 +278,16 @@ class CaregiverViewModel(
     }
 
     fun updateLanguage(lang: String) {
-        // Stub
+        val uid = authService.getCurrentUser()?.uid ?: return
+        com.relaxmind.app.ui.themes.ThemeState.language.value = lang
+        _caregiver.value = _caregiver.value?.copy(language = lang)
+
+        viewModelScope.launch {
+            firestoreRepository.updateCaregiver(uid, mapOf("language" to lang))
+                .onFailure { error ->
+                    _error.value = error.localizedMessage ?: "No se pudo actualizar el idioma."
+                }
+        }
     }
 
     fun updateNotificationsEnabled(enabled: Boolean) {
@@ -291,3 +307,5 @@ class CaregiverViewModel(
         authService.logout()
     }
 }
+
+

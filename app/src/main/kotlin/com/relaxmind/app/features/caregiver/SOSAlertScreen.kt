@@ -70,10 +70,21 @@ fun SOSAlertScreen(
     }
 
     val alert = uiState.alert
-    if (alert == null || alert.resolved) {
-        LaunchedEffect(Unit) {
-            onNavigateBack()
-        }
+    if (alert == null) {
+        SOSAlertMessageState(
+            title = "Alerta no disponible",
+            message = uiState.error ?: "No pudimos cargar esta alerta.",
+            onNavigateBack = onNavigateBack
+        )
+        return
+    }
+
+    if (alert.resolved) {
+        SOSAlertMessageState(
+            title = "Alerta resuelta",
+            message = "Esta emergencia ya fue marcada como resuelta.",
+            onNavigateBack = onNavigateBack
+        )
         return
     }
 
@@ -490,6 +501,75 @@ fun SOSAlertScreen(
             containerColor = Color.White,
             shape = RoundedCornerShape(20.dp)
         )
+    }
+}
+
+@Composable
+private fun SOSAlertMessageState(
+    title: String,
+    message: String,
+    onNavigateBack: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .systemBarsPadding()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .background(SOSCoral.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "SOS",
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = SOSCoral,
+                    fontSize = 18.sp
+                )
+            }
+
+            Text(
+                text = title,
+                fontFamily = LexendFontFamily,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 24.sp,
+                color = TextPrimary
+            )
+
+            Text(
+                text = message,
+                fontFamily = LexendFontFamily,
+                fontSize = 15.sp,
+                color = TextSecondary,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
+            Button(
+                onClick = onNavigateBack,
+                colors = ButtonDefaults.buttonColors(containerColor = CaregiverIndigo),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+            ) {
+                Text(
+                    text = "Volver",
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
     }
 }
 

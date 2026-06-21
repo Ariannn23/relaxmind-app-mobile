@@ -43,10 +43,12 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.relaxmind.app.R
 import com.relaxmind.app.ui.themes.LexendFontFamily
 import com.relaxmind.app.ui.themes.PatientGreen
 import com.relaxmind.app.ui.themes.RelaxMindTheme
@@ -177,6 +179,21 @@ private fun ElevatedNavItem(
         label = "nav-item-text-color"
     )
 
+    val routeToLabelRes = remember {
+        mapOf(
+            "patient/dashboard" to R.string.nav_home,
+            "patient/meditate" to R.string.nav_meditate,
+            "patient/progress" to R.string.nav_progress,
+            "patient/schedule" to R.string.nav_schedule,
+            "patient/settings" to R.string.nav_settings,
+            "caregiver/dashboard" to R.string.nav_home,
+            "caregiver/patients" to R.string.nav_patients,
+            "caregiver/alerts" to R.string.nav_alerts,
+            "caregiver/settings" to R.string.nav_settings
+        )
+    }
+    val labelText = stringResource(id = routeToLabelRes[item.route] ?: R.string.app_name)
+
     Box(
         modifier = Modifier
             .width(68.dp)
@@ -243,7 +260,7 @@ private fun ElevatedNavItem(
                 ) {
                     Icon(
                         imageVector = item.icon,
-                        contentDescription = item.label,
+                        contentDescription = labelText,
                         tint = iconColorAnimation,
                         modifier = Modifier.size(24.dp)
                     )
@@ -253,7 +270,7 @@ private fun ElevatedNavItem(
             Spacer(modifier = Modifier.height(2.dp)) // tight spacing for premium feel
 
             Text(
-                text = item.label,
+                text = labelText,
                 fontFamily = LexendFontFamily,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                 fontSize = 11.sp,
@@ -263,6 +280,7 @@ private fun ElevatedNavItem(
         }
     }
 }
+
 
 @Immutable
 private data class RelaxNavItem(

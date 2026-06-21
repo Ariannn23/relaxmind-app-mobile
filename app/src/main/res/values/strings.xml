@@ -1,3 +1,123 @@
 <resources>
     <string name="app_name">RelaxMind</string>
+    <string name="loading_default">Cargando...</string>
+
+    <!-- Navigation Tabs -->
+    <string name="nav_home">Inicio</string>
+    <string name="nav_meditate">Meditar</string>
+    <string name="nav_progress">Progreso</string>
+    <string name="nav_schedule">Agenda</string>
+    <string name="nav_settings">Ajustes</string>
+    <string name="nav_patients">Pacientes</string>
+    <string name="nav_alerts">Alertas</string>
+
+    <!-- Settings Screen -->
+    <string name="header_settings">Ajustes</string>
+    <string name="header_settings_subtitle">Personaliza tu experiencia en RelaxMind</string>
+    <string name="settings_preferences">Preferencias</string>
+    <string name="settings_dark_mode">Modo oscuro</string>
+    <string name="settings_language">Idioma</string>
+    <string name="settings_notifications">Notificaciones</string>
+    <string name="settings_checkin_reminder">Recordatorio de check-in</string>
+    <string name="settings_biometrics">Inicio con biometría</string>
+    <string name="settings_account">Cuenta</string>
+    <string name="settings_terms">Términos y condiciones</string>
+    <string name="settings_unlink">Desvincular cuidador</string>
+    <string name="settings_delete_account">Borrar cuenta</string>
+    <string name="settings_logout">Cerrar sesión</string>
+
+    <!-- Dialogs -->
+    <string name="dialog_logout_title">¿Deseas cerrar sesión?</string>
+    <string name="dialog_logout_desc">Tendrás que volver a introducir tus credenciales para acceder a la aplicación.</string>
+    <string name="dialog_cancel">Cancelar</string>
+    <string name="dialog_confirm">Aceptar</string>
+    <string name="select_language">Selecciona tu idioma</string>
+    <string name="language_spanish">Español (ES)</string>
+    <string name="language_english">English (EN)</string>
+
+    <!-- Patient dashboard -->
+    <string name="dashboard_greeting">Hola, %1$s</string>
+    <string name="dashboard_safe_space">Tu espacio seguro aquí</string>
+    <string name="dashboard_wellbeing_today">Mi bienestar hoy</string>
+    <string name="dashboard_wellbeing_hint">Prioriza tu paz mental hoy.</string>
+    <string name="dashboard_daily_checkin">Check-in diario</string>
+    <string name="dashboard_checkin_ready">Listo</string>
+    <string name="dashboard_checkin_start">Iniciar</string>
+    <string name="dashboard_for_you_today">Para ti hoy</string>
+    <string name="dashboard_today_goal">Meta de hoy</string>
+    <string name="dashboard_completed">Completada</string>
+    <string name="dashboard_start">Comenzar</string>
+    <string name="dashboard_free_schedule">Agenda libre</string>
+    <string name="dashboard_all_caught_up">Todo al día hoy</string>
+    <string name="dashboard_review">Revisar</string>
+    <string name="dashboard_quick_access">Accesos rápidos</string>
+    <string name="dashboard_relax_sounds">Sonidos relajantes</string>
+    <string name="dashboard_relax_sounds_desc">Música de fondo para calmarte</string>
+    <string name="dashboard_support_library">Biblioteca de apoyo</string>
+    <string name="dashboard_support_library_desc">Artículos para entender y manejar tu bienestar</string>
+    <string name="dashboard_diary">Mi Diario</string>
+    <string name="dashboard_diary_desc">Escribe tus emociones y pensamientos de hoy</string>
+    <string name="dashboard_lumi">Hablar con Lumi</string>
+    <string name="dashboard_lumi_desc">Tu asistente IA de bienestar</string>
+    <string name="dashboard_caregiver">Mi Cuidador</string>
+    <string name="dashboard_caregiver_question">¿Tienes un cuidador vinculado?</string>
+    <string name="dashboard_caregiver_link">Vincular</string>
+    <string name="dashboard_caregiver_linked">Vinculado</string>
+    <string name="dashboard_health_centers">Centros de salud cercanos</string>
+    <string name="dashboard_health_centers_desc">Encuentra ayuda profesional cerca de ti</string>
+    <string name="dashboard_call">Llamar</string>
+
+    <!-- Core screens -->
+    <string name="schedule_title">Agenda</string>
+    <string name="schedule_subtitle_week">Tu semana, organizada y en calma</string>
+    <string name="schedule_subtitle_month">Tu mes de citas y recordatorios</string>
+    <string name="schedule_week">Semana</string>
+    <string name="schedule_calendar">Calendario</string>
+    <string name="schedule_no_events">Sin eventos programados</string>
+    <string name="schedule_events_count">%1$d eventos programados</string>
+    <string name="meditate_today_goal">Tu meta de hoy:</string>
+    <string name="meditate_goal_badge">META DE HOY</string>
+    <string name="progress_score_label">Puntaje: %1$d / 100\nCategoría: %2$s</string>
+    <string name="progress_streak_days">días seguidos</string>
+    <string name="progress_best_streak">Mejor racha: %1$d días</string>
+    <string name="progress_achievements">Logros</string>
+    <string name="progress_history">Historial</string>
+    <string name="progress_view_all">Ver todo</string>
+
+    <!-- Caregiver -->
+    <string name="caregiver_dashboard_loading">Cargando dashboard...</string>
+    <string name="caregiver_greeting">Hola, %1$s</string>
+    <string name="caregiver_dashboard_summary">Aquí tienes un resumen del bienestar de tus pacientes.</string>
+    <string name="caregiver_active_alerts">ALERTAS ACTIVAS</string>
+    <string name="caregiver_view_all">Ver todas</string>
+    <string name="caregiver_all_quiet">Todo tranquilo hoy</string>
+    <string name="caregiver_no_pending_alerts">No hay alertas pendientes de revisión.</string>
+    <string name="caregiver_my_patients_label">MIS PACIENTES</string>
+    <string name="caregiver_my_patients_count">Mis pacientes (%1$d)</string>
+    <string name="caregiver_patients_empty">Sin pacientes vinculados</string>
+    <string name="caregiver_patients_empty_desc">Usa el botón + para escanear el código de un paciente</string>
+    <string name="caregiver_view">Ver</string>
+    <string name="patients_title">Mis Pacientes</string>
+    <string name="patients_search_hint">Buscar paciente...</string>
+    <string name="patients_no_linked">Aún no tienes pacientes vinculados</string>
+    <string name="patients_link_now">Vincular paciente</string>
+    <string name="patients_loading">Cargando pacientes...</string>
+    <string name="alerts_history_title">Historial de Alertas</string>
+    <string name="alerts_loading">Cargando alertas...</string>
+    <string name="alerts_patient_filter">Paciente: %1$s</string>
+    <string name="alerts_date_range">Rango de fechas</string>
+    <string name="alerts_pending">PENDIENTE</string>
+    <string name="alerts_resolved">RESUELTA</string>
+
+    <!-- Terms & Conditions Screen -->
+    <string name="terms_title">Términos y condiciones</string>
+    <string name="terms_subtitle">Última actualización: 20 de junio de 2026</string>
+    <string name="terms_section1_title">1. Aceptación de los términos</string>
+    <string name="terms_section1_desc">Al utilizar RelaxMind, aceptas estar sujeto a estos términos y condiciones. Si no estás de acuerdo con alguno de ellos, te solicitamos no utilizar la aplicación.</string>
+    <string name="terms_section2_title">2. Privacidad y seguridad</string>
+    <string name="terms_section2_desc">Nos tomamos en serio la privacidad de tus datos de salud mental y bienestar. Toda la información personal y los registros médicos están protegidos de forma segura.</string>
+    <string name="terms_section3_title">3. Uso del contenido</string>
+    <string name="terms_section3_desc">Los ejercicios de meditación, sonidos de relajación y consejos proporcionados en la aplicación son de carácter informativo y de apoyo. No sustituyen el diagnóstico ni el tratamiento de un profesional de la salud.</string>
+    <string name="terms_section4_title">4. Responsabilidades</string>
+    <string name="terms_section4_desc">RelaxMind no se hace responsable del uso inadecuado de la aplicación ni de la falta de conexión a internet para reportar alertas SOS en tiempo real de pacientes a cuidadores.</string>
 </resources>

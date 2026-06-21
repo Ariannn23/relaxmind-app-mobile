@@ -155,6 +155,10 @@ class CheckInViewModel(
                 if (isInitialTest) {
                     firestoreRepository.updatePatient(userId, mapOf("onboardingCompleted" to true))
                 }
+                
+                // Update streak
+                firestoreRepository.updatePatientStreak(userId, dateStr)
+                
                 _uiState.value = CheckInUiState.Success(calculatedScore, category)
             } else {
                 _uiState.value = CheckInUiState.Error(

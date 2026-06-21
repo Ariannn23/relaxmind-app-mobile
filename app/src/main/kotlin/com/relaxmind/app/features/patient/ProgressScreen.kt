@@ -1,4 +1,4 @@
-package com.relaxmind.app.features.patient
+﻿package com.relaxmind.app.features.patient
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -55,16 +54,21 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.relaxmind.app.R
 import com.relaxmind.app.data.model.CheckIn
 import com.relaxmind.app.data.model.UserAchievement
+import com.relaxmind.app.ui.components.AchievementUnlockedDialog
 import com.relaxmind.app.ui.components.AppRole
+import com.relaxmind.app.ui.components.LoadingIndicator
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxIcons
+import com.relaxmind.app.ui.components.ScreenHeader
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.BorderSoft
 import com.relaxmind.app.ui.themes.LexendFontFamily
@@ -95,10 +99,10 @@ private data class AchievementCatalogItem(
 
 private val AchievementCatalog = listOf(
     AchievementCatalogItem("first_checkin", "Primeros pasos", "Primer check-in completado", "https://cdn-icons-png.flaticon.com/512/825/825590.png"),
-    AchievementCatalogItem("streak_3", "3 días seguidos", "Racha de 3 días", "https://cdn-icons-png.flaticon.com/512/785/785116.png"),
-    AchievementCatalogItem("streak_7", "7 días de calma", "Racha de 7 días", "https://cdn-icons-png.flaticon.com/512/785/785116.png"),
-    AchievementCatalogItem("streak_14", "Dos semanas imparable", "Racha de 14 días", "https://cdn-icons-png.flaticon.com/512/785/785116.png"),
-    AchievementCatalogItem("streak_30", "30 días seguidos", "Racha de 30 días", "https://cdn-icons-png.flaticon.com/512/3112/3112946.png"),
+    AchievementCatalogItem("streak_3", "3 dí­as seguidos", "Racha de 3 dí­as", "https://cdn-icons-png.flaticon.com/512/785/785116.png"),
+    AchievementCatalogItem("streak_7", "7 dí­as de calma", "Racha de 7 dí­as", "https://cdn-icons-png.flaticon.com/512/785/785116.png"),
+    AchievementCatalogItem("streak_14", "Dos semanas imparable", "Racha de 14 dí­as", "https://cdn-icons-png.flaticon.com/512/785/785116.png"),
+    AchievementCatalogItem("streak_30", "30 dí­as seguidos", "Racha de 30 dí­as", "https://cdn-icons-png.flaticon.com/512/3112/3112946.png"),
     AchievementCatalogItem("first_meditation", "Enfoque total", "Primera meditación completada", "https://cdn-icons-png.flaticon.com/512/2913/2913520.png"),
     AchievementCatalogItem("meditations_10", "Mente en calma", "10 meditaciones completadas", "https://cdn-icons-png.flaticon.com/512/414/414927.png"),
     AchievementCatalogItem("first_diary", "Mi historia", "Primera entrada de diario", "https://cdn-icons-png.flaticon.com/512/3068/3068327.png"),
@@ -118,7 +122,8 @@ private enum class AchievementIconType {
 @Composable
 fun ProgressScreen(
     viewModel: PatientViewModel = viewModel(),
-    onNavigate: (String) -> Unit
+    onNavigate: (String) -> Unit,
+    showBottomNav: Boolean = true
 ) {
     val isLoading by viewModel.isLoading.collectAsState()
     val streakData by viewModel.streak.collectAsState()
@@ -126,12 +131,22 @@ fun ProgressScreen(
     val allCheckIns by viewModel.allCheckIns.collectAsState()
     val selectedMonth by viewModel.selectedMonth.collectAsState()
     val selectedYear by viewModel.selectedYear.collectAsState()
+    var observedAchievementCount by remember { mutableStateOf<Int?>(null) }
+    var achievementDialog by remember { mutableStateOf<UserAchievement?>(null) }
 
     val currentStreak = streakData?.currentStreak ?: 0
     val longestStreak = streakData?.longestStreak ?: 0
 
     LaunchedEffect(Unit) {
         viewModel.loadProgressData()
+    }
+
+    LaunchedEffect(unlockedAchievements) {
+        val previousCount = observedAchievementCount
+        if (previousCount != null && unlockedAchievements.size > previousCount) {
+            achievementDialog = unlockedAchievements.maxByOrNull { it.unlockedAt }
+        }
+        observedAchievementCount = unlockedAchievements.size
     }
 
     // Filter check-ins by selected month/year
@@ -161,11 +176,13 @@ fun ProgressScreen(
         Scaffold(
             containerColor = Color.White,
             bottomBar = {
-                RelaxBottomNav(
-                    selectedRoute = "patient/progress",
-                    onNavigate = onNavigate,
-                    role = AppRole.PATIENT
-                )
+                if (showBottomNav) {
+                    RelaxBottomNav(
+                        selectedRoute = "patient/progress",
+                        onNavigate = onNavigate,
+                        role = AppRole.PATIENT
+                    )
+                }
             }
         ) { innerPadding ->
             Box(
@@ -177,26 +194,18 @@ fun ProgressScreen(
                 SoftGradientBackground(animateBlobs = true)
 
                 if (isLoading && allCheckIns.isEmpty() && streakData == null) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = PatientGreen)
-                    }
+                    LoadingIndicator()
                 } else {
                     var selectedDayInfo by remember { mutableStateOf<Pair<Int, Int>?>(null) }
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 24.dp, vertical = 20.dp),
+                            .padding(horizontal = 24.dp),
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
                         // 1. Header
-                        ProgressHeader(
-                            hasNotifications = true,
-                            onNotificationsClick = { /* No-op notifications mockup */ }
-                        )
+                        ProgressHeader()
 
                         // 2. Streak Card
                         StreakCard(
@@ -252,77 +261,36 @@ fun ProgressScreen(
                             }
                         )
                     }
+
+                    achievementDialog?.let { achievement ->
+                        AchievementUnlockedDialog(
+                            title = achievement.title.ifBlank { "Nuevo logro" },
+                            iconUrl = achievement.iconUrl,
+                            onDismiss = { achievementDialog = null }
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 1. PROGRESS HEADER
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 @Composable
 private fun ProgressHeader(
-    hasNotifications: Boolean,
-    onNotificationsClick: () -> Unit
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Balancer spacer for centering title
-        Spacer(modifier = Modifier.width(46.dp))
-
-        Text(
-            text = "Mi Progreso",
-            fontFamily = LexendFontFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 22.sp,
-            color = TextPrimary,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f)
-        )
-
-        // Notification Button matching Dashboard screen
-        Box(
-            modifier = Modifier
-                .size(46.dp)
-                .shadow(
-                    elevation = 4.dp,
-                    shape = RoundedCornerShape(16.dp),
-                    ambientColor = Color(0xFF8A88A6).copy(alpha = 0.15f),
-                    spotColor = Color(0xFF8A88A6).copy(alpha = 0.15f)
-                )
-                .background(Color.White, RoundedCornerShape(16.dp))
-                .border(1.dp, BorderSoft, RoundedCornerShape(16.dp))
-                .clickable(onClick = onNotificationsClick)
-                .padding(10.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = RelaxIcons.Notifications,
-                contentDescription = "Notificaciones",
-                tint = TextPrimary,
-                modifier = Modifier.size(24.dp)
-            )
-            if (hasNotifications) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(PatientGreenLight)
-                        .align(Alignment.TopEnd)
-                        .offset(x = 1.dp, y = (-1).dp)
-                )
-            }
-        }
-    }
+    ScreenHeader(
+        title = "Progreso",
+        subtitle = "Tu evolución y bienestar día a día",
+        modifier = modifier,
+        horizontalPadding = 0.dp
+    )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 // 2. STREAK CARD
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 @Composable
 private fun StreakCard(
     currentStreak: Int,
@@ -340,20 +308,27 @@ private fun StreakCard(
             .fillMaxWidth()
             .scale(scale)
             .shadow(
-                elevation = 10.dp,
+                elevation = 12.dp,
                 shape = RoundedCornerShape(28.dp),
-                ambientColor = PatientGreen.copy(alpha = 0.08f),
-                spotColor = PatientGreen.copy(alpha = 0.08f)
+                ambientColor = Color(0xFFF97316).copy(alpha = 0.15f),
+                spotColor = Color(0xFFF97316).copy(alpha = 0.15f)
             )
-            .border(1.2.dp, BorderSoft, RoundedCornerShape(28.dp))
-            .background(Color.White, RoundedCornerShape(28.dp))
+            .border(1.2.dp, Color(0xFFFFEDD5), RoundedCornerShape(28.dp))
+            .background(
+                brush = Brush.linearGradient(
+                    colors = listOf(Color(0xFFFFF7ED), Color(0xFFFFEDD5)),
+                    start = androidx.compose.ui.geometry.Offset.Zero,
+                    end = androidx.compose.ui.geometry.Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+                ),
+                shape = RoundedCornerShape(28.dp)
+            )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = { isPressed = !isPressed }
             )
     ) {
-        // Background organic leaves vector drawn programmatically on right edge
+        // Background floating stars
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
@@ -361,49 +336,32 @@ private fun StreakCard(
         ) {
             val w = size.width
             val h = size.height
-            val stemColor = Color(0xFFD4F3E5).copy(alpha = 0.5f)
-            val leafColor = Color(0xFFE2F3EB).copy(alpha = 0.7f)
+            val starColor = Color(0xFFFDBA74).copy(alpha = 0.6f)
 
-            // Stem
-            val path = androidx.compose.ui.graphics.Path().apply {
-                moveTo(w * 0.88f, h * 0.85f)
-                quadraticBezierTo(w * 0.84f, h * 0.5f, w * 0.87f, h * 0.15f)
+            fun drawStar(center: androidx.compose.ui.geometry.Offset, radius: Float) {
+                val path = androidx.compose.ui.graphics.Path()
+                val points = 5
+                val angle = Math.PI / points
+                for (i in 0 until points * 2) {
+                    val r = if (i % 2 == 0) radius else radius / 2.2f
+                    val a = i * angle - Math.PI / 2
+                    val x = center.x + r * Math.cos(a).toFloat()
+                    val y = center.y + r * Math.sin(a).toFloat()
+                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                }
+                path.close()
+                drawPath(path, starColor)
             }
-            drawPath(
-                path = path,
-                color = stemColor,
-                style = Stroke(width = 1.8f.dp.toPx(), cap = StrokeCap.Round)
-            )
 
-            // Rotated Leaves
-            rotate(degrees = -15f, pivot = androidx.compose.ui.geometry.Offset(w * 0.87f, h * 0.15f)) {
-                drawOval(
-                    color = leafColor,
-                    topLeft = androidx.compose.ui.geometry.Offset(w * 0.87f - 4.dp.toPx(), h * 0.15f - 8.dp.toPx()),
-                    size = androidx.compose.ui.geometry.Size(8.dp.toPx(), 16.dp.toPx())
-                )
-            }
-            rotate(degrees = -45f, pivot = androidx.compose.ui.geometry.Offset(w * 0.85f, h * 0.38f)) {
-                drawOval(
-                    color = leafColor,
-                    topLeft = androidx.compose.ui.geometry.Offset(w * 0.85f - 4.dp.toPx(), h * 0.38f - 8.dp.toPx()),
-                    size = androidx.compose.ui.geometry.Size(8.dp.toPx(), 14.dp.toPx())
-                )
-            }
-            rotate(degrees = 25f, pivot = androidx.compose.ui.geometry.Offset(w * 0.86f, h * 0.48f)) {
-                drawOval(
-                    color = leafColor,
-                    topLeft = androidx.compose.ui.geometry.Offset(w * 0.86f - 4.dp.toPx(), h * 0.48f - 8.dp.toPx()),
-                    size = androidx.compose.ui.geometry.Size(8.dp.toPx(), 14.dp.toPx())
-                )
-            }
-            rotate(degrees = -40f, pivot = androidx.compose.ui.geometry.Offset(w * 0.85f, h * 0.65f)) {
-                drawOval(
-                    color = leafColor,
-                    topLeft = androidx.compose.ui.geometry.Offset(w * 0.85f - 4.dp.toPx(), h * 0.65f - 8.dp.toPx()),
-                    size = androidx.compose.ui.geometry.Size(8.dp.toPx(), 14.dp.toPx())
-                )
-            }
+            drawStar(androidx.compose.ui.geometry.Offset(w * 0.75f, h * 0.25f), 14.dp.toPx())
+            drawStar(androidx.compose.ui.geometry.Offset(w * 0.88f, h * 0.5f), 22.dp.toPx())
+            drawStar(androidx.compose.ui.geometry.Offset(w * 0.65f, h * 0.7f), 10.dp.toPx())
+            drawStar(androidx.compose.ui.geometry.Offset(w * 0.92f, h * 0.8f), 12.dp.toPx())
+            
+            // Draw a few small circular particles
+            drawCircle(starColor, 4.dp.toPx(), androidx.compose.ui.geometry.Offset(w * 0.8f, h * 0.1f))
+            drawCircle(starColor, 3.dp.toPx(), androidx.compose.ui.geometry.Offset(w * 0.7f, h * 0.5f))
+            drawCircle(starColor, 5.dp.toPx(), androidx.compose.ui.geometry.Offset(w * 0.85f, h * 0.85f))
         }
 
         Row(
@@ -412,12 +370,12 @@ private fun StreakCard(
                 .padding(24.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Large circular container for the green flame icon
+            // Large circular container for the flame icon
             Box(
                 modifier = Modifier
                     .size(80.dp)
                     .clip(CircleShape)
-                    .background(SoftMint),
+                    .background(Color.White),
                 contentAlignment = Alignment.Center
             ) {
                 FlameIcon(modifier = Modifier.size(46.dp))
@@ -436,12 +394,12 @@ private fun StreakCard(
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 48.sp,
-                        color = PatientGreen,
+                        color = Color(0xFFEA580C), // Deep Orange
                         lineHeight = 48.sp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "días seguidos",
+                        text = "dí­as seguidos",
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
@@ -468,7 +426,7 @@ private fun FlameIcon(modifier: Modifier = Modifier) {
         val w = size.width
         val h = size.height
 
-        // Styled vector path for outer green flame
+        // Styled vector path for outer orange flame
         val outerPath = androidx.compose.ui.graphics.Path().apply {
             moveTo(w * 0.5f, h * 0.05f)
             cubicTo(w * 0.2f, h * 0.35f, w * 0.1f, h * 0.65f, w * 0.25f, h * 0.85f)
@@ -479,7 +437,7 @@ private fun FlameIcon(modifier: Modifier = Modifier) {
         drawPath(
             path = outerPath,
             brush = Brush.verticalGradient(
-                colors = listOf(Color(0xFF68D391), Color(0xFF0F6E56))
+                colors = listOf(Color(0xFFF97316), Color(0xFFDC2626)) // Orange to Red
             )
         )
 
@@ -494,15 +452,15 @@ private fun FlameIcon(modifier: Modifier = Modifier) {
         drawPath(
             path = innerPath,
             brush = Brush.verticalGradient(
-                colors = listOf(Color(0xFFFFFBEA), Color(0xFF68D391))
+                colors = listOf(Color(0xFFFEF08A), Color(0xFFF97316)) // Yellow to Orange
             )
         )
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 // 3. MONTHLY PROGRESS CARD
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 @Composable
 private fun MonthlyProgressCard(
     year: Int,
@@ -710,9 +668,9 @@ private fun LegendItem(color: Color, text: String) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 // 4. ACHIEVEMENTS SECTION
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 @Composable
 private fun AchievementsSection(
     unlockedAchievements: List<UserAchievement>,
@@ -727,7 +685,7 @@ private fun AchievementsSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Logros",
+                text = stringResource(id = R.string.progress_achievements),
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
@@ -812,7 +770,7 @@ private fun AchievementsSection(
                     iconType = AchievementIconType.TARGET
                 )
                 AchievementCard(
-                    title = "30 días seguidos",
+                    title = "30 dí­as seguidos",
                     isUnlocked = unlockedAchievements.any { it.achievementKey == "streak_30" },
                     iconType = AchievementIconType.TROPHY
                 )
@@ -1081,9 +1039,9 @@ private fun AchievementVectorIcon(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 // 5. HISTORY SECTION
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 @Composable
 private fun HistorySection(
     history: List<CheckIn>
@@ -1098,7 +1056,7 @@ private fun HistorySection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Historial",
+                text = stringResource(id = R.string.progress_history),
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
@@ -1106,7 +1064,7 @@ private fun HistorySection(
             )
             if (history.size > 3) {
                 Text(
-                    text = "Ver todo",
+                    text = stringResource(id = R.string.progress_view_all),
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 13.sp,
@@ -1379,9 +1337,9 @@ private fun HistoryItemRow(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 // HELPERS
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 private fun getMonthNameInSpanish(month: Int): String {
     return when (month) {
         1 -> "Enero"

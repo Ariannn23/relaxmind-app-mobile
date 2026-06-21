@@ -69,14 +69,14 @@ fun SettingsPatientScreen(
     viewModel: PatientViewModel = viewModel(),
     onNavigateToEditProfile: () -> Unit,
     onLogout: () -> Unit,
-    onNavigate: (String) -> Unit
+    onNavigate: (String) -> Unit,
+    showBottomNav: Boolean = true
 ) {
     val context = LocalContext.current
     val isLoading by viewModel.isLoading.collectAsState()
     val patient by viewModel.patient.collectAsState()
     val caregiver by viewModel.caregiver.collectAsState()
 
-    var showLanguageBottomSheet by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showUnlinkDialog by remember { mutableStateOf(false) }
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
@@ -92,11 +92,13 @@ fun SettingsPatientScreen(
         Scaffold(
             containerColor = Color.White,
             bottomBar = {
-                RelaxBottomNav(
-                    selectedRoute = "patient/settings",
-                    onNavigate = onNavigate,
-                    role = AppRole.PATIENT
-                )
+                if (showBottomNav) {
+                    RelaxBottomNav(
+                        selectedRoute = "patient/settings",
+                        onNavigate = onNavigate,
+                        role = AppRole.PATIENT
+                    )
+                }
             }
         ) { innerPadding ->
             Box(
@@ -147,15 +149,7 @@ fun SettingsPatientScreen(
                                 )
                                 SettingsDivider()
 
-                                // Idioma
-                                SettingsNavigationRow(
-                                    label = "Idioma",
-                                    icon = Icons.Filled.Language,
-                                    trailingText = if (currPatient.language == "en") "English" else "Español",
-                                    onClick = { showLanguageBottomSheet = true }
-                                )
-                                SettingsDivider()
-
+                                // Removed language row
                                 // Notificaciones
                                 SettingsToggleRow(
                                     label = "Notificaciones",
@@ -197,7 +191,7 @@ fun SettingsPatientScreen(
                                 SettingsNavigationRow(
                                     label = "Términos y condiciones",
                                     icon = Icons.Filled.Description,
-                                    onClick = { openTermsUrl(context) }
+                                    onClick = { onNavigate("common/terms-and-conditions/patient") }
                                 )
                                 SettingsDivider()
 
@@ -277,73 +271,7 @@ fun SettingsPatientScreen(
         }
     }
 
-    // Modal Bottom Sheet para idiomas
-    if (showLanguageBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showLanguageBottomSheet = false },
-            sheetState = rememberModalBottomSheetState(),
-            containerColor = Color.White,
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp)
-            ) {
-                Text(
-                    text = "Selecciona tu idioma",
-                    fontFamily = LexendFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    color = TextPrimary
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable {
-                            viewModel.updateLanguage("es")
-                            showLanguageBottomSheet = false
-                            relaunchActivity(context)
-                        }
-                        .padding(vertical = 14.dp, horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Español (ES)",
-                        fontFamily = LexendFontFamily,
-                        fontWeight = if (patient?.language == "es") FontWeight.SemiBold else FontWeight.Normal,
-                        fontSize = 16.sp,
-                        color = if (patient?.language == "es") PatientGreen else TextPrimary
-                    )
-                }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable {
-                            viewModel.updateLanguage("en")
-                            showLanguageBottomSheet = false
-                            relaunchActivity(context)
-                        }
-                        .padding(vertical = 14.dp, horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "English (EN)",
-                        fontFamily = LexendFontFamily,
-                        fontWeight = if (patient?.language == "en") FontWeight.SemiBold else FontWeight.Normal,
-                        fontSize = 16.sp,
-                        color = if (patient?.language == "en") PatientGreen else TextPrimary
-                    )
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-        }
-    }
+    // Language bottom sheet removed
 
     // Custom dialog flows
     if (showUnlinkDialog) {
@@ -547,10 +475,11 @@ fun SettingsProfileCard(
             .shadow(
                 elevation = 8.dp,
                 shape = RoundedCornerShape(28.dp),
-                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.15f),
-                spotColor = Color(0xFF8A88A6).copy(alpha = 0.15f)
+                ambientColor = Color(0xFF319F89).copy(alpha = 0.25f),
+                spotColor = Color(0xFF319F89).copy(alpha = 0.25f)
             )
-            .background(Color.White, RoundedCornerShape(28.dp))
+            .background(Color(0xFFE8F6EF), RoundedCornerShape(28.dp))
+            .border(2.dp, Color(0xFF87D0A8), RoundedCornerShape(28.dp))
             .clickable(onClick = onClick)
             .padding(24.dp)
     ) {

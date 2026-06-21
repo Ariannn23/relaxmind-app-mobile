@@ -65,7 +65,7 @@ fun DiaryScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onCreateEntry,
-                containerColor = PatientGreen,
+                containerColor = DiaryOrange,
                 contentColor = Color.White
             ) {
                 Icon(Icons.Default.Edit, "Nueva nota")
@@ -121,7 +121,7 @@ fun DiaryScreen(
                     text = selectedDate!!.format(DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", Locale("es", "ES"))).replaceFirstChar { it.uppercase() },
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = PatientGreen,
+                    color = DiaryOrange,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
                 
@@ -159,8 +159,8 @@ private fun DiaryCalendarGrid(
             .shadow(
                 elevation = 8.dp,
                 shape = RoundedCornerShape(24.dp),
-                ambientColor = PatientGreen.copy(alpha = 0.08f),
-                spotColor = PatientGreen.copy(alpha = 0.08f)
+                ambientColor = DiaryOrange.copy(alpha = 0.08f),
+                spotColor = DiaryOrange.copy(alpha = 0.08f)
             )
             .border(1.dp, BorderSoft, RoundedCornerShape(24.dp)),
         shape = RoundedCornerShape(24.dp),
@@ -178,17 +178,17 @@ private fun DiaryCalendarGrid(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onMonthPrevious) {
-                    Icon(Icons.Default.ChevronLeft, contentDescription = "Mes anterior", tint = PatientGreen)
+                    Icon(Icons.Default.ChevronLeft, contentDescription = "Mes anterior", tint = DiaryOrange)
                 }
                 Text(
                     text = "$monthName $year",
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
-                    color = PatientGreen
+                    color = DiaryOrange
                 )
                 IconButton(onClick = onMonthNext) {
-                    Icon(Icons.Default.ChevronRight, contentDescription = "Mes siguiente", tint = PatientGreen)
+                    Icon(Icons.Default.ChevronRight, contentDescription = "Mes siguiente", tint = DiaryOrange)
                 }
             }
 
@@ -273,7 +273,7 @@ private fun DiaryCalendarCell(
             .clip(RoundedCornerShape(12.dp))
             .clickable(enabled = hasEntries) { onClick() }
             .then(
-                if (isToday && !hasEntries) Modifier.border(1.dp, PatientGreenLight, RoundedCornerShape(12.dp))
+                if (isToday && !hasEntries) Modifier.border(1.dp, DiaryPeach, RoundedCornerShape(12.dp))
                 else Modifier
             ),
         contentAlignment = Alignment.Center
@@ -312,7 +312,7 @@ private fun DiaryCalendarCell(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .border(2.dp, PatientGreenLight, RoundedCornerShape(12.dp))
+                    .border(2.dp, DiaryPeach, RoundedCornerShape(12.dp))
             )
         }
     }
@@ -323,7 +323,7 @@ private fun DiaryHistoryCard(entry: DiaryEntry) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = SoftMint)
+        colors = CardDefaults.cardColors(containerColor = DiaryOrangeLight)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -348,7 +348,7 @@ private fun DiaryHistoryCard(entry: DiaryEntry) {
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = null,
-                            tint = PatientGreen,
+                            tint = DiaryOrange,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -370,7 +370,7 @@ private fun DiaryHistoryCard(entry: DiaryEntry) {
                     Text(
                         text = entry.category,
                         style = MaterialTheme.typography.labelSmall,
-                        color = PatientGreen,
+                        color = DiaryOrange,
                         fontWeight = FontWeight.Bold
                     )
                 }

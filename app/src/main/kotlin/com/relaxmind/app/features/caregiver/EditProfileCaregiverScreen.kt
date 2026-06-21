@@ -44,6 +44,14 @@ import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.themes.*
 import java.util.Calendar
 
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import com.relaxmind.app.ui.components.LocalRelaxAvatars
+import com.relaxmind.app.ui.components.getAvatarDrawableRes
+
 
 // ── Avatar color data (same palette as AvatarSetupScreen) ────────────────────
 private data class AvatarColorOption(val url: String, val colors: List<Color>)
@@ -215,21 +223,22 @@ fun EditProfileCaregiverScreen(
                                 modifier = Modifier
                                     .size(120.dp)
                                     .clip(CircleShape)
-                                    .border(3.dp, CaregiverIndigo.copy(alpha = 0.4f), CircleShape),
+                                    .border(3.dp, CaregiverIndigo.copy(alpha = 0.4f), CircleShape)
+                                    .background(Color(0xFFF3F4F6)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (previewIsCustom) {
-                                    val previewColors = getAvatarColorsForEdit(selectedAvatarUrl)
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(Brush.linearGradient(previewColors))
+                                    Image(
+                                        painter = painterResource(id = getAvatarDrawableRes(selectedAvatarUrl)),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
                                     )
                                 } else {
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .background(Brush.linearGradient(listOf(CaregiverEditLavender, CaregiverIndigo)))
+                                            .background(Color(0xFFEDE9FE))
                                     )
                                 }
                             }
@@ -237,7 +246,7 @@ fun EditProfileCaregiverScreen(
                             Spacer(modifier = Modifier.height(20.dp))
 
                             Text(
-                                text = "Elige un color",
+                                text = "Elige un avatar",
                                 fontFamily = LexendFontFamily,
                                 fontWeight = FontWeight.Normal,
                                 fontSize = 13.sp,
@@ -246,38 +255,40 @@ fun EditProfileCaregiverScreen(
 
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            // Avatar color grid (2 rows of 6)
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                for (rowIdx in 0..1) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceEvenly
+                            // Avatar image grid (horizontal scroll)
+                            LazyRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(LocalRelaxAvatars) { option ->
+                                    val isSelected = selectedAvatarUrl == option.url
+                                    val scale by animateFloatAsState(
+                                        targetValue = if (isSelected) 1.1f else 1f,
+                                        label = "avatar-scale-${option.url}"
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(56.dp)
+                                            .scale(scale)
+                                            .border(
+                                                width = if (isSelected) 2.5.dp else 0.dp,
+                                                color = if (isSelected) CaregiverIndigo else Color.Transparent,
+                                                shape = CircleShape
+                                            )
+                                            .padding(if (isSelected) 3.dp else 0.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFFF3F4F6))
+                                            .clickable(
+                                                indication = null,
+                                                interactionSource = remember { MutableInteractionSource() }
+                                            ) { selectedAvatarUrl = option.url }
                                     ) {
-                                        for (colIdx in 0..5) {
-                                            val option = avatarColorOptions[rowIdx * 6 + colIdx]
-                                            val isSelected = selectedAvatarUrl == option.url
-                                            val scale by animateFloatAsState(
-                                                targetValue = if (isSelected) 1.1f else 1f,
-                                                label = "avatar-scale-${option.url}"
-                                            )
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(42.dp)
-                                                    .scale(scale)
-                                                    .border(
-                                                        width = if (isSelected) 2.5.dp else 0.dp,
-                                                        color = if (isSelected) CaregiverIndigo else Color.Transparent,
-                                                        shape = CircleShape
-                                                    )
-                                                    .padding(if (isSelected) 3.dp else 0.dp)
-                                                    .clip(CircleShape)
-                                                    .background(Brush.linearGradient(option.colors))
-                                                    .clickable(
-                                                        indication = null,
-                                                        interactionSource = remember { MutableInteractionSource() }
-                                                    ) { selectedAvatarUrl = option.url }
-                                            )
-                                        }
+                                        Image(
+                                            painter = painterResource(id = option.drawableRes),
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
                                     }
                                 }
                             }

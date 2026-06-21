@@ -38,7 +38,6 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.ReportProblem
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -67,11 +66,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.relaxmind.app.ui.components.getAvatarDrawableRes
 import com.relaxmind.app.Screen
 import com.relaxmind.app.data.model.CaregiverAlert
 import com.relaxmind.app.data.model.CheckIn
 import com.relaxmind.app.data.model.Patient
 import com.relaxmind.app.ui.components.AppRole
+import com.relaxmind.app.ui.components.LoadingIndicator
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxToastHost
 import com.relaxmind.app.ui.components.rememberRelaxToastState
@@ -116,7 +119,8 @@ fun PatientDetailScreen(
     viewModel: CaregiverViewModel = viewModel(),
     onNavigateBack: () -> Unit,
     onSosAlertClick: (String) -> Unit,
-    onNavigate: (String) -> Unit
+    onNavigate: (String) -> Unit,
+    showBottomNav: Boolean = true
 ) {
     val patient by viewModel.selectedPatient.collectAsState()
     val checkIns by viewModel.selectedPatientCheckIns.collectAsState()
@@ -144,12 +148,14 @@ fun PatientDetailScreen(
     Scaffold(
         containerColor = Color.White,
         bottomBar = {
-            RelaxBottomNav(
-                selectedRoute = Screen.PatientsList.route,
-                onNavigate = onNavigate,
-                role = AppRole.CAREGIVER
-            )
-        }
+                if (showBottomNav) {
+                    RelaxBottomNav(
+                        selectedRoute = Screen.PatientsList.route,
+                        onNavigate = onNavigate,
+                        role = AppRole.CAREGIVER
+                    )
+                }
+            }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -224,9 +230,7 @@ fun PatientDetailScreen(
             }
 
             if (isLoading && patient == null) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = CaregiverIndigo)
-                }
+                LoadingIndicator()
             }
 
             if (!isLoading && patient == null) {
@@ -340,17 +344,29 @@ private fun PatientProfileSummary(
         horizontalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         val avatarName = URLEncoder.encode(fullName, StandardCharsets.UTF_8.toString())
-        AsyncImage(
-            model = patient.avatarUrl.ifBlank {
-                "https://ui-avatars.com/api/?name=$avatarName&background=4338A8&color=fff"
-            },
-            contentDescription = "Avatar de $fullName",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(116.dp)
-                .clip(CircleShape)
-                .border(4.dp, scoreStatus(latestScore).color.copy(alpha = 0.82f), CircleShape)
-        )
+        if (patient.avatarUrl.startsWith("relaxmind://avatar/")) {
+            Image(
+                painter = painterResource(id = getAvatarDrawableRes(patient.avatarUrl)),
+                contentDescription = "Avatar de $fullName",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(116.dp)
+                    .clip(CircleShape)
+                    .border(4.dp, scoreStatus(latestScore).color.copy(alpha = 0.82f), CircleShape)
+            )
+        } else {
+            AsyncImage(
+                model = patient.avatarUrl.ifBlank {
+                    "https://ui-avatars.com/api/?name=$avatarName&background=4338A8&color=fff"
+                },
+                contentDescription = "Avatar de $fullName",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(116.dp)
+                    .clip(CircleShape)
+                    .border(4.dp, scoreStatus(latestScore).color.copy(alpha = 0.82f), CircleShape)
+            )
+        }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = fullName,

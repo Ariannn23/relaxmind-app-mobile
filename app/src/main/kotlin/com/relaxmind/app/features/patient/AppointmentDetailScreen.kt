@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.relaxmind.app.ui.components.LoadingIndicator
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.*
 import java.time.LocalDate
@@ -65,12 +66,7 @@ fun AppointmentDetailScreen(
             SoftGradientBackground(animateBlobs = true)
 
             if (appointment == null || isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = PatientGreen)
-                }
+                LoadingIndicator()
             } else {
                 val appt = appointment!!
 

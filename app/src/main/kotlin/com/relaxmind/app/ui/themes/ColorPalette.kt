@@ -61,3 +61,8 @@ val LowOrange = Color(0xFFFF7A1A)
 val LowOrangeSoft = Color(0xFFFFEBD8)
 val CriticalRed = Color(0xFFFF4D5A)
 val CriticalRedSoft = Color(0xFFFFE8EA)
+
+// Diary Colors
+val DiaryOrange = Color(0xFFF97316)
+val DiaryOrangeLight = Color(0xFFFFEDD5)
+val DiaryPeach = Color(0xFFFED7AA)

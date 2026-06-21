@@ -17,6 +17,7 @@ import com.relaxmind.app.data.model.LumiSession
 import com.relaxmind.app.data.model.LumiMessage
 import com.relaxmind.app.data.model.Streak
 import com.relaxmind.app.data.model.UserAchievement
+import com.relaxmind.app.data.model.LibraryArticle
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.util.Date
@@ -278,6 +279,8 @@ class FirestoreRepository(
         code: String,
         caregiverId: String
     ): Result<String> = runCatching {
+        require(caregiverId.isNotBlank()) { "No se encontró una sesión activa." }
+
         val now = Date()
         val docs = bindingCodes
             .whereEqualTo("code", code)
@@ -293,6 +296,15 @@ class FirestoreRepository(
         val bindingCode = bindingSnapshot.toObject(BindingCode::class.java)
             ?: error("Código inválido o expirado")
         val patientRef = patients.document(bindingCode.patientId)
+        val linkedPatientsCount = patients
+            .whereEqualTo("caregiverId", caregiverId)
+            .get()
+            .await()
+            .size()
+
+        if (linkedPatientsCount >= MAX_PATIENTS_PER_CAREGIVER) {
+            error("Has alcanzado el límite de $MAX_PATIENTS_PER_CAREGIVER pacientes vinculados.")
+        }
 
         val linkedAt = LocalDate.now().toString()
         val caregiverProfile = getLinkedCaregiverProfile(caregiverId).getOrNull()
@@ -446,6 +458,54 @@ class FirestoreRepository(
             .get()
             .await()
             .toObject(Streak::class.java)?.copy(patientId = patientId)
+    }
+
+    suspend fun updatePatientStreak(patientId: String, checkInDateStr: String): Result<Streak> = runCatching {
+        val streakRef = firestore.collection(STREAKS_COLLECTION).document(patientId)
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(streakRef)
+            val currentStreak = snapshot.toObject(Streak::class.java) ?: Streak(patientId = patientId)
+            
+            var newCurrentStreak = currentStreak.currentStreak
+            var newLongestStreak = currentStreak.longestStreak
+            
+            val lastDateStr = currentStreak.lastCheckInDate
+            
+            if (lastDateStr != null) {
+                try {
+                    val lastDate = java.time.LocalDate.parse(lastDateStr)
+                    val newDate = java.time.LocalDate.parse(checkInDateStr)
+                    
+                    val daysBetween = java.time.temporal.ChronoUnit.DAYS.between(lastDate, newDate)
+                    
+                    if (daysBetween == 1L) {
+                        newCurrentStreak += 1
+                    } else if (daysBetween > 1L) {
+                        newCurrentStreak = 1
+                    } else if (daysBetween == 0L && newCurrentStreak == 0) {
+                         newCurrentStreak = 1 // Just in case it was 0 for some reason today
+                    }
+                } catch (e: Exception) {
+                    newCurrentStreak = 1
+                }
+            } else {
+                newCurrentStreak = 1
+            }
+            
+            if (newCurrentStreak > newLongestStreak) {
+                newLongestStreak = newCurrentStreak
+            }
+            
+            val updatedStreak = currentStreak.copy(
+                currentStreak = newCurrentStreak,
+                longestStreak = newLongestStreak,
+                lastCheckInDate = checkInDateStr,
+                updatedAt = java.time.Instant.now().toString()
+            )
+            
+            transaction.set(streakRef, updatedStreak)
+            updatedStreak
+        }.await()
     }
 
     suspend fun getPatientAchievements(patientId: String): Result<List<UserAchievement>> = runCatching {
@@ -715,6 +775,30 @@ class FirestoreRepository(
         false
     }
 
+    suspend fun getLibraryArticles(role: String): Result<List<LibraryArticle>> = runCatching {
+        val q1 = firestore.collection(LIBRARY_ARTICLES_COLLECTION)
+            .whereEqualTo("targetRole", role)
+            .get()
+            .await()
+            .documents.mapNotNull { doc -> doc.toObject(LibraryArticle::class.java)?.copy(id = doc.id) }
+
+        val q2 = firestore.collection(LIBRARY_ARTICLES_COLLECTION)
+            .whereEqualTo("targetRole", "both")
+            .get()
+            .await()
+            .documents.mapNotNull { doc -> doc.toObject(LibraryArticle::class.java)?.copy(id = doc.id) }
+
+        (q1 + q2).distinctBy { it.id }
+    }
+
+    suspend fun getArticleById(articleId: String): Result<LibraryArticle?> = runCatching {
+        val doc = firestore.collection(LIBRARY_ARTICLES_COLLECTION)
+            .document(articleId)
+            .get()
+            .await()
+        doc.toObject(LibraryArticle::class.java)?.copy(id = doc.id)
+    }
+
     private companion object {
         const val PATIENTS_COLLECTION = "patients"
         const val CAREGIVERS_COLLECTION = "caregivers"
@@ -729,5 +813,8 @@ class FirestoreRepository(
         const val STREAKS_COLLECTION = "streaks"
         const val ACHIEVEMENTS_COLLECTION = "achievements"
         const val LUMI_SESSIONS_COLLECTION = "lumiSessions"
+        const val LIBRARY_ARTICLES_COLLECTION = "libraryArticles"
+        const val MAX_PATIENTS_PER_CAREGIVER = 5
     }
 }
+
