@@ -46,6 +46,29 @@ object WellnessScoreCalculator {
     }
 
     /**
+     * Calculates the short daily check-in score.
+     *
+     * Daily check-ins are intentionally brief:
+     * emotion, sleep, energy, and stress. Stress is inverted because less stress
+     * means better wellbeing.
+     */
+    fun calculateDailyScore(
+        emotionalState: Int,
+        sleep: Int,
+        energy: Int,
+        stress: Int
+    ): Int {
+        val emotionalBlock = emotionalState.toDouble() / 5.0 * 0.35
+        val sleepBlock = sleep.toDouble() / 5.0 * 0.25
+        val energyBlock = energy.toDouble() / 10.0 * 0.20
+        val stressBlock = ((11 - stress).toDouble() / 10.0) * 0.20
+
+        return ((emotionalBlock + sleepBlock + energyBlock + stressBlock) * 100.0)
+            .roundToInt()
+            .coerceIn(0, 100)
+    }
+
+    /**
      * Calculates the wellness score using Double values, typically used for averages or history calculations.
      */
     fun calculateScore(
@@ -80,12 +103,14 @@ object WellnessScoreCalculator {
     fun getCategory(score: Int): String {
         return when (score) {
             in 0..20 -> "Muy bajo"
-            in 21..40 -> "Bajo"
-            in 41..60 -> "Moderado"
+            in 21..30 -> "Bajo"
+            in 31..60 -> "Moderado"
             in 61..80 -> "Bueno"
             else -> "Excelente"
         }
     }
+
+    fun shouldAlertCaregiver(score: Int): Boolean = score <= 30
 
     /**
      * Returns the color associated with the wellness score.
@@ -94,7 +119,7 @@ object WellnessScoreCalculator {
         return when {
             score == null -> ScoreGray
             score <= 20 -> ScoreRed
-            score <= 40 -> ScoreOrange
+            score <= 30 -> ScoreOrange
             score <= 60 -> ScoreYellow
             score <= 80 -> ScoreGreenLight
             else -> ScoreGreenDark

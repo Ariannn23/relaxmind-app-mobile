@@ -433,6 +433,15 @@ class AuthViewModel(
         }
     }
 
+    fun ensureCurrentRole() {
+        val userId = authService.getCurrentUser()?.uid ?: return
+        if (_userRole.value != null) return
+
+        viewModelScope.launch {
+            resolveCurrentRole(userId)
+        }
+    }
+
     /** Persists the notification preference for the currently authenticated user. */
     fun setNotificationPermission(enabled: Boolean) {
         val userId = authService.getCurrentUser()?.uid ?: run {

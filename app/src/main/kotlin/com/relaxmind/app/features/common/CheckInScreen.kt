@@ -135,10 +135,7 @@ fun CheckInScreen(
                 StepType.EMOTIONAL,
                 StepType.SLEEP,
                 StepType.ENERGY,
-                StepType.STRESS,
-                StepType.HABITS,
-                StepType.BINARY,
-                StepType.NOTES
+                StepType.STRESS
             )
         }
     }
@@ -205,6 +202,26 @@ fun CheckInScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
+                if (isInitialTest) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.End)
+                            .background(
+                                color = PatientGreen.copy(alpha = 0.10f),
+                                shape = RoundedCornerShape(999.dp)
+                            )
+                            .padding(horizontal = 14.dp, vertical = 7.dp)
+                    ) {
+                        Text(
+                            text = "Paso 2 de 2",
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                            color = PatientGreen
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
                 // Progress indicator
                 LinearProgressIndicator(
                     progress = { progress },
@@ -217,7 +234,11 @@ fun CheckInScreen(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Paso ${currentStepIndex + 1} de $totalSteps",
+                    text = if (isInitialTest) {
+                        "Pregunta ${currentStepIndex + 1} de $totalSteps"
+                    } else {
+                        "Pregunta ${currentStepIndex + 1} de $totalSteps"
+                    },
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 13.sp,
@@ -252,10 +273,19 @@ fun CheckInScreen(
                         ) {
                             Spacer(modifier = Modifier.height(20.dp))
                             when (step) {
-                                StepType.EMOTIONAL -> EmotionalStepView(
-                                    selected = emotionalState,
-                                    onSelect = { viewModel.selectEmotionalState(it) }
-                                )
+                                StepType.EMOTIONAL -> {
+                                    if (isInitialTest) {
+                                        EmotionalStepView(
+                                            selected = emotionalState,
+                                            onSelect = { viewModel.selectEmotionalState(it) }
+                                        )
+                                    } else {
+                                        DailyEmotionalStepView(
+                                            selected = emotionalState,
+                                            onSelect = { viewModel.selectEmotionalState(it) }
+                                        )
+                                    }
+                                }
                                 StepType.SLEEP -> SleepStepView(
                                     selected = sleep,
                                     onSelect = { viewModel.selectSleep(it) }
@@ -421,6 +451,34 @@ private fun SleepStepView(
         CheckInStepTitle(
             title = "¿Cómo dormiste anoche?",
             subtitle = "Tu descanso también ayuda a entender tu bienestar de hoy."
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+        options.forEach { option ->
+            MoodSelectionCard(
+                option = option,
+                isSelected = selected == option.value,
+                onClick = { onSelect(option.value) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun DailyEmotionalStepView(
+    selected: Int?,
+    onSelect: (Int) -> Unit
+) {
+    val options = listOf(
+        MoodCardOption(1, "Muy mal", "Necesito apoyo hoy"),
+        MoodCardOption(2, "Mal", "Ha sido un dia pesado"),
+        MoodCardOption(3, "Bien", "Estoy estable"),
+        MoodCardOption(4, "Muy bien", "Me siento con calma"),
+        MoodCardOption(5, "Excelente", "Me siento pleno")
+    )
+    Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
+        CheckInStepTitle(
+            title = "Como te sientes hoy?",
+            subtitle = "Una respuesta rapida nos ayuda a cuidar tu bienestar diario."
         )
         Spacer(modifier = Modifier.height(20.dp))
         options.forEach { option ->

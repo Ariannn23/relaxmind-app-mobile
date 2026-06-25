@@ -3,6 +3,7 @@ package com.relaxmind.app.features.common
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.relaxmind.app.data.model.BinaryAnswer
+import com.relaxmind.app.data.model.CaregiverAlert
 import com.relaxmind.app.data.model.CheckIn
 import com.relaxmind.app.data.model.FrequencyAnswer
 import com.relaxmind.app.data.remote.FirebaseAuthService
@@ -14,6 +15,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
 
 sealed interface CheckInUiState {
@@ -112,21 +116,33 @@ class CheckInViewModel(
             val sleepVal = if (isInitialTest) null else (_sleep.value ?: 3)
             val energyVal = _energy.value
             val stressVal = _stress.value
-            val freqList = _frequencyAnswers.value
-            val binList = _binaryAnswers.value.map { if (it == -1) 1 else it }
+            val freqList = if (isInitialTest) _frequencyAnswers.value else emptyList()
+            val binList = if (isInitialTest) {
+                _binaryAnswers.value.map { if (it == -1) 1 else it }
+            } else {
+                emptyList()
+            }
             val noteText = _notes.value
 
-            val scoreAnswers = CheckInAnswers(
-                emotionalState = emotionalVal,
-                sleep = sleepVal,
-                energy = energyVal,
-                stress = stressVal,
-                frequencyAnswers = freqList,
-                binaryAnswers = binList,
-                notes = noteText
-            )
-
-            val calculatedScore = WellnessScoreCalculator.calculateScore(scoreAnswers)
+            val calculatedScore = if (isInitialTest) {
+                val scoreAnswers = CheckInAnswers(
+                    emotionalState = emotionalVal,
+                    sleep = sleepVal,
+                    energy = energyVal,
+                    stress = stressVal,
+                    frequencyAnswers = freqList,
+                    binaryAnswers = binList,
+                    notes = noteText
+                )
+                WellnessScoreCalculator.calculateScore(scoreAnswers)
+            } else {
+                WellnessScoreCalculator.calculateDailyScore(
+                    emotionalState = emotionalVal,
+                    sleep = sleepVal ?: 3,
+                    energy = energyVal,
+                    stress = stressVal
+                )
+            }
             val category = WellnessScoreCalculator.getCategory(calculatedScore)
             val dateStr = LocalDate.now().toString()
 
@@ -154,6 +170,13 @@ class CheckInViewModel(
             if (result.isSuccess) {
                 if (isInitialTest) {
                     firestoreRepository.updatePatient(userId, mapOf("onboardingCompleted" to true))
+                } else if (WellnessScoreCalculator.shouldAlertCaregiver(calculatedScore)) {
+                    createLowScoreAlertIfLinked(
+                        patientId = userId,
+                        score = calculatedScore,
+                        category = category,
+                        dateStr = dateStr
+                    )
                 }
                 
                 // Update streak
@@ -201,5 +224,32 @@ class CheckInViewModel(
                 )
             }
         }
+    }
+
+    private suspend fun createLowScoreAlertIfLinked(
+        patientId: String,
+        score: Int,
+        category: String,
+        dateStr: String
+    ) {
+        val patient = firestoreRepository.getPatientById(patientId).getOrNull() ?: return
+        val caregiverId = patient.caregiverId ?: return
+        val patientName = "${patient.name} ${patient.lastName}".trim().ifBlank { "Paciente" }
+        val createdAtText = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()).format(Date())
+
+        firestoreRepository.createAlert(
+            CaregiverAlert(
+                id = "low_checkin_${patientId}_$dateStr",
+                caregiverId = caregiverId,
+                patientId = patientId,
+                patientName = patientName,
+                type = "low_checkin",
+                title = "Check-in bajo",
+                message = "$patientName registrÃ³ $score/100 ($category) en su check-in diario.",
+                severity = "warning",
+                resolved = false,
+                createdAtText = createdAtText
+            )
+        )
     }
 }
