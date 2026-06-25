@@ -35,7 +35,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 
-class MainActivity : ComponentActivity() {
+import androidx.fragment.app.FragmentActivity
+
+class MainActivity : FragmentActivity() {
     private val authService = FirebaseAuthService()
     private val firestoreRepository = FirestoreRepository()
 

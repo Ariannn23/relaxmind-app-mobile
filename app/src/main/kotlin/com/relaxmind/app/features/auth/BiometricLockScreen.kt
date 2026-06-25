@@ -27,6 +27,18 @@ import com.relaxmind.app.ui.themes.PatientGreen
 import com.relaxmind.app.ui.themes.TextPrimary
 import com.relaxmind.app.ui.themes.TextSecondary
 
+import android.content.Context
+import android.content.ContextWrapper
+
+fun Context.findActivity(): FragmentActivity? {
+    var context = this
+    while (context is ContextWrapper) {
+        if (context is FragmentActivity) return context
+        context = context.baseContext
+    }
+    return null
+}
+
 @Composable
 fun BiometricLockScreen(
     onUnlockSuccess: () -> Unit,
@@ -39,7 +51,7 @@ fun BiometricLockScreen(
     val authenticate = {
         isAuthenticating = true
         biometricError = null
-        val activity = context as? FragmentActivity
+        val activity = context.findActivity()
         if (activity != null) {
             val executor = ContextCompat.getMainExecutor(activity)
             val biometricPrompt = BiometricPrompt(
