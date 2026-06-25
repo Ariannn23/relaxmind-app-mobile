@@ -60,6 +60,8 @@ import com.relaxmind.app.ui.components.RelaxIcons
 import com.relaxmind.app.ui.components.getAvatarDrawableRes
 import com.relaxmind.app.ui.components.RelaxButton
 import com.relaxmind.app.ui.components.RelaxTopBar
+import com.relaxmind.app.ui.components.SettingsSkeleton
+import com.relaxmind.app.ui.components.ErrorStateScreen
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.*
 
@@ -74,6 +76,7 @@ fun SettingsPatientScreen(
 ) {
     val context = LocalContext.current
     val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
     val patient by viewModel.patient.collectAsState()
     val caregiver by viewModel.caregiver.collectAsState()
 
@@ -109,14 +112,22 @@ fun SettingsPatientScreen(
                 // Background decoration
                 SoftGradientBackground(animateBlobs = true)
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 24.dp, vertical = 20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(24.dp)
-                ) {
+                if (isLoading && patient == null && error == null) {
+                    SettingsSkeleton(modifier = Modifier.align(Alignment.Center))
+                } else if (error != null && patient == null) {
+                    ErrorStateScreen(
+                        message = error ?: "",
+                        onRetry = { viewModel.loadDashboardData() }
+                    )
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 24.dp, vertical = 20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(24.dp)
+                    ) {
                     // 1. Header
                     SettingsHeader(
                         onBackClick = { onNavigate("patient/dashboard") },
@@ -248,24 +259,20 @@ fun SettingsPatientScreen(
                             color = TextSecondary
                         )
                     }
+                    }
                 }
 
-                // Loading overlay
-                if (isLoading) {
-                    if (patient == null) {
-                        FullScreenLoadingOverlay(overlayColor = Color.Transparent)
-                    } else {
-                        // Invisible overlay to block touches during background saves without darkening or showing a spinner
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clickable(
-                                    onClick = {},
-                                    indication = null,
-                                    interactionSource = remember { MutableInteractionSource() }
-                                )
-                        )
-                    }
+                // Invisible overlay to block touches during background saves
+                if (isLoading && patient != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable(
+                                onClick = {},
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() }
+                            )
+                    )
                 }
             }
         }

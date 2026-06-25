@@ -13,6 +13,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonOff
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -41,9 +43,11 @@ import com.relaxmind.app.ui.components.getAvatarDrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import com.relaxmind.app.ui.components.rememberRelaxToastState
+import com.relaxmind.app.ui.components.CaregiverDashboardSkeleton
+import com.relaxmind.app.ui.components.ErrorStateScreen
 import com.relaxmind.app.ui.themes.*
 
-// ── Caregiver-specific palette ────────────────────────────────────────────────
+//  Caregiver-specific palette 
 private val CaregiverPurple = Color(0xFF4F2DE8)
 private val CaregiverIndigoDark = Color(0xFF4338A8)
 private val CaregiverLavender = Color(0xFFF1EDFF)
@@ -56,9 +60,58 @@ private val ScoreGreenSoft = Color(0xFFECFDF5)
 private val ScoreOrangeSoft = Color(0xFFFFF7E6)
 private val ScoreRedSoft = Color(0xFFFFF0EE)
 
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 // MAIN SCREEN
-// ─────────────────────────────────────────────────────────────────────────────
+// 
+
+data class CaregiverDashboardColors(
+    val background: Brush,
+    val surface: Color,
+    val card: Color,
+    val primary: Brush,
+    val primaryLight: Color,
+    val textPrimary: Color,
+    val textSecondary: Color,
+    val textMuted: Color,
+    val border: Color,
+    val isDark: Boolean
+)
+
+@Composable
+fun caregiverDashboardColors(isDark: Boolean): CaregiverDashboardColors {
+    return if (isDark) {
+        CaregiverDashboardColors(
+            background = Brush.verticalGradient(
+                colors = listOf(Color(0xFF080A1A), Color(0xFF0D1024), Color(0xFF050711))
+            ),
+            surface = Color(0xFF101329),
+            card = Color(0xFF151936),
+            primary = Brush.verticalGradient(listOf(Color(0xFF7C3AED), Color(0xFF4F2DE8))),
+            primaryLight = Color(0xFF8B5CF6),
+            textPrimary = Color(0xFFF7F4FF),
+            textSecondary = Color(0xFFC7BEDF),
+            textMuted = Color(0xFF8F87A8),
+            border = Color(0xFF322B55),
+            isDark = true
+        )
+    } else {
+        CaregiverDashboardColors(
+            background = Brush.verticalGradient(
+                colors = listOf(CaregiverLavender, Color(0xFFF8F8FD))
+            ),
+            surface = Color(0xFFFFFFFF),
+            card = Color(0xFFFFFFFF),
+            primary = Brush.verticalGradient(listOf(CaregiverPurple, CaregiverIndigoDark)),
+            primaryLight = CaregiverPurple,
+            textPrimary = TextPrimary,
+            textSecondary = TextSecondary,
+            textMuted = Color(0xFF8FA89B),
+            border = Color(0xFFE6E8EF),
+            isDark = false
+        )
+    }
+}
+
 @Composable
 fun DashboardCaregiverScreen(
     viewModel: CaregiverViewModel = viewModel(),
@@ -74,6 +127,9 @@ fun DashboardCaregiverScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val toastState = rememberRelaxToastState()
+    
+    val isDarkCaregiverDashboard = true
+    val colors = caregiverDashboardColors(isDark = isDarkCaregiverDashboard)
 
     LaunchedEffect(Unit) { viewModel.loadDashboard() }
 
@@ -84,22 +140,27 @@ fun DashboardCaregiverScreen(
         }
     }
 
-    if (isLoading && caregiver == null) {
-        FullScreenLoadingScreen(text = "Cargando dashboard...")
+    if (isLoading && caregiver == null && error == null) {
+        Box(modifier = Modifier.fillMaxSize().background(colors.background)) {
+            CaregiverDashboardSkeleton(modifier = Modifier.align(Alignment.Center))
+        }
+        return
+    } else if (error != null && caregiver == null) {
+        Box(modifier = Modifier.fillMaxSize().background(colors.background)) {
+            ErrorStateScreen(
+                message = error ?: "",
+                onRetry = { viewModel.loadDashboard() }
+            )
+        }
         return
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8F8FD))) {
-        // Soft gradient background at top
+    Box(modifier = Modifier.fillMaxSize().background(colors.background)) {
+        // Soft gradient background is handled by colors.background Brush above
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(260.dp)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(CaregiverLavender, Color(0xFFF8F8FD))
-                    )
-                )
         )
 
         var showLimitDialog by remember { mutableStateOf(false) }
@@ -107,10 +168,10 @@ fun DashboardCaregiverScreen(
         if (showLimitDialog) {
             AlertDialog(
                 onDismissRequest = { showLimitDialog = false },
-                title = { Text("L�mite alcanzado", fontFamily = LexendFontFamily, fontWeight = FontWeight.Bold, color = TextPrimary) },
-                text = { Text("Has alcanzado el l�mite m�ximo de 5 pacientes vinculados.", fontFamily = LexendFontFamily, color = TextSecondary) },
-                confirmButton = { TextButton(onClick = { showLimitDialog = false }) { Text("Entendido", fontFamily = LexendFontFamily, color = CaregiverIndigo, fontWeight = FontWeight.Bold) } },
-                containerColor = Color.White
+                title = { Text("Lmite alcanzado", fontFamily = LexendFontFamily, fontWeight = FontWeight.Bold, color = colors.textPrimary) },
+                text = { Text("Has alcanzado el lmite mximo de 5 pacientes vinculados.", fontFamily = LexendFontFamily, color = colors.textSecondary) },
+                confirmButton = { TextButton(onClick = { showLimitDialog = false }) { Text("Entendido", fontFamily = LexendFontFamily, color = colors.primaryLight, fontWeight = FontWeight.Bold) } },
+                containerColor = colors.surface
             )
         }
 
@@ -121,12 +182,13 @@ fun DashboardCaregiverScreen(
                     RelaxBottomNav(
                         selectedRoute = Screen.CaregiverDashboard.route,
                         onNavigate = onNavigate,
-                        role = AppRole.CAREGIVER
+                        role = AppRole.CAREGIVER,
+                        darkMode = colors.isDark
                     )
                 }
             },
             floatingActionButton = {
-                CaregiverFAB(onScanQr = {
+                CaregiverFAB(colors = colors, onScanQr = {
                     if (patients.size >= 5) {
                         showLimitDialog = true
                     } else {
@@ -151,12 +213,14 @@ fun DashboardCaregiverScreen(
                 ) {
                     // 1. Header
                     DashboardHeader(
+                        colors = colors,
                         name = caregiver?.name.orEmpty(),
                         avatarUrl = caregiver?.avatarUrl.orEmpty()
                     )
 
                     // 2. Active Alerts Card
                     ActiveAlertsCard(
+                        colors = colors,
                         alerts = alerts,
                         onAlertsClick = onAlertsClick,
                         onAlertClick = { alertId ->
@@ -166,6 +230,7 @@ fun DashboardCaregiverScreen(
 
                     // 3. Patients Card
                     PatientsCard(
+                        colors = colors,
                         patients = patients,
                         onViewAll = { onNavigate(Screen.PatientsList.route) },
                         onPatientClick = onPatientClick
@@ -181,20 +246,20 @@ fun DashboardCaregiverScreen(
     }
 }
 
-// ── FAB ───────────────────────────────────────────────────────────────────────
+//  FAB 
 @Composable
-private fun CaregiverFAB(onScanQr: () -> Unit) {
+private fun CaregiverFAB(colors: CaregiverDashboardColors, onScanQr: () -> Unit) {
     Box(
         modifier = Modifier
             .size(64.dp)
             .shadow(
                 elevation = 16.dp,
                 shape = CircleShape,
-                ambientColor = CaregiverPurple.copy(alpha = 0.4f),
-                spotColor = CaregiverPurple.copy(alpha = 0.5f)
+                ambientColor = if (colors.isDark) Color(0xFF7C3AED).copy(alpha = 0.35f) else CaregiverPurple.copy(alpha = 0.4f),
+                spotColor = if (colors.isDark) Color(0xFF7C3AED).copy(alpha = 0.35f) else CaregiverPurple.copy(alpha = 0.5f)
             )
             .clip(CircleShape)
-            .background(Brush.linearGradient(listOf(CaregiverPurple, CaregiverIndigoDark)))
+            .background(colors.primary)
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },
@@ -211,9 +276,9 @@ private fun CaregiverFAB(onScanQr: () -> Unit) {
     }
 }
 
-// ── Header ────────────────────────────────────────────────────────────────────
+//  Header 
 @Composable
-private fun DashboardHeader(name: String, avatarUrl: String) {
+private fun DashboardHeader(colors: CaregiverDashboardColors, name: String, avatarUrl: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -221,19 +286,19 @@ private fun DashboardHeader(name: String, avatarUrl: String) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Hola, ${name.ifBlank { "María" }} 👋",
+                text = "Hola, ${name.ifBlank { "Mara" }} ",
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 24.sp,
-                color = TextPrimary
+                color = colors.textPrimary
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Aquí tienes un resumen del bienestar\nde tus pacientes.",
+                text = "Aqu tienes un resumen del bienestar\nde tus pacientes.",
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Normal,
                 fontSize = 14.sp,
-                color = TextSecondary,
+                color = colors.textSecondary,
                 lineHeight = 20.sp
             )
         }
@@ -244,9 +309,9 @@ private fun DashboardHeader(name: String, avatarUrl: String) {
         Box(
             modifier = Modifier
                 .size(72.dp)
-                .shadow(8.dp, CircleShape, ambientColor = CaregiverIndigoDark.copy(alpha = 0.15f))
+                .shadow(8.dp, CircleShape, ambientColor = if (colors.isDark) Color(0xFF8B5CF6).copy(alpha = 0.25f) else CaregiverIndigoDark.copy(alpha = 0.15f))
                 .clip(CircleShape)
-                .border(3.dp, CaregiverLavender, CircleShape)
+                .border(3.dp, if (colors.isDark) Color(0xFF8B5CF6) else CaregiverLavender, CircleShape)
         ) {
             val isCustomAvatar = avatarUrl.startsWith("relaxmind://avatar/")
             if (isCustomAvatar) {
@@ -268,17 +333,40 @@ private fun DashboardHeader(name: String, avatarUrl: String) {
     }
 }
 
-// ── Active Alerts Card ────────────────────────────────────────────────────────
+//  Active Alerts Card 
 @Composable
 private fun ActiveAlertsCard(
+    colors: CaregiverDashboardColors,
     alerts: List<CaregiverAlert>,
     onAlertsClick: () -> Unit,
     onAlertClick: (String) -> Unit
 ) {
+    val hasAlerts = alerts.isNotEmpty()
+    val cardBg = if (colors.isDark) {
+        if (hasAlerts) Color(0xFF3B1D24) else Color(0xFF10251F)
+    } else {
+        if (hasAlerts) AlertRedSoft else ScoreGreenSoft
+    }
+    val cardBorder = if (colors.isDark) {
+        if (hasAlerts) Color(0xFF7C2E39) else Color(0xFF255C45)
+    } else {
+        if (hasAlerts) Color(0xFFFFD4D4) else Color(0xFFC6F6D5)
+    }
+    val iconColor = if (colors.isDark) {
+        if (hasAlerts) Color(0xFFFF6B5F) else Color(0xFF7BE0A5)
+    } else {
+        if (hasAlerts) AlertRed else ScoreGreen
+    }
+    val iconBg = if (colors.isDark) {
+        if (hasAlerts) Color(0xFF5A252C) else Color(0xFF163D2E)
+    } else {
+        if (hasAlerts) Color.White else Color.White
+    }
+
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().border(1.dp, cardBorder, RoundedCornerShape(28.dp)),
         shape = RoundedCornerShape(28.dp),
-        color = if (alerts.isEmpty()) Color(0xFFF6FFF8) else AlertRedSoft,
+        color = cardBg,
         shadowElevation = 8.dp,
         tonalElevation = 0.dp
     ) {
@@ -292,13 +380,13 @@ private fun ActiveAlertsCard(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(if (alerts.isEmpty()) ScoreGreenSoft else Color(0xFFFFE4E4)),
+                        .background(iconBg),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Notifications,
                         contentDescription = null,
-                        tint = if (alerts.isEmpty()) ScoreGreen else AlertRed,
+                        tint = iconColor,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -307,7 +395,7 @@ private fun ActiveAlertsCard(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
-                    color = if (alerts.isEmpty()) ScoreGreen else AlertRed,
+                    color = iconColor,
                     letterSpacing = 0.8.sp
                 )
                 Spacer(modifier = Modifier.weight(1f))
@@ -347,13 +435,13 @@ private fun ActiveAlertsCard(
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 15.sp,
-                            color = ScoreGreen
+                            color = colors.textPrimary
                         )
                         Text(
-                            text = "No hay alertas pendientes de revisión.",
+                            text = "No hay alertas pendientes de revisin.",
                             fontFamily = LexendFontFamily,
                             fontSize = 13.sp,
-                            color = TextSecondary
+                            color = colors.textSecondary
                         )
                     }
                 }
@@ -367,7 +455,7 @@ private fun ActiveAlertsCard(
                             color = BorderSoft
                         )
                     }
-                    AlertRow(alert = alert, onClick = { onAlertClick(alert.id) })
+                    AlertRow(colors = colors, alert = alert, onClick = { onAlertClick(alert.id) })
                 }
             }
         }
@@ -375,27 +463,47 @@ private fun ActiveAlertsCard(
 }
 
 @Composable
-private fun AlertRow(alert: CaregiverAlert, onClick: () -> Unit) {
+private fun AlertRow(colors: CaregiverDashboardColors, alert: CaregiverAlert, onClick: () -> Unit) {
     val isSOS = alert.severity.lowercase() in listOf("high", "sos")
-    val iconBg = if (isSOS) AlertRed else AlertOrange
-    val iconContent: @Composable () -> Unit = if (isSOS) {
-        {
-            Text(
-                text = "SOS",
-                fontFamily = LexendFontFamily,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 9.sp,
-                color = Color.White
-            )
+    val isUnlink = alert.type.equals("UNLINK", ignoreCase = true)
+    
+    val iconBg = when {
+        isSOS -> AlertRed
+        isUnlink -> Color(0xFF6B7280) // Gray
+        else -> AlertOrange
+    }
+    
+    val iconContent: @Composable () -> Unit = when {
+        isSOS -> {
+            {
+                Text(
+                    text = "SOS",
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 9.sp,
+                    color = Color.White
+                )
+            }
         }
-    } else {
-        {
-            Icon(
-                imageVector = Icons.Default.BarChart,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(20.dp)
-            )
+        isUnlink -> {
+            {
+                Icon(
+                    imageVector = Icons.Default.PersonOff,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+        else -> {
+            {
+                Icon(
+                    imageVector = Icons.Default.BarChart,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 
@@ -423,14 +531,14 @@ private fun AlertRow(alert: CaregiverAlert, onClick: () -> Unit) {
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
-                    color = TextPrimary
+                    color = colors.textPrimary
                 )
                 if (alert.createdAtText.isNotBlank()) {
                     Text(
-                        text = " · ${alert.createdAtText}",
+                        text = "  ${alert.createdAtText}",
                         fontFamily = LexendFontFamily,
                         fontSize = 12.sp,
-                        color = TextSecondary
+                        color = colors.textSecondary
                     )
                 }
             }
@@ -438,7 +546,7 @@ private fun AlertRow(alert: CaregiverAlert, onClick: () -> Unit) {
                 text = alert.title.ifBlank { alert.message.ifBlank { "Alerta pendiente" } },
                 fontFamily = LexendFontFamily,
                 fontSize = 12.sp,
-                color = TextSecondary,
+                color = colors.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -447,9 +555,9 @@ private fun AlertRow(alert: CaregiverAlert, onClick: () -> Unit) {
         // Ver button
         Box(
             modifier = Modifier
-                .shadow(4.dp, RoundedCornerShape(12.dp), ambientColor = CaregiverIndigoDark.copy(alpha = 0.2f))
+                .shadow(4.dp, RoundedCornerShape(12.dp), ambientColor = if (colors.isDark) Color(0xFF8B5CF6).copy(alpha = 0.25f) else CaregiverIndigoDark.copy(alpha = 0.2f))
                 .clip(RoundedCornerShape(12.dp))
-                .background(Brush.linearGradient(listOf(CaregiverPurple, CaregiverIndigoDark)))
+                .background(colors.primary)
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() },
@@ -468,17 +576,18 @@ private fun AlertRow(alert: CaregiverAlert, onClick: () -> Unit) {
     }
 }
 
-// ── Patients Card ─────────────────────────────────────────────────────────────
+//  Patients Card 
 @Composable
 private fun PatientsCard(
+    colors: CaregiverDashboardColors,
     patients: List<CaregiverPatientSummary>,
     onViewAll: () -> Unit,
     onPatientClick: (String) -> Unit
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().border(1.dp, colors.border, RoundedCornerShape(30.dp)),
         shape = RoundedCornerShape(30.dp),
-        color = Color.White,
+        color = colors.card,
         shadowElevation = 10.dp,
         tonalElevation = 0.dp
     ) {
@@ -493,13 +602,13 @@ private fun PatientsCard(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(CaregiverLavender),
+                        .background(if (colors.isDark) Color(0xFF2B2448) else CaregiverLavender),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Group,
                         contentDescription = null,
-                        tint = CaregiverIndigoDark,
+                        tint = if (colors.isDark) Color(0xFFA78BFA) else CaregiverIndigoDark,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -508,7 +617,7 @@ private fun PatientsCard(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp,
-                    color = CaregiverIndigoDark,
+                    color = if (colors.isDark) Color(0xFFA78BFA) else CaregiverIndigoDark,
                     letterSpacing = 0.8.sp,
                     modifier = Modifier.weight(1f)
                 )
@@ -527,7 +636,7 @@ private fun PatientsCard(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
-                    color = TextPrimary
+                    color = colors.textPrimary
                 )
                 if (patients.isNotEmpty()) {
                     Row(
@@ -543,12 +652,12 @@ private fun PatientsCard(
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Medium,
                             fontSize = 13.sp,
-                            color = CaregiverIndigoDark
+                            color = if (colors.isDark) Color(0xFFA78BFA) else CaregiverIndigoDark
                         )
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = null,
-                            tint = CaregiverIndigoDark,
+                            tint = if (colors.isDark) Color(0xFFA78BFA) else CaregiverIndigoDark,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -563,7 +672,7 @@ private fun PatientsCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(CaregiverLavender)
+                        .background(if (colors.isDark) Color(0xFF2B2448) else CaregiverLavender)
                         .padding(20.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -571,7 +680,7 @@ private fun PatientsCard(
                         Icon(
                             imageVector = Icons.Default.PersonAdd,
                             contentDescription = null,
-                            tint = CaregiverIndigoDark,
+                            tint = if (colors.isDark) Color(0xFFA78BFA) else CaregiverIndigoDark,
                             modifier = Modifier.size(36.dp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -580,14 +689,14 @@ private fun PatientsCard(
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 14.sp,
-                            color = CaregiverIndigoDark,
+                            color = if (colors.isDark) Color(0xFFA78BFA) else CaregiverIndigoDark,
                             textAlign = TextAlign.Center
                         )
                         Text(
-                            text = "Usa el botón + para escanear el código de un paciente",
+                            text = "Usa el botn + para escanear el cdigo de un paciente",
                             fontFamily = LexendFontFamily,
                             fontSize = 12.sp,
-                            color = TextSecondary,
+                            color = colors.textSecondary,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -600,6 +709,7 @@ private fun PatientsCard(
                 ) {
                     patients.take(3).forEach { summary ->
                         PatientCard(
+                            colors = colors,
                             summary = summary,
                             onClick = { onPatientClick(summary.patient.id) },
                             modifier = Modifier.weight(1f)
@@ -617,6 +727,7 @@ private fun PatientsCard(
 
 @Composable
 private fun PatientCard(
+    colors: CaregiverDashboardColors,
     summary: CaregiverPatientSummary,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -624,16 +735,16 @@ private fun PatientCard(
     val patient = summary.patient
     val score = summary.latestScore
     val borderColor = when {
-        score == null -> Color(0xFFCBD5E0)
-        score < 40 -> AlertRed
-        score < 70 -> AlertOrange
-        else -> ScoreGreen
+        score == null -> if (colors.isDark) Color(0xFF636174) else Color(0xFFCBD5E0)
+        score < 40 -> if (colors.isDark) Color(0xFFFF6B5F) else AlertRed
+        score < 70 -> if (colors.isDark) Color(0xFFF6B94B) else AlertOrange
+        else -> if (colors.isDark) Color(0xFF7BE0A5) else ScoreGreen
     }
     val chipBg = when {
-        score == null -> Color(0xFFF0F0F0)
-        score < 40 -> ScoreRedSoft
-        score < 70 -> ScoreOrangeSoft
-        else -> ScoreGreenSoft
+        score == null -> if (colors.isDark) Color(0xFF24263A) else Color(0xFFF0F0F0)
+        score < 40 -> if (colors.isDark) Color(0xFF3B1D24) else ScoreRedSoft
+        score < 70 -> if (colors.isDark) Color(0xFF3A2A12) else ScoreOrangeSoft
+        else -> if (colors.isDark) Color(0xFF123829) else ScoreGreenSoft
     }
     val chipText = when {
         score == null -> "Sin datos"
@@ -642,10 +753,16 @@ private fun PatientCard(
         else -> "Bueno $score/100"
     }
     val chipColor = when {
-        score == null -> TextSecondary
-        score < 40 -> AlertRed
-        score < 70 -> AlertOrange
-        else -> ScoreGreen
+        score == null -> if (colors.isDark) Color(0xFFB7B5C8) else TextSecondary
+        score < 40 -> if (colors.isDark) Color(0xFFFF6B5F) else AlertRed
+        score < 70 -> if (colors.isDark) Color(0xFFF6B94B) else AlertOrange
+        else -> if (colors.isDark) Color(0xFF7BE0A5) else ScoreGreen
+    }
+    val chipBorderColor = when {
+        score == null -> if (colors.isDark) Color(0xFF4A4D63) else Color.Transparent
+        score < 40 -> if (colors.isDark) Color(0xFF7C2E39) else Color.Transparent
+        score < 70 -> if (colors.isDark) Color(0xFF8A650D) else Color.Transparent
+        else -> if (colors.isDark) Color(0xFF2C7A55) else Color.Transparent
     }
 
     Column(
@@ -707,7 +824,7 @@ private fun PatientCard(
             fontFamily = LexendFontFamily,
             fontWeight = FontWeight.SemiBold,
             fontSize = 12.sp,
-            color = TextPrimary,
+            color = colors.textPrimary,
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -715,10 +832,10 @@ private fun PatientCard(
 
         // Condition
         Text(
-            text = patient.condition.ifBlank { "—" },
+            text = patient.condition.ifBlank { "" },
             fontFamily = LexendFontFamily,
             fontSize = 10.sp,
-            color = TextSecondary,
+            color = colors.textSecondary,
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -730,6 +847,7 @@ private fun PatientCard(
             modifier = Modifier
                 .clip(RoundedCornerShape(50.dp))
                 .background(chipBg)
+                .border(1.dp, chipBorderColor, RoundedCornerShape(50.dp))
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Text(

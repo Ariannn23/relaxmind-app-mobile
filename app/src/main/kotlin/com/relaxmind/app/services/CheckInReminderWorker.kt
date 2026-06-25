@@ -8,12 +8,16 @@ import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.relaxmind.app.data.model.CaregiverAlert
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.relaxmind.app.MainActivity
 import com.relaxmind.app.R
 import com.relaxmind.app.data.remote.FirebaseAuthService
 import com.relaxmind.app.data.remote.FirestoreRepository
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.time.LocalDate
 
 class CheckInReminderWorker(
@@ -39,9 +43,36 @@ class CheckInReminderWorker(
         if (checkInResult.isSuccess && checkInResult.getOrNull() == null) {
             // Patient hasn't checked in today. Show reminder!
             showNotification()
+            createNoCheckInAlertIfLinked(firestoreRepository, user.uid, today)
         }
 
         return Result.success()
+    }
+
+    private suspend fun createNoCheckInAlertIfLinked(
+        firestoreRepository: FirestoreRepository,
+        patientId: String,
+        today: String
+    ) {
+        val patient = firestoreRepository.getPatientById(patientId).getOrNull() ?: return
+        val caregiverId = patient.caregiverId ?: return
+        val patientName = "${patient.name} ${patient.lastName}".trim().ifBlank { "Paciente" }
+        val createdAtText = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()).format(Date())
+
+        firestoreRepository.createAlert(
+            CaregiverAlert(
+                id = "no_checkin_${patientId}_$today",
+                caregiverId = caregiverId,
+                patientId = patientId,
+                patientName = patientName,
+                type = "no_checkin",
+                title = "Sin check-in",
+                message = "$patientName no ha completado su check-in diario de hoy.",
+                severity = "warning",
+                resolved = false,
+                createdAtText = createdAtText
+            )
+        )
     }
 
     private fun showNotification() {

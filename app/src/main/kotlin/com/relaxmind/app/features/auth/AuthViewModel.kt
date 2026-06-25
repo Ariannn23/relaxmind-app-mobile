@@ -8,6 +8,7 @@ import com.relaxmind.app.data.model.Patient
 import com.relaxmind.app.data.remote.FirebaseAuthService
 import com.relaxmind.app.data.remote.FirestoreRepository
 import com.relaxmind.app.utils.ValidationUtils
+import com.relaxmind.app.utils.toUserFriendlyMessage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -111,7 +112,7 @@ class AuthViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = registerResult.exceptionOrNull().toUserMessage(
+                        error = registerResult.exceptionOrNull().toUserFriendlyMessage(
                             fallback = "Error al crear la cuenta."
                         )
                     )
@@ -147,15 +148,14 @@ class AuthViewModel(
                         createdAt = createdAt
                     )
                 )
-                else -> Result.failure(IllegalArgumentException("Rol desconocido: $role"))
+                else -> Result.failure(IllegalArgumentException("Tipo de cuenta inválido."))
             }
 
             if (firestoreResult.isFailure) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = firestoreResult.exceptionOrNull()?.localizedMessage
-                            ?: "Error al guardar el perfil."
+                        error = firestoreResult.exceptionOrNull().toUserFriendlyMessage("Error al guardar el perfil.")
                     )
                 }
                 return@launch
@@ -210,15 +210,14 @@ class AuthViewModel(
                         createdAt = createdAt
                     )
                 )
-                else -> Result.failure(IllegalArgumentException("Rol desconocido: $role"))
+                else -> Result.failure(IllegalArgumentException("Tipo de cuenta inválido."))
             }
 
             if (firestoreResult.isFailure) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = firestoreResult.exceptionOrNull()?.localizedMessage
-                            ?: "Error al guardar el perfil."
+                        error = firestoreResult.exceptionOrNull().toUserFriendlyMessage("Error al guardar el perfil.")
                     )
                 }
                 return@launch
@@ -248,8 +247,9 @@ class AuthViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = loginResult.exceptionOrNull()?.localizedMessage
-                            ?: "Correo o contraseña incorrectos."
+                        error = loginResult.exceptionOrNull().toUserFriendlyMessage(
+                            "Correo o contraseña incorrectos."
+                        )
                     )
                 }
                 return@launch
@@ -262,8 +262,9 @@ class AuthViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = roleResult.exceptionOrNull()?.localizedMessage
-                            ?: "No se pudo determinar el rol del usuario."
+                        error = roleResult.exceptionOrNull().toUserFriendlyMessage(
+                            "No se pudo determinar el rol del usuario."
+                        )
                     )
                 }
                 return@launch
@@ -287,8 +288,9 @@ class AuthViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = loginResult.exceptionOrNull()?.localizedMessage
-                            ?: "Error al iniciar sesión con Google."
+                        error = loginResult.exceptionOrNull().toUserFriendlyMessage(
+                            "Error al iniciar sesión con Google."
+                        )
                     )
                 }
                 return@launch
@@ -311,8 +313,9 @@ class AuthViewModel(
             if (result.isFailure) {
                 _uiState.update {
                     it.copy(
-                        error = result.exceptionOrNull()?.localizedMessage
-                            ?: "Error al enviar enlace de verificación."
+                        error = result.exceptionOrNull().toUserFriendlyMessage(
+                            "Error al enviar enlace de verificación."
+                        )
                     )
                 }
             }
@@ -346,7 +349,7 @@ class AuthViewModel(
                     _uiState.update { it.copy(isLoading = false, error = "Aún no has verificado tu correo. Revisa tu bandeja de entrada.") }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = "Error al verificar el correo.") }
+                _uiState.update { it.copy(isLoading = false, error = e.toUserFriendlyMessage("Error al verificar el correo.")) }
             }
         }
     }
@@ -364,8 +367,9 @@ class AuthViewModel(
                 if (result.isFailure) {
                     it.copy(
                         isLoading = false,
-                        error = result.exceptionOrNull()?.localizedMessage
-                            ?: "Error al reenviar el enlace."
+                        error = result.exceptionOrNull().toUserFriendlyMessage(
+                            "Error al reenviar el enlace."
+                        )
                     )
                 } else {
                     it.copy(isLoading = false, success = true)
@@ -390,8 +394,9 @@ class AuthViewModel(
                 if (result.isFailure) {
                     it.copy(
                         isLoading = false,
-                        error = result.exceptionOrNull()?.localizedMessage
-                            ?: "Error al enviar el correo de recuperación."
+                        error = result.exceptionOrNull().toUserFriendlyMessage(
+                            "Error al enviar el correo de recuperación."
+                        )
                     )
                 } else {
                     it.copy(isLoading = false, success = true)
@@ -416,20 +421,30 @@ class AuthViewModel(
             val result = when (role) {
                 "patient" -> firestoreRepository.updatePatient(userId, mapOf("avatarUrl" to avatarUrl))
                 "caregiver" -> firestoreRepository.updateCaregiver(userId, mapOf("avatarUrl" to avatarUrl))
-                else -> Result.failure(IllegalStateException("Rol desconocido: $role"))
+                else -> Result.failure(IllegalStateException("Tipo de cuenta inválido."))
             }
 
             _uiState.update {
                 if (result.isFailure) {
                     it.copy(
                         isLoading = false,
-                        error = result.exceptionOrNull()?.localizedMessage
-                            ?: "Error al actualizar el avatar."
+                        error = result.exceptionOrNull().toUserFriendlyMessage(
+                            "Error al actualizar el avatar."
+                        )
                     )
                 } else {
                     it.copy(isLoading = false, success = true)
                 }
             }
+        }
+    }
+
+    fun ensureCurrentRole() {
+        val userId = authService.getCurrentUser()?.uid ?: return
+        if (_userRole.value != null) return
+
+        viewModelScope.launch {
+            resolveCurrentRole(userId)
         }
     }
 
@@ -451,15 +466,14 @@ class AuthViewModel(
                 "caregiver" -> firestoreRepository.updateCaregiver(
                     userId, mapOf("notificationsEnabled" to enabled)
                 )
-                else -> Result.failure(IllegalStateException("Rol desconocido: $role"))
+                else -> Result.failure(IllegalStateException("Tipo de cuenta inválido."))
             }
 
             _uiState.update {
                 if (result.isFailure) {
                     it.copy(
                         isLoading = false,
-                        error = result.exceptionOrNull()?.localizedMessage
-                            ?: "Error al actualizar las notificaciones."
+                        error = result.exceptionOrNull().toUserFriendlyMessage("Error al actualizar las notificaciones.")
                     )
                 } else {
                     it.copy(isLoading = false, success = true)
@@ -489,7 +503,7 @@ class AuthViewModel(
                         "There is no user record" in message || "ERROR_USER_NOT_FOUND" in message) {
                         "El correo no está registrado."
                     } else {
-                        exception?.localizedMessage ?: "Error al enviar el correo de recuperación."
+                        exception.toUserFriendlyMessage("Error al enviar el correo de recuperación.")
                     }
                     
                     it.copy(isLoading = false, error = finalError)
@@ -536,17 +550,5 @@ class AuthViewModel(
     override fun onCleared() {
         super.onCleared()
         timerJob?.cancel()
-    }
-}
-
-private fun Throwable?.toUserMessage(fallback: String): String {
-    val message = this?.localizedMessage.orEmpty()
-    return when {
-        "CONFIGURATION_NOT_FOUND" in message ->
-            "Firebase Auth no está configurado. Activa Email/Password en Firebase Console."
-        "email address is badly formatted" in message ->
-            "El correo electrónico no tiene un formato válido."
-        message.isNotBlank() -> message
-        else -> fallback
     }
 }

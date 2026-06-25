@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -46,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -64,9 +66,10 @@ private const val DEFAULT_AVATAR_URL = "relaxmind://avatar/default"
 fun AvatarSetupScreen(
     viewModel: AuthViewModel = viewModel(),
     onNavigateBack: () -> Unit,
-    onContinue: () -> Unit
+    onContinue: (String?) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val userRole by viewModel.userRole.collectAsState()
     val toastState = rememberRelaxToastState()
     var selectedAvatarUrl by remember { mutableStateOf(LocalRelaxAvatars.first().url) }
     var submitted by remember { mutableStateOf(false) }
@@ -74,6 +77,7 @@ fun AvatarSetupScreen(
     var savingStartedAt by remember { mutableStateOf(0L) }
 
     LaunchedEffect(Unit) {
+        viewModel.ensureCurrentRole()
         viewModel.clearSuccess()
     }
 
@@ -82,7 +86,7 @@ fun AvatarSetupScreen(
             val elapsed = System.currentTimeMillis() - savingStartedAt
             delay((1_000L - elapsed).coerceAtLeast(0L))
             viewModel.clearSuccess()
-            onContinue()
+            onContinue(userRole)
         }
     }
 
@@ -119,6 +123,25 @@ fun AvatarSetupScreen(
                 horizontalAlignment = Alignment.Start
             ) {
                 Spacer(modifier = Modifier.height(34.dp))
+                if (userRole == "patient") {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.End)
+                            .background(
+                                color = PatientGreen.copy(alpha = 0.10f),
+                                shape = RoundedCornerShape(999.dp)
+                            )
+                            .padding(horizontal = 14.dp, vertical = 7.dp)
+                    ) {
+                        Text(
+                            text = "Paso 1 de 2",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = PatientGreen
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
                 Text(
                     text = "Elige tu avatar",
                     style = MaterialTheme.typography.headlineLarge

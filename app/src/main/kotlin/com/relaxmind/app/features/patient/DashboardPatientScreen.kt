@@ -59,6 +59,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -66,6 +67,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -94,8 +96,9 @@ import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxIcons
 import com.relaxmind.app.ui.components.getAvatarDrawableRes
+import com.relaxmind.app.ui.components.DashboardSkeleton
+import com.relaxmind.app.ui.components.ErrorStateScreen
 import com.relaxmind.app.ui.components.LoadingIndicator
-import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.components.RelaxCard
 import com.relaxmind.app.utils.SoundPlayerManager
 import com.relaxmind.app.ui.themes.Outfit
@@ -112,12 +115,95 @@ import com.relaxmind.app.ui.themes.SoftLavender
 import com.relaxmind.app.ui.themes.SoftMint
 import com.relaxmind.app.ui.themes.TextPrimary
 import com.relaxmind.app.ui.themes.TextSecondary
+import com.relaxmind.app.ui.themes.ThemeState
 import com.relaxmind.app.utils.WellnessScoreCalculator
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+private data class PatientDashboardColors(
+    val isDark: Boolean,
+    val background: Color,
+    val backgroundBrush: Brush,
+    val card: Color,
+    val cardSoft: Color,
+    val primary: Color,
+    val primaryStrong: Color,
+    val textPrimary: Color,
+    val textSecondary: Color,
+    val textMuted: Color,
+    val border: Color,
+    val notificationButton: Color,
+    val wellbeingBrush: Brush,
+    val checkInCard: Color,
+    val checkInBorder: Color,
+    val checkInAccent: Color
+)
+
+private val LocalPatientDashboardColors = staticCompositionLocalOf {
+    patientDashboardColors(isDark = false)
+}
+
+private fun patientDashboardColors(isDark: Boolean): PatientDashboardColors {
+    return if (isDark) {
+        PatientDashboardColors(
+            isDark = true,
+            background = Color(0xFF061615),
+            backgroundBrush = Brush.verticalGradient(
+                listOf(Color(0xFF061615), Color(0xFF0A1F1D), Color(0xFF04100F))
+            ),
+            card = Color(0xFF102C29),
+            cardSoft = Color(0xFF143731),
+            primary = Color(0xFF68D391),
+            primaryStrong = Color(0xFF1FBF8A),
+            textPrimary = Color(0xFFF4FBF7),
+            textSecondary = Color(0xFFB8C8C3),
+            textMuted = Color(0xFF7F9690),
+            border = Color(0xFF244B45),
+            notificationButton = Color.White.copy(alpha = 0.08f),
+            wellbeingBrush = Brush.linearGradient(
+                listOf(Color(0xFF123B35), Color(0xFF0B2825), Color(0xFF102C29))
+            ),
+            checkInCard = Color(0xFF321F24),
+            checkInBorder = Color(0xFF5A2B36),
+            checkInAccent = Color(0xFFFF7A8A)
+        )
+    } else {
+        PatientDashboardColors(
+            isDark = false,
+            background = Color.White,
+            backgroundBrush = Brush.verticalGradient(listOf(Color.White, Color.White)),
+            card = Color.White,
+            cardSoft = SoftMint,
+            primary = PatientGreen,
+            primaryStrong = PatientGreen,
+            textPrimary = TextPrimary,
+            textSecondary = TextSecondary,
+            textMuted = TextSecondary,
+            border = BorderSoft,
+            notificationButton = Color.White,
+            wellbeingBrush = Brush.linearGradient(listOf(Color(0xFFEBF8FF), Color(0xFFE6F9F2))),
+            checkInCard = Color(0xFFFFF1F2),
+            checkInBorder = Color.Transparent,
+            checkInAccent = Color(0xFFF43F5E)
+        )
+    }
+}
+
+private fun darkQuickAccessColor(key: String): Color = when (key) {
+    "sounds" -> Color(0xFF123D3A)
+    "library" -> Color(0xFF242340)
+    "diary" -> Color(0xFF352B21)
+    "lumi" -> Color(0xFF123247)
+    "caregiver" -> Color(0xFF2D2448)
+    "health" -> Color(0xFF12342F)
+    else -> Color(0xFF102C29)
+}
+
+private fun lightQuickAccessShadow(isDark: Boolean): Color =
+    if (isDark) Color(0xFF68D391).copy(alpha = 0.08f) else Color(0xFF8A88A6).copy(alpha = 0.2f)
 
 @Composable
 fun DashboardPatientScreen(
@@ -131,12 +217,15 @@ fun DashboardPatientScreen(
     showBottomNav: Boolean = true
 ) {
     val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
     val patient by viewModel.patient.collectAsState()
     val todayCheckIn by viewModel.todayCheckIn.collectAsState()
     val dailyGoal by viewModel.dailyGoal.collectAsState()
     val dailyGoalExercise by viewModel.dailyGoalExercise.collectAsState()
     val nextAppointment by viewModel.nextAppointment.collectAsState()
     val caregiver by viewModel.caregiver.collectAsState()
+    val isDarkDashboard by ThemeState.darkMode.collectAsState()
+    val dashboardColors = remember(isDarkDashboard) { patientDashboardColors(isDarkDashboard) }
 
     LaunchedEffect(Unit) {
         viewModel.loadDashboardData()
@@ -147,14 +236,16 @@ fun DashboardPatientScreen(
         colorScheme = MaterialTheme.colorScheme,
         typography = LexendTypography
     ) {
+        CompositionLocalProvider(LocalPatientDashboardColors provides dashboardColors) {
         Scaffold(
-            containerColor = Color.White,
+            containerColor = dashboardColors.background,
             bottomBar = {
                 if (showBottomNav) {
                     RelaxBottomNav(
                         selectedRoute = "patient/dashboard",
                         onNavigate = onNavigate,
-                        role = AppRole.PATIENT
+                        role = AppRole.PATIENT,
+                        darkMode = dashboardColors.isDark
                     )
                 }
             }
@@ -164,11 +255,35 @@ fun DashboardPatientScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                // Background gradient blobs
-                SoftGradientBackground(animateBlobs = true)
+                if (dashboardColors.isDark) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(dashboardColors.backgroundBrush)
+                    )
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        drawCircle(
+                            color = dashboardColors.primary.copy(alpha = 0.10f),
+                            radius = size.minDimension * 0.45f,
+                            center = androidx.compose.ui.geometry.Offset(size.width * 0.10f, size.height * 0.18f)
+                        )
+                        drawCircle(
+                            color = Color(0xFF123247).copy(alpha = 0.18f),
+                            radius = size.minDimension * 0.38f,
+                            center = androidx.compose.ui.geometry.Offset(size.width * 0.92f, size.height * 0.70f)
+                        )
+                    }
+                } else {
+                    SoftGradientBackground(animateBlobs = true)
+                }
 
-                if (isLoading && patient == null) {
-                    LoadingIndicator(modifier = Modifier.align(Alignment.Center))
+                if (isLoading && patient == null && error == null) {
+                    DashboardSkeleton(modifier = Modifier.align(Alignment.Center))
+                } else if (error != null && patient == null) {
+                    ErrorStateScreen(
+                        message = error ?: "",
+                        onRetry = { viewModel.loadDashboardData() }
+                    )
                 } else {
                     Column(
                         modifier = Modifier
@@ -257,6 +372,7 @@ fun DashboardPatientScreen(
                 }
             }
         }
+        }
     }
 }
 
@@ -270,6 +386,7 @@ private fun DashboardHeader(
     onAvatarClick: () -> Unit,
     hasNotifications: Boolean
 ) {
+    val colors = LocalPatientDashboardColors.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -294,7 +411,7 @@ private fun DashboardHeader(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 24.sp,
-                    color = TextPrimary
+                    color = colors.textPrimary
                 )
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
@@ -302,7 +419,7 @@ private fun DashboardHeader(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Normal,
                     fontSize = 14.sp,
-                    color = TextSecondary,
+                    color = colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -324,6 +441,7 @@ private fun UserAvatar(
     avatarUrl: String,
     onClick: () -> Unit
 ) {
+    val colors = LocalPatientDashboardColors.current
     val isCustomAvatar = avatarUrl.startsWith("relaxmind://avatar/")
     Box(
         modifier = Modifier
@@ -339,8 +457,8 @@ private fun UserAvatar(
             modifier = Modifier
                 .size(64.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFD4F3E5)) // default soft green circle background
-                .border(2.dp, Color.White, CircleShape),
+                .background(if (colors.isDark) Color(0xFF143731) else Color(0xFFD4F3E5))
+                .border(2.dp, if (colors.isDark) colors.primary else Color.White, CircleShape),
             contentAlignment = Alignment.BottomCenter
         ) {
             if (isCustomAvatar) {
@@ -372,8 +490,8 @@ private fun UserAvatar(
             modifier = Modifier
                 .size(14.dp)
                 .clip(CircleShape)
-                .background(PatientGreenLight)
-                .border(2.dp, Color.White, CircleShape)
+                .background(colors.primary)
+                .border(2.dp, if (colors.isDark) colors.background else Color.White, CircleShape)
                 .align(Alignment.BottomEnd)
         )
     }
@@ -384,16 +502,18 @@ private fun SoftNotificationButton(
     hasNotifications: Boolean,
     onClick: () -> Unit
 ) {
+    val colors = LocalPatientDashboardColors.current
     Box(
         modifier = Modifier
             .size(46.dp)
             .shadow(
                 elevation = 4.dp,
                 shape = RoundedCornerShape(16.dp),
-                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.2f),
-                spotColor = Color(0xFF8A88A6).copy(alpha = 0.2f)
+                ambientColor = if (colors.isDark) colors.primary.copy(alpha = 0.10f) else Color(0xFF8A88A6).copy(alpha = 0.2f),
+                spotColor = if (colors.isDark) colors.primary.copy(alpha = 0.10f) else Color(0xFF8A88A6).copy(alpha = 0.2f)
             )
-            .background(Color.White, RoundedCornerShape(16.dp))
+            .background(colors.notificationButton, RoundedCornerShape(16.dp))
+            .border(1.dp, if (colors.isDark) colors.border else Color.Transparent, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
             .padding(10.dp),
         contentAlignment = Alignment.Center
@@ -401,7 +521,7 @@ private fun SoftNotificationButton(
         Icon(
             imageVector = RelaxIcons.Notifications,
             contentDescription = "Notificaciones",
-            tint = TextPrimary,
+            tint = colors.textPrimary,
             modifier = Modifier.size(24.dp)
         )
         if (hasNotifications) {
@@ -425,6 +545,7 @@ private fun WellbeingTodayCard(
     score: Int?,
     category: String?
 ) {
+    val colors = LocalPatientDashboardColors.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -432,8 +553,8 @@ private fun WellbeingTodayCard(
             .shadow(
                 elevation = 16.dp,
                 shape = RoundedCornerShape(30.dp),
-                ambientColor = PatientGreen.copy(alpha = 0.25f),
-                spotColor = PatientGreen.copy(alpha = 0.25f)
+                ambientColor = colors.primary.copy(alpha = if (colors.isDark) 0.14f else 0.25f),
+                spotColor = colors.primary.copy(alpha = if (colors.isDark) 0.14f else 0.25f)
             ),
         shape = RoundedCornerShape(30.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
@@ -449,20 +570,15 @@ private fun WellbeingTodayCard(
                     .fillMaxSize()
                     .clip(RoundedCornerShape(30.dp))
             ) {
-                // 1. Draw linear gradient background (soft sky blue / mint green palette)
                 drawRect(
-                    brush = Brush.linearGradient(
-                        colors = listOf(Color(0xFFEBF8FF), Color(0xFFE6F9F2)),
-                        start = androidx.compose.ui.geometry.Offset(0f, 0f),
-                        end = androidx.compose.ui.geometry.Offset(size.width, size.height)
-                    )
+                    brush = colors.wellbeingBrush
                 )
 
                 // Helper to draw a flower
                 fun drawFlower(centerX: Float, centerY: Float, flowerSize: Float, alpha: Float) {
                     val petalRadius = flowerSize / 3.2f
                     val centerRadius = flowerSize / 5.5f
-                    val baseColor = Color.White.copy(alpha = alpha)
+                    val baseColor = Color.White.copy(alpha = if (colors.isDark) alpha * 0.16f else alpha)
                     for (i in 0 until 5) {
                         val angle = i * 72f
                         val rad = Math.toRadians(angle.toDouble())
@@ -477,7 +593,7 @@ private fun WellbeingTodayCard(
                     }
                     // Yellow/cream soft center
                     drawCircle(
-                        color = Color(0xFFFFFBEA).copy(alpha = alpha * 1.4f.coerceAtMost(1f)),
+                        color = (if (colors.isDark) colors.primary else Color(0xFFFFFBEA)).copy(alpha = if (colors.isDark) alpha * 0.18f else alpha * 1.4f.coerceAtMost(1f)),
                         radius = centerRadius,
                         center = androidx.compose.ui.geometry.Offset(centerX, centerY)
                     )
@@ -495,7 +611,7 @@ private fun WellbeingTodayCard(
                     }
                     drawPath(
                         path = starPath,
-                        color = Color.White.copy(alpha = alpha)
+                        color = Color.White.copy(alpha = if (colors.isDark) alpha * 0.15f else alpha)
                     )
                 }
 
@@ -556,10 +672,10 @@ private fun WellbeingTodayCard(
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp,
-                            color = TextPrimary
+                            color = colors.textPrimary
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFF0D9488), modifier = Modifier.size(16.dp))
+                        Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, tint = colors.primary, modifier = Modifier.size(16.dp))
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -568,7 +684,7 @@ private fun WellbeingTodayCard(
                         fontWeight = FontWeight.Normal,
                         fontSize = 13.sp,
                         lineHeight = 17.sp,
-                        color = Color(0xFF5A5E6B)
+                        color = colors.textSecondary
                     )
                 }
 
@@ -593,6 +709,7 @@ private fun DailyCheckInStatusCard(
     onStartClick: () -> Unit,
     onProgressClick: () -> Unit
 ) {
+    val colors = LocalPatientDashboardColors.current
     val action = if (completed) onProgressClick else onStartClick
     Card(
         modifier = Modifier
@@ -600,12 +717,13 @@ private fun DailyCheckInStatusCard(
             .shadow(
                 elevation = 8.dp,
                 shape = RoundedCornerShape(26.dp),
-                ambientColor = Color(0xFFF43F5E).copy(alpha = 0.14f),
-                spotColor = Color(0xFFF43F5E).copy(alpha = 0.16f)
+                ambientColor = colors.checkInAccent.copy(alpha = if (colors.isDark) 0.18f else 0.14f),
+                spotColor = colors.checkInAccent.copy(alpha = if (colors.isDark) 0.18f else 0.16f)
             )
+            .border(1.dp, colors.checkInBorder, RoundedCornerShape(26.dp))
             .clickable(onClick = action),
         shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF1F2))
+        colors = CardDefaults.cardColors(containerColor = colors.checkInCard)
     ) {
         Row(
             modifier = Modifier
@@ -618,13 +736,13 @@ private fun DailyCheckInStatusCard(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(if (completed) Color(0xFFFDA4AF) else Color(0xFFFFE4E6)),
+                    .background(if (completed) colors.checkInAccent.copy(alpha = if (colors.isDark) 0.70f else 1f) else colors.checkInAccent.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (completed) RelaxIcons.Check else RelaxIcons.Meditation,
                     contentDescription = null,
-                    tint = if (completed) Color.White else Color(0xFFF43F5E),
+                    tint = if (completed) Color.White else colors.checkInAccent,
                     modifier = Modifier.size(23.dp)
                 )
             }
@@ -635,7 +753,7 @@ private fun DailyCheckInStatusCard(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
-                    color = TextPrimary
+                    color = colors.textPrimary
                 )
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
@@ -648,7 +766,7 @@ private fun DailyCheckInStatusCard(
                     fontWeight = FontWeight.Normal,
                     fontSize = 12.sp,
                     lineHeight = 16.sp,
-                    color = TextSecondary,
+                    color = colors.textSecondary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -657,7 +775,7 @@ private fun DailyCheckInStatusCard(
             Row(
                 modifier = Modifier
                     .shadow(2.dp, RoundedCornerShape(18.dp))
-                    .background(if (completed) Color(0xFFFFE4E6) else Color(0xFFF43F5E), RoundedCornerShape(18.dp))
+                    .background(if (completed) colors.checkInAccent.copy(alpha = 0.16f) else colors.checkInAccent, RoundedCornerShape(18.dp))
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -666,7 +784,7 @@ private fun DailyCheckInStatusCard(
                     Icon(
                         imageVector = RelaxIcons.Check,
                         contentDescription = null,
-                        tint = Color(0xFFF43F5E),
+                        tint = colors.checkInAccent,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -675,7 +793,7 @@ private fun DailyCheckInStatusCard(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp,
-                    color = if (completed) Color(0xFFF43F5E) else Color.White
+                    color = if (completed) colors.checkInAccent else Color.White
                 )
             }
         }
@@ -688,6 +806,7 @@ private fun CircularWellbeingProgress(
     category: String?,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalPatientDashboardColors.current
     val displayScore = score ?: 74 // Default placeholder visual if null
     val targetProgress = displayScore / 100f
     val animatedProgress by animateFloatAsState(
@@ -715,7 +834,7 @@ private fun CircularWellbeingProgress(
 
                 // Translucent track circle background
                 drawArc(
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = if (colors.isDark) colors.border else Color.White.copy(alpha = 0.6f),
                     startAngle = 0f,
                     sweepAngle = 360f,
                     useCenter = false,
@@ -726,7 +845,7 @@ private fun CircularWellbeingProgress(
 
                 // Filled green arc
                 drawArc(
-                    color = PatientGreen,
+                    color = colors.primary,
                     startAngle = -90f,
                     sweepAngle = animatedProgress * 360f,
                     useCenter = false,
@@ -746,14 +865,14 @@ private fun CircularWellbeingProgress(
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 26.sp,
-                        color = TextPrimary
+                        color = colors.textPrimary
                     )
                     Text(
                         text = "/100",
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Medium,
                         fontSize = 12.sp,
-                        color = TextSecondary,
+                        color = colors.textSecondary,
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
                 }
@@ -763,7 +882,7 @@ private fun CircularWellbeingProgress(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 12.sp,
-                    color = PatientGreen
+                    color = colors.primary
                 )
             }
         }
@@ -783,6 +902,7 @@ private fun ParaTiHoySection(
     appointmentTime: String?,
     onReminderClick: () -> Unit
 ) {
+    val colors = LocalPatientDashboardColors.current
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -796,13 +916,13 @@ private fun ParaTiHoySection(
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
-                color = TextPrimary
+                color = colors.textPrimary
             )
             Spacer(modifier = Modifier.width(6.dp))
             Icon(
                 imageVector = Icons.Default.AutoAwesome,
                 contentDescription = null,
-                tint = PatientGreen,
+                tint = colors.primary,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -905,14 +1025,15 @@ private fun TodayGoalCard(
     onStartClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalPatientDashboardColors.current
     Card(
         modifier = modifier
             .height(160.dp)
             .shadow(
                 elevation = 10.dp,
                 shape = RoundedCornerShape(26.dp),
-                ambientColor = PatientGreen.copy(alpha = 0.22f),
-                spotColor = PatientGreen.copy(alpha = 0.22f)
+                ambientColor = colors.primary.copy(alpha = if (colors.isDark) 0.12f else 0.22f),
+                spotColor = colors.primary.copy(alpha = if (colors.isDark) 0.12f else 0.22f)
             ),
         shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
@@ -920,8 +1041,12 @@ private fun TodayGoalCard(
         Box(modifier = Modifier.fillMaxSize()) {
             AnimatedRecommendationBackground(
                 modifier = Modifier.fillMaxSize(),
-                colors = listOf(Color(0xFFE8F8EF), Color(0xFFC7F3DA), Color(0xFFAEE9CF)),
-                accentColor = PatientGreen
+                colors = if (colors.isDark) {
+                    listOf(Color(0xFF102C29), Color(0xFF12342F), Color(0xFF143731))
+                } else {
+                    listOf(Color(0xFFE8F8EF), Color(0xFFC7F3DA), Color(0xFFAEE9CF))
+                },
+                accentColor = colors.primary
             )
             Column(
                 modifier = Modifier
@@ -937,13 +1062,13 @@ private fun TodayGoalCard(
                     Box(
                         modifier = Modifier
                             .size(34.dp)
-                            .background(Color.White.copy(alpha = 0.9f), CircleShape),
+                            .background(if (colors.isDark) Color.White.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.9f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = RelaxIcons.Meditation,
                             contentDescription = null,
-                            tint = PatientGreen,
+                            tint = colors.primary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -952,7 +1077,7 @@ private fun TodayGoalCard(
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 12.sp,
-                        color = PatientGreen
+                        color = colors.primary
                     )
                 }
 
@@ -962,7 +1087,7 @@ private fun TodayGoalCard(
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
-                        color = TextPrimary,
+                        color = colors.textPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -972,7 +1097,7 @@ private fun TodayGoalCard(
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Normal,
                         fontSize = 12.sp,
-                        color = TextSecondary
+                        color = colors.textSecondary
                     )
                 }
 
@@ -980,7 +1105,7 @@ private fun TodayGoalCard(
                     modifier = Modifier
                         .shadow(2.dp, RoundedCornerShape(50))
                         .background(
-                            if (completed) Color.White.copy(alpha = 0.65f) else PatientGreen,
+                            if (completed) colors.cardSoft.copy(alpha = 0.65f) else colors.primaryStrong,
                             RoundedCornerShape(50)
                         )
                         .clickable(enabled = !completed, onClick = onStartClick)
@@ -993,7 +1118,7 @@ private fun TodayGoalCard(
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 11.sp,
-                        color = if (completed) TextSecondary else Color.White
+                        color = if (completed) colors.textSecondary else Color.White
                     )
                     if (!completed) {
                         Icon(
@@ -1015,14 +1140,15 @@ private fun NextReminderCard(
     onCardClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalPatientDashboardColors.current
     Card(
         modifier = modifier
             .height(160.dp)
             .shadow(
                 elevation = 10.dp,
                 shape = RoundedCornerShape(26.dp),
-                ambientColor = PatientGreen.copy(alpha = 0.2f),
-                spotColor = PatientGreen.copy(alpha = 0.2f)
+                ambientColor = colors.primary.copy(alpha = if (colors.isDark) 0.12f else 0.2f),
+                spotColor = colors.primary.copy(alpha = if (colors.isDark) 0.12f else 0.2f)
             )
             .clickable(onClick = onCardClick),
         shape = RoundedCornerShape(26.dp),
@@ -1031,8 +1157,12 @@ private fun NextReminderCard(
         Box(modifier = Modifier.fillMaxSize()) {
             AnimatedRecommendationBackground(
                 modifier = Modifier.fillMaxSize(),
-                colors = listOf(Color(0xFFF0FBF5), Color(0xFFD7F6E6), Color(0xFFBCECD7)),
-                accentColor = PatientGreen
+                colors = if (colors.isDark) {
+                    listOf(Color(0xFF102C29), Color(0xFF123D3A), Color(0xFF123247))
+                } else {
+                    listOf(Color(0xFFF0FBF5), Color(0xFFD7F6E6), Color(0xFFBCECD7))
+                },
+                accentColor = colors.primary
             )
             Column(
                 modifier = Modifier
@@ -1048,13 +1178,13 @@ private fun NextReminderCard(
                     Box(
                         modifier = Modifier
                             .size(34.dp)
-                            .background(Color.White.copy(alpha = 0.9f), CircleShape),
+                            .background(if (colors.isDark) Color.White.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.9f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = RelaxIcons.Calendar,
                             contentDescription = null,
-                            tint = PatientGreen,
+                            tint = colors.primary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -1063,7 +1193,7 @@ private fun NextReminderCard(
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 11.sp,
-                        color = PatientGreen,
+                        color = colors.primary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1076,7 +1206,7 @@ private fun NextReminderCard(
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
-                            color = TextPrimary,
+                            color = colors.textPrimary,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -1086,7 +1216,7 @@ private fun NextReminderCard(
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Normal,
                             fontSize = 12.sp,
-                            color = TextSecondary
+                            color = colors.textSecondary
                         )
                     }
                 } else {
@@ -1096,7 +1226,7 @@ private fun NextReminderCard(
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
-                            color = TextPrimary
+                            color = colors.textPrimary
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
@@ -1104,7 +1234,7 @@ private fun NextReminderCard(
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Normal,
                             fontSize = 12.sp,
-                            color = TextSecondary
+                            color = colors.textSecondary
                         )
                     }
                 }
@@ -1112,7 +1242,7 @@ private fun NextReminderCard(
                 Row(
                     modifier = Modifier
                         .shadow(2.dp, RoundedCornerShape(50))
-                        .background(PatientGreen, RoundedCornerShape(50))
+                        .background(colors.primaryStrong, RoundedCornerShape(50))
                         .clickable(onClick = onCardClick)
                         .padding(horizontal = 14.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -1145,6 +1275,7 @@ private fun QuickAccessSection(
 ) {
     val activeSounds by SoundPlayerManager.playingSoundIds.collectAsState()
     val isAnySoundPlaying = activeSounds.isNotEmpty()
+    val colors = LocalPatientDashboardColors.current
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -1159,13 +1290,13 @@ private fun QuickAccessSection(
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
-                color = TextPrimary
+                color = colors.textPrimary
             )
             Spacer(modifier = Modifier.width(6.dp))
             Icon(
                 imageVector = RelaxIcons.QuickSpark,
                 contentDescription = null,
-                tint = Color(0xFF4338A8),
+                tint = if (colors.isDark) Color(0xFFB779FF) else Color(0xFF4338A8),
                 modifier = Modifier.size(17.dp)
             )
         }
@@ -1173,7 +1304,7 @@ private fun QuickAccessSection(
         RelaxCard(
             onClick = onSoundsClick,
             modifier = Modifier.fillMaxWidth(),
-            containerColor = Color(0xFFECFDFB)
+            containerColor = if (colors.isDark) darkQuickAccessColor("sounds") else Color(0xFFECFDFB)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1188,7 +1319,7 @@ private fun QuickAccessSection(
                         DashboardAssetIcon(
                             drawableRes = R.drawable.sonidos,
                             contentDescription = "Sonidos relajantes",
-                            backgroundColor = Color(0xFFB5EBE6),
+                            backgroundColor = if (colors.isDark) Color(0xFF2B8074) else Color(0xFFB5EBE6),
                             imageSize = 34.dp
                         )
                         if (isAnySoundPlaying) {
@@ -1212,21 +1343,21 @@ private fun QuickAccessSection(
                             fontFamily = Outfit,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 16.sp,
-                            color = TextPrimary
+                            color = colors.textPrimary
                         )
                         Text(
                             text = "Música de fondo para calmarte",
                             fontFamily = Urbanist,
                             fontWeight = FontWeight.Normal,
                             fontSize = 13.sp,
-                            color = TextSecondary
+                            color = colors.textSecondary
                         )
                     }
                 }
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "Ir a sonidos",
-                    tint = TextSecondary
+                    tint = colors.textSecondary
                 )
             }
         }
@@ -1234,7 +1365,7 @@ private fun QuickAccessSection(
         RelaxCard(
             onClick = onLibraryClick,
             modifier = Modifier.fillMaxWidth(),
-            containerColor = Color(0xFFF3F0FF)
+            containerColor = if (colors.isDark) darkQuickAccessColor("library") else Color(0xFFF3F0FF)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1248,7 +1379,7 @@ private fun QuickAccessSection(
                     DashboardAssetIcon(
                         drawableRes = R.drawable.biblioteca,
                         contentDescription = "Biblioteca de apoyo",
-                        backgroundColor = Color(0xFFDDD6FE),
+                        backgroundColor = if (colors.isDark) Color(0xFF4A3D78) else Color(0xFFDDD6FE),
                         imageSize = 34.dp
                     )
                     Spacer(modifier = Modifier.width(14.dp))
@@ -1258,14 +1389,14 @@ private fun QuickAccessSection(
                             fontFamily = Outfit,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 16.sp,
-                            color = TextPrimary
+                            color = colors.textPrimary
                         )
                         Text(
                             text = "Artículos para entender y manejar tu bienestar",
                             fontFamily = Urbanist,
                             fontWeight = FontWeight.Normal,
                             fontSize = 13.sp,
-                            color = TextSecondary,
+                            color = colors.textSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -1274,7 +1405,7 @@ private fun QuickAccessSection(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "Ir a biblioteca",
-                    tint = TextSecondary
+                    tint = colors.textSecondary
                 )
             }
         }
@@ -1350,18 +1481,19 @@ private fun QuickAccessCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalPatientDashboardColors.current
     Card(
         modifier = modifier
             .height(140.dp)
             .shadow(
                 elevation = 6.dp,
                 shape = RoundedCornerShape(26.dp),
-                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.2f),
-                spotColor = Color(0xFF8A88A6).copy(alpha = 0.2f)
+                ambientColor = lightQuickAccessShadow(colors.isDark),
+                spotColor = lightQuickAccessShadow(colors.isDark)
             )
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor)
+        colors = CardDefaults.cardColors(containerColor = if (colors.isDark) colors.card else backgroundColor)
     ) {
         Column(
             modifier = Modifier
@@ -1373,7 +1505,7 @@ private fun QuickAccessCard(
             Box(
                 modifier = Modifier
                     .size(42.dp)
-                    .background(Color.White.copy(alpha = 0.65f), CircleShape),
+                    .background(if (colors.isDark) Color.White.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.65f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -1389,7 +1521,7 @@ private fun QuickAccessCard(
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
-                color = TextPrimary
+                color = colors.textPrimary
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
@@ -1398,7 +1530,7 @@ private fun QuickAccessCard(
                 fontWeight = FontWeight.Normal,
                 fontSize = 11.sp,
                 lineHeight = 13.sp,
-                color = TextSecondary,
+                color = colors.textSecondary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -1413,18 +1545,19 @@ private fun QuickAccessCard(
 private fun DiaryCard(
     onDiaryClick: () -> Unit
 ) {
+    val colors = LocalPatientDashboardColors.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(
                 elevation = 6.dp,
                 shape = RoundedCornerShape(26.dp),
-                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.2f),
-                spotColor = Color(0xFF8A88A6).copy(alpha = 0.2f)
+                ambientColor = lightQuickAccessShadow(colors.isDark),
+                spotColor = lightQuickAccessShadow(colors.isDark)
             )
             .clickable(onClick = onDiaryClick),
         shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E7))
+        colors = CardDefaults.cardColors(containerColor = if (colors.isDark) darkQuickAccessColor("diary") else Color(0xFFFFF3E7))
     ) {
         Row(
             modifier = Modifier
@@ -1441,7 +1574,7 @@ private fun DiaryCard(
                 DashboardAssetIcon(
                     drawableRes = R.drawable.diario,
                     contentDescription = "Mi Diario",
-                    backgroundColor = Color(0xFFFED7AA),
+                    backgroundColor = if (colors.isDark) Color(0xFF7A4A20) else Color(0xFFFED7AA),
                     imageSize = 34.dp
                 )
                 Column {
@@ -1450,7 +1583,7 @@ private fun DiaryCard(
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
-                        color = TextPrimary
+                        color = colors.textPrimary
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
@@ -1458,7 +1591,7 @@ private fun DiaryCard(
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Normal,
                         fontSize = 12.sp,
-                        color = TextSecondary,
+                        color = colors.textSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1468,7 +1601,7 @@ private fun DiaryCard(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = TextSecondary,
+                tint = colors.textSecondary,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -1490,6 +1623,7 @@ private fun CaregiverCard(
 ) {
     var showModal by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val colors = LocalPatientDashboardColors.current
     val displayName = caregiverName ?: when {
         caregiverId == null -> "Cuidador"
         isCaregiverLoading -> "Cargando datos del cuidador..."
@@ -1649,11 +1783,11 @@ private fun CaregiverCard(
             .shadow(
                 elevation = 6.dp,
                 shape = RoundedCornerShape(26.dp),
-                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.2f),
-                spotColor = Color(0xFF8A88A6).copy(alpha = 0.2f)
+                ambientColor = lightQuickAccessShadow(colors.isDark),
+                spotColor = lightQuickAccessShadow(colors.isDark)
             ),
         shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF3E8FF)) // Soft Purple
+        colors = CardDefaults.cardColors(containerColor = if (colors.isDark) darkQuickAccessColor("caregiver") else Color(0xFFF3E8FF))
     ) {
         if (caregiverId == null) {
             Row(
@@ -1671,7 +1805,7 @@ private fun CaregiverCard(
                     DashboardAssetIcon(
                         drawableRes = R.drawable.cuidador,
                         contentDescription = "Mi Cuidador",
-                        backgroundColor = Color(0xFFE9D5FF),
+                        backgroundColor = if (colors.isDark) Color(0xFF574089) else Color(0xFFE9D5FF),
                         imageSize = 34.dp
                     )
                     Column {
@@ -1680,7 +1814,7 @@ private fun CaregiverCard(
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
-                            color = TextPrimary
+                            color = colors.textPrimary
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
@@ -1688,7 +1822,7 @@ private fun CaregiverCard(
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Normal,
                             fontSize = 12.sp,
-                            color = TextSecondary
+                            color = colors.textSecondary
                         )
                     }
                 }
@@ -1696,7 +1830,7 @@ private fun CaregiverCard(
                 Row(
                     modifier = Modifier
                         .shadow(1.dp, RoundedCornerShape(50))
-                        .background(Color(0xFF4338A8), RoundedCornerShape(50))
+                        .background(if (colors.isDark) Color(0xFF7C5CFF) else Color(0xFF4338A8), RoundedCornerShape(50))
                         .clickable(onClick = onLinkClick)
                         .padding(horizontal = 14.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -1742,7 +1876,7 @@ private fun CaregiverCard(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(CircleShape)
-                                .border(1.5.dp, Color(0xFF4338A8).copy(alpha = 0.3f), CircleShape),
+                                .border(1.5.dp, if (colors.isDark) Color(0xFFB779FF).copy(alpha = 0.45f) else Color(0xFF4338A8).copy(alpha = 0.3f), CircleShape),
                             contentScale = ContentScale.Crop
                         )
                     } else {
@@ -1752,7 +1886,7 @@ private fun CaregiverCard(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(CircleShape)
-                                .border(1.5.dp, Color(0xFF4338A8).copy(alpha = 0.3f), CircleShape),
+                                .border(1.5.dp, if (colors.isDark) Color(0xFFB779FF).copy(alpha = 0.45f) else Color(0xFF4338A8).copy(alpha = 0.3f), CircleShape),
                             contentScale = ContentScale.Crop
                         )
                     }
@@ -1762,7 +1896,7 @@ private fun CaregiverCard(
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
-                            color = TextPrimary
+                            color = colors.textPrimary
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
@@ -1770,7 +1904,7 @@ private fun CaregiverCard(
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Normal,
                             fontSize = 12.sp,
-                            color = Color(0xFF4338A8)
+                            color = if (colors.isDark) Color(0xFFC4B5FD) else Color(0xFF4338A8)
                         )
                     }
                 }
@@ -1782,7 +1916,7 @@ private fun CaregiverCard(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF4338A8).copy(alpha = 0.12f))
+                            .background((if (colors.isDark) Color(0xFF7C5CFF) else Color(0xFF4338A8)).copy(alpha = 0.16f))
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Row(
@@ -1792,21 +1926,21 @@ private fun CaregiverCard(
                             Box(
                                 modifier = Modifier
                                     .size(6.dp)
-                                    .background(Color(0xFF4338A8), CircleShape)
+                                    .background(if (colors.isDark) Color(0xFFC4B5FD) else Color(0xFF4338A8), CircleShape)
                             )
                             Text(
                                 text = stringResource(id = R.string.dashboard_caregiver_linked),
                                 fontFamily = LexendFontFamily,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.sp,
-                                color = Color(0xFF4338A8)
+                                color = if (colors.isDark) Color(0xFFC4B5FD) else Color(0xFF4338A8)
                             )
                         }
                     }
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = null,
-                        tint = TextSecondary,
+                        tint = colors.textSecondary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -1822,18 +1956,19 @@ private fun CaregiverCard(
 private fun NearbyHealthCard(
     onNearbyClick: () -> Unit
 ) {
+    val colors = LocalPatientDashboardColors.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(
                 elevation = 6.dp,
                 shape = RoundedCornerShape(26.dp),
-                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.2f),
-                spotColor = Color(0xFF8A88A6).copy(alpha = 0.2f)
+                ambientColor = lightQuickAccessShadow(colors.isDark),
+                spotColor = lightQuickAccessShadow(colors.isDark)
             )
             .clickable(onClick = onNearbyClick),
         shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF6FCE5))
+        colors = CardDefaults.cardColors(containerColor = if (colors.isDark) darkQuickAccessColor("health") else Color(0xFFF6FCE5))
     ) {
         Row(
             modifier = Modifier
@@ -1850,7 +1985,7 @@ private fun NearbyHealthCard(
                 DashboardAssetIcon(
                     drawableRes = R.drawable.centros_cercanos,
                     contentDescription = "Centros de Salud Cercanos",
-                    backgroundColor = Color(0xFFE3F4B3),
+                    backgroundColor = if (colors.isDark) Color(0xFF347A45) else Color(0xFFE3F4B3),
                     imageSize = 34.dp
                 )
                 Column {
@@ -1859,7 +1994,7 @@ private fun NearbyHealthCard(
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
-                        color = TextPrimary
+                        color = colors.textPrimary
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
@@ -1867,7 +2002,7 @@ private fun NearbyHealthCard(
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Normal,
                         fontSize = 12.sp,
-                        color = TextSecondary,
+                        color = colors.textSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1877,7 +2012,7 @@ private fun NearbyHealthCard(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = TextSecondary,
+                tint = colors.textSecondary,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -2035,18 +2170,19 @@ private fun SOSFloatingButton(
 private fun LumiCard(
     onLumiClick: () -> Unit
 ) {
+    val colors = LocalPatientDashboardColors.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(
                 elevation = 6.dp,
                 shape = RoundedCornerShape(26.dp),
-                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.2f),
-                spotColor = Color(0xFF8A88A6).copy(alpha = 0.2f)
+                ambientColor = lightQuickAccessShadow(colors.isDark),
+                spotColor = lightQuickAccessShadow(colors.isDark)
             )
             .clickable(onClick = onLumiClick),
         shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFE0F2FE)) // Soft Light Blue
+        colors = CardDefaults.cardColors(containerColor = if (colors.isDark) darkQuickAccessColor("lumi") else Color(0xFFE0F2FE))
     ) {
         Row(
             modifier = Modifier
@@ -2063,7 +2199,7 @@ private fun LumiCard(
                 DashboardAssetIcon(
                     drawableRes = R.drawable.lumi,
                     contentDescription = "Lumi",
-                    backgroundColor = Color(0xFFBAE6FD),
+                    backgroundColor = if (colors.isDark) Color(0xFF2E7290) else Color(0xFFBAE6FD),
                     imageSize = 34.dp
                 )
                 Column {
@@ -2072,7 +2208,7 @@ private fun LumiCard(
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
-                        color = TextPrimary
+                        color = colors.textPrimary
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
@@ -2080,7 +2216,7 @@ private fun LumiCard(
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Normal,
                         fontSize = 12.sp,
-                        color = TextSecondary,
+                        color = colors.textSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -2090,7 +2226,7 @@ private fun LumiCard(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = TextSecondary,
+                tint = colors.textSecondary,
                 modifier = Modifier.size(24.dp)
             )
         }

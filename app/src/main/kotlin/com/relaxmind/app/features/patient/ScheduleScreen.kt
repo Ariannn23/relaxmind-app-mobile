@@ -52,6 +52,8 @@ import com.relaxmind.app.data.model.DiaryEntry
 import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
+import com.relaxmind.app.ui.components.ScheduleSkeleton
+import com.relaxmind.app.ui.components.ErrorStateScreen
 import com.relaxmind.app.ui.themes.*
 import java.time.LocalDate
 import java.time.format.TextStyle
@@ -71,6 +73,8 @@ fun ScheduleScreen(
     onNavigate: (String) -> Unit,
     showBottomNav: Boolean = true
 ) {
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
     val selectedDateAppointments by viewModel.selectedDateAppointments.collectAsState()
     val monthlyAppointments by viewModel.monthlyAppointments.collectAsState()
     val monthlyDiaryEntries by viewModel.monthlyDiaryEntries.collectAsState()
@@ -128,9 +132,20 @@ fun ScheduleScreen(
         ) {
             SoftGradientBackground(animateBlobs = true)
 
-            Column(
-                modifier = Modifier.fillMaxSize()
-            ) {
+            if (isLoading && selectedDateAppointments.isEmpty() && monthlyAppointments.isEmpty() && error == null) {
+                ScheduleSkeleton(modifier = Modifier.align(Alignment.Center))
+            } else if (error != null && selectedDateAppointments.isEmpty() && monthlyAppointments.isEmpty()) {
+                ErrorStateScreen(
+                    message = error ?: "",
+                    onRetry = {
+                        viewModel.loadAppointmentsForDate(selectedDate.toString())
+                        viewModel.loadMonthlyEvents(calendarYearMonth.year, calendarYearMonth.monthValue)
+                    }
+                )
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
                 // Header area with "+" button
                 ScheduleHeader(
                     selectedTabIndex = selectedTabIndex,
@@ -200,6 +215,7 @@ fun ScheduleScreen(
                     }
                 }
             }
+        }
         }
 
         // Bottom Sheet showing events & diary entry for selected day in month views

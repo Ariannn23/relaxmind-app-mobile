@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.relaxmind.app.utils.toUserFriendlyMessage
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -148,7 +149,7 @@ class SOSPatientViewModel(
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isSOSActive = false,
-                        error = result.exceptionOrNull()?.localizedMessage ?: "No se pudo enviar la alerta SOS."
+                        error = result.exceptionOrNull().toUserFriendlyMessage("No se pudo enviar la alerta SOS.")
                     )
                 }
                 isCreatingAlert = false

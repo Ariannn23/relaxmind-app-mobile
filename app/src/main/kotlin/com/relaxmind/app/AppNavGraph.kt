@@ -7,6 +7,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,6 +59,7 @@ import com.relaxmind.app.features.caregiver.SOSAlertScreen
 import com.relaxmind.app.features.common.TermsAndConditionsScreen
 import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.RelaxBottomNav
+import com.relaxmind.app.ui.themes.ThemeState
 
 sealed class Screen(val route: String) {
     data object Welcome : Screen("welcome")
@@ -160,6 +162,7 @@ fun AppNavGraph(
     val currentRoute = currentBackStackEntry?.destination?.route
     val bottomNavRole = currentRoute.bottomNavRole()
     val selectedBottomRoute = currentRoute.selectedBottomRoute()
+    val darkMode by ThemeState.darkMode.collectAsState()
 
     fun navigateBottomTab(route: String) {
         if (route == selectedBottomRoute) return
@@ -201,7 +204,8 @@ fun AppNavGraph(
                 RelaxBottomNav(
                     selectedRoute = selectedBottomRoute,
                     onNavigate = { route -> navigateBottomTab(route) },
-                    role = bottomNavRole
+                    role = bottomNavRole,
+                    darkMode = darkMode && selectedBottomRoute == Screen.PatientDashboard.route
                 )
             }
         }
@@ -245,7 +249,7 @@ fun AppNavGraph(
                     }
                 },
                 onNavigateToPatientDashboard = {
-                    navController.navigate(Screen.PatientDashboard.route) {
+                    navController.navigate(Screen.AvatarSetup.route) {
                         popUpTo(Screen.Register.route) { inclusive = true }
                     }
                 },
@@ -270,8 +274,13 @@ fun AppNavGraph(
         composable(Screen.AvatarSetup.route) {
             AvatarSetupScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onContinue = {
-                    navController.navigate(Screen.NotificationPermission.route) {
+                onContinue = { role ->
+                    val nextRoute = if (role == "caregiver") {
+                        Screen.NotificationPermission.route
+                    } else {
+                        Screen.InitialTest.route
+                    }
+                    navController.navigate(nextRoute) {
                         popUpTo(Screen.AvatarSetup.route) { inclusive = true }
                     }
                 }
@@ -281,7 +290,7 @@ fun AppNavGraph(
             NotificationPermissionScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onContinuePatient = {
-                    navController.navigate(Screen.PatientDashboard.route) {
+                    navController.navigate(Screen.InitialTest.route) {
                         popUpTo(Screen.NotificationPermission.route) { inclusive = true }
                     }
                 },

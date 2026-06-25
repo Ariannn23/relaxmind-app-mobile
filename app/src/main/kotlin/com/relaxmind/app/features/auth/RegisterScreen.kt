@@ -34,6 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import com.relaxmind.app.utils.GoogleAuthHelper
+import com.relaxmind.app.utils.toUserFriendlyMessage
 import com.relaxmind.app.features.auth.components.RegisterFormCard
 import com.relaxmind.app.features.auth.components.RegisterHeader
 import com.relaxmind.app.features.auth.components.RelaxAuthBackButton
@@ -239,7 +240,7 @@ fun RegisterScreen(
                                 result.onSuccess { token ->
                                     viewModel.loginWithGoogle(token)
                                 }.onFailure { error ->
-                                    toastState.showError(error.message ?: "Error al autenticar con Google")
+                                    toastState.showError(error.toUserFriendlyMessage("Error al registrar con Google."))
                                 }
                             }
                         },

@@ -54,7 +54,7 @@ import com.relaxmind.app.ui.themes.TextPrimary
 import com.relaxmind.app.ui.themes.TextSecondary
 import com.relaxmind.app.utils.ValidationUtils
 import com.relaxmind.app.utils.GoogleAuthHelper
-
+import com.relaxmind.app.utils.toUserFriendlyMessage
 @Composable
 fun LoginScreen(
     viewModel: AuthViewModel = viewModel(),
@@ -174,7 +174,7 @@ fun LoginScreen(
                                         result.onSuccess { token ->
                                             viewModel.loginWithGoogle(token)
                                         }.onFailure { error ->
-                                            displayError = error.message
+                                            displayError = error.toUserFriendlyMessage("Error al iniciar sesión con Google.")
                                         }
                                     }
                                 },

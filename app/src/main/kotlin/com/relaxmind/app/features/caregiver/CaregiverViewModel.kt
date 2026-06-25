@@ -13,6 +13,7 @@ import com.relaxmind.app.data.remote.FirestoreRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.relaxmind.app.utils.toUserFriendlyMessage
 
 data class CaregiverPatientSummary(
     val patient: Patient,
@@ -84,7 +85,7 @@ class CaregiverViewModel(
 
             firestoreRepository.getCaregiverById(caregiverId)
                 .onSuccess { _caregiver.value = it }
-                .onFailure { _error.value = it.localizedMessage ?: "No se pudo cargar el cuidador." }
+                .onFailure { _error.value = it.toUserFriendlyMessage("No se pudo cargar el cuidador.") }
 
             _isLoading.value = false
         }
@@ -97,7 +98,7 @@ class CaregiverViewModel(
                 rawPatients = patients
                 rebuildPatientSummaries()
             },
-            onError = { _error.value = it.localizedMessage ?: "No se pudieron escuchar los pacientes." }
+            onError = { _error.value = it.toUserFriendlyMessage("No se pudieron escuchar los pacientes.") }
         )
 
         alertsListener = firestoreRepository.listenAlertsForCaregiver(
@@ -107,7 +108,7 @@ class CaregiverViewModel(
                 _activeAlerts.value = alerts.filter { !it.resolved }
                 rebuildPatientSummaries()
             },
-            onError = { _error.value = it.localizedMessage ?: "No se pudieron escuchar las alertas." }
+            onError = { _error.value = it.toUserFriendlyMessage("No se pudieron escuchar las alertas.") }
         )
     }
 
@@ -121,15 +122,15 @@ class CaregiverViewModel(
 
             firestoreRepository.getPatientById(patientId)
                 .onSuccess { _selectedPatient.value = it }
-                .onFailure { _error.value = it.localizedMessage ?: "No se pudo cargar el paciente." }
+                .onFailure { _error.value = it.toUserFriendlyMessage("No se pudo cargar el paciente.") }
 
             firestoreRepository.getPatientCheckIns(patientId)
                 .onSuccess { _selectedPatientCheckIns.value = it.sortedByDescending { checkIn -> checkIn.date } }
-                .onFailure { _error.value = it.localizedMessage ?: "No se pudo cargar el historial." }
+                .onFailure { _error.value = it.toUserFriendlyMessage("No se pudo cargar el historial.") }
 
             firestoreRepository.getPatientStreak(patientId)
                 .onSuccess { _selectedPatientStreak.value = it }
-                .onFailure { _error.value = it.localizedMessage ?: "No se pudo cargar la racha." }
+                .onFailure { _error.value = it.toUserFriendlyMessage("No se pudo cargar la racha.") }
 
             _isLoading.value = false
         }
@@ -139,7 +140,7 @@ class CaregiverViewModel(
             caregiverId = caregiverId,
             patientId = patientId,
             onChange = { _selectedPatientAlerts.value = it },
-            onError = { _error.value = it.localizedMessage ?: "No se pudieron escuchar las alertas del paciente." }
+            onError = { _error.value = it.toUserFriendlyMessage("No se pudieron escuchar las alertas del paciente.") }
         )
     }
 
@@ -147,7 +148,7 @@ class CaregiverViewModel(
         viewModelScope.launch {
             firestoreRepository.updateAlertResolved(alertId, true)
                 .onSuccess { _message.value = "Alerta marcada como resuelta" }
-                .onFailure { _error.value = it.localizedMessage ?: "No se pudo resolver la alerta." }
+                .onFailure { _error.value = it.toUserFriendlyMessage("No se pudo resolver la alerta.") }
         }
     }
 
@@ -178,7 +179,7 @@ class CaregiverViewModel(
                     onSuccess()
                 }
                 .onFailure { throwable ->
-                    _error.value = throwable.localizedMessage ?: "Código inválido o expirado"
+                    _error.value = throwable.toUserFriendlyMessage("Código inválido o expirado")
                 }
 
             _isLinking.value = false
@@ -254,13 +255,13 @@ class CaregiverViewModel(
                             onSuccess()
                         }
                         .onFailure { error ->
-                            onError(error.localizedMessage ?: "Error al guardar el perfil.")
+                            onError(error.toUserFriendlyMessage("Error al guardar el perfil."))
                         }
                 } else {
                     onError("No se encontró sesión activa.")
                 }
             } catch (e: Exception) {
-                onError(e.localizedMessage ?: "Error inesperado.")
+                onError(e.toUserFriendlyMessage("Error inesperado."))
             } finally {
                 _isLoading.value = false
             }
@@ -285,7 +286,7 @@ class CaregiverViewModel(
         viewModelScope.launch {
             firestoreRepository.updateCaregiver(uid, mapOf("language" to lang))
                 .onFailure { error ->
-                    _error.value = error.localizedMessage ?: "No se pudo actualizar el idioma."
+                    _error.value = error.toUserFriendlyMessage("No se pudo actualizar el idioma.")
                 }
         }
     }

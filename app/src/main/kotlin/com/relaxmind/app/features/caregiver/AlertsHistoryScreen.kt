@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -72,6 +73,8 @@ import com.relaxmind.app.Screen
 import com.relaxmind.app.data.model.CaregiverAlert
 import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.RelaxBottomNav
+import com.relaxmind.app.ui.components.AlertsHistorySkeleton
+import com.relaxmind.app.ui.components.ErrorStateScreen
 import com.relaxmind.app.ui.components.RelaxLoadingContent
 import com.relaxmind.app.ui.components.ScreenHeader
 import com.relaxmind.app.ui.components.RelaxToastHost
@@ -96,13 +99,15 @@ private enum class AlertFilter(val label: String) {
     ALL("Todos"),
     SOS("SOS"),
     LOW_CHECKIN("Check-in bajo"),
-    MISSED_CHECKIN("Sin check-in")
+    MISSED_CHECKIN("Sin check-in"),
+    UNLINK("Desvinculado")
 }
 
 private enum class AlertType {
     SOS,
     LOW_CHECKIN,
-    NO_CHECKIN
+    NO_CHECKIN,
+    UNLINK
 }
 
 private enum class AlertDateRange(val label: String) {
@@ -166,6 +171,7 @@ fun AlertsHistoryScreen(
                     AlertFilter.SOS -> alert.alertType() == AlertType.SOS
                     AlertFilter.LOW_CHECKIN -> alert.alertType() == AlertType.LOW_CHECKIN
                     AlertFilter.MISSED_CHECKIN -> alert.alertType() == AlertType.NO_CHECKIN
+                    AlertFilter.UNLINK -> alert.alertType() == AlertType.UNLINK
                 }
             }
             .take(10)
@@ -237,19 +243,18 @@ fun AlertsHistoryScreen(
                 }
 
                 when {
-                    isLoading && alerts.isEmpty() -> {
+                    isLoading && alerts.isEmpty() && error == null -> {
                         item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 60.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                RelaxLoadingContent(
-                                    message = stringResource(id = R.string.alerts_loading),
-                                    compact = true
-                                )
-                            }
+                            AlertsHistorySkeleton()
+                        }
+                    }
+
+                    error != null && alerts.isEmpty() -> {
+                        item {
+                            ErrorStateScreen(
+                                message = error ?: "",
+                                onRetry = { viewModel.observeCaregiverData() }
+                            )
                         }
                     }
 
@@ -606,6 +611,7 @@ private fun AlertTypeIcon(type: AlertType) {
         AlertType.SOS -> AlertRed
         AlertType.LOW_CHECKIN -> WarningOrange
         AlertType.NO_CHECKIN -> NeutralPurpleGray
+        AlertType.UNLINK -> NeutralPurpleGray
     }
 
     Box(
@@ -633,6 +639,13 @@ private fun AlertTypeIcon(type: AlertType) {
             AlertType.NO_CHECKIN -> Icon(
                 imageVector = Icons.Default.CalendarMonth,
                 contentDescription = "Alerta sin check-in",
+                tint = Color.White,
+                modifier = Modifier.size(26.dp)
+            )
+
+            AlertType.UNLINK -> Icon(
+                imageVector = Icons.Default.PersonOff,
+                contentDescription = "Acceso revocado",
                 tint = Color.White,
                 modifier = Modifier.size(26.dp)
             )
@@ -817,6 +830,7 @@ private fun ResolveAlertDialog(
 }
 
 private fun CaregiverAlert.alertType(): AlertType = when {
+    type.equals("UNLINK", ignoreCase = true) -> AlertType.UNLINK
     type.equals("sos", ignoreCase = true) -> AlertType.SOS
     type.contains("missed", ignoreCase = true) ||
         type.contains("sin_checkin", ignoreCase = true) ||
@@ -834,6 +848,7 @@ private fun CaregiverAlert.displayTitle(): String {
             AlertType.SOS -> "SOS"
             AlertType.LOW_CHECKIN -> "Bienestar bajo"
             AlertType.NO_CHECKIN -> "Sin check-in"
+            AlertType.UNLINK -> "Acceso revocado"
         }
     }
 
@@ -843,6 +858,7 @@ private fun CaregiverAlert.displayTitle(): String {
             .replace("Puntaje de bienestar bajo", "Bienestar bajo", ignoreCase = true)
             .replace("Check-in bajo", "Bienestar bajo", ignoreCase = true)
         AlertType.NO_CHECKIN -> "Sin check-in"
+        AlertType.UNLINK -> "Acceso revocado"
     }
 }
 
