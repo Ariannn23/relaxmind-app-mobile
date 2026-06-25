@@ -227,6 +227,7 @@ fun DashboardCaregiverScreen(
                             if (alert.type.equals("sos", ignoreCase = true) || alert.severity.equals("high", ignoreCase = true)) {
                                 onNavigate(Screen.SOSAlert.createRoute(alert.id))
                             } else {
+                                viewModel.markAlertResolved(alert.id)
                                 onNavigate(Screen.PatientDetail.createRoute(alert.patientId))
                             }
                         }
