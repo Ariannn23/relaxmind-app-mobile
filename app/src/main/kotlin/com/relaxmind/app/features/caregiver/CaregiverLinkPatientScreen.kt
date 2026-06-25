@@ -135,11 +135,10 @@ fun CaregiverLinkPatientScreen(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Volver",
-                                tint = CaregiverIndigo
+                        Box(modifier = Modifier.padding(start = 8.dp)) {
+                            com.relaxmind.app.ui.components.RelaxBackButton(
+                                onClick = onNavigateBack,
+                                role = com.relaxmind.app.ui.components.AppRole.CAREGIVER
                             )
                         }
                     },

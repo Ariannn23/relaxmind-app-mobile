@@ -256,19 +256,11 @@ private fun LumiChatHeader(
                 .padding(start = 8.dp, end = 14.dp, top = 14.dp, bottom = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(
+            com.relaxmind.app.ui.components.RelaxBackButton(
                 onClick = onNavigateBack,
-                modifier = Modifier
-                    .size(52.dp)
-                    .semantics { contentDescription = "Volver" }
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = null,
-                    tint = LumiBlueDark,
-                    modifier = Modifier.size(30.dp)
-                )
-            }
+                role = com.relaxmind.app.ui.components.AppRole.PATIENT,
+                modifier = Modifier.padding(start = 4.dp, end = 4.dp)
+            )
 
             LumiAvatar(size = 64)
             Spacer(modifier = Modifier.width(14.dp))

@@ -213,12 +213,10 @@ fun PatientsHeader(onBackClick: () -> Unit) {
             .padding(top = 20.dp, bottom = 16.dp, start = 12.dp, end = 24.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onBackClick) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Volver",
-                tint = TextPrimary,
-                modifier = Modifier.size(28.dp)
+        Box(modifier = Modifier.padding(start = 12.dp)) {
+            com.relaxmind.app.ui.components.RelaxBackButton(
+                onClick = onBackClick,
+                role = com.relaxmind.app.ui.components.AppRole.CAREGIVER
             )
         }
 

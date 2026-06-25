@@ -15,27 +15,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.relaxmind.app.ui.themes.PatientGreen
+import com.relaxmind.app.ui.components.RelaxBackButton
 
 @Composable
 fun RelaxAuthBackButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(
+    RelaxBackButton(
+        onClick = onClick,
         modifier = modifier
-            .size(52.dp)
-            .shadow(elevation = 6.dp, shape = CircleShape)
-            .clip(CircleShape)
-            .background(Color.White)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-            contentDescription = "Regresar",
-            tint = PatientGreen,
-            modifier = Modifier.size(24.dp)
-        )
-    }
+    )
 }

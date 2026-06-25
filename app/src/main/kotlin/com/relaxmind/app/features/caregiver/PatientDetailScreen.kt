@@ -276,17 +276,10 @@ private fun PatientDetailHeader(
             .padding(top = 20.dp, bottom = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        HeaderIconButton(
-            contentDescription = "Volver",
-            onClick = onBackClick
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = null,
-                tint = CaregiverPurple,
-                modifier = Modifier.size(30.dp)
-            )
-        }
+        com.relaxmind.app.ui.components.RelaxBackButton(
+            onClick = onBackClick,
+            role = com.relaxmind.app.ui.components.AppRole.CAREGIVER
+        )
         Text(
             text = title,
             fontFamily = LexendFontFamily,

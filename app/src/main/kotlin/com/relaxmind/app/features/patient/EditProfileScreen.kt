@@ -132,26 +132,10 @@ fun EditProfileScreen(
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .shadow(4.dp, CircleShape, ambientColor = Color(0x18000000))
-                                .clip(CircleShape)
-                                .background(Color.White)
-                                .clickable(
-                                    onClick = onNavigateBack,
-                                    indication = null,
-                                    interactionSource = remember { MutableInteractionSource() }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Volver",
-                                tint = PatientGreen,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                        com.relaxmind.app.ui.components.RelaxBackButton(
+                            onClick = onNavigateBack,
+                            role = com.relaxmind.app.ui.components.AppRole.PATIENT
+                        )
 
                         Spacer(modifier = Modifier.width(16.dp))
 

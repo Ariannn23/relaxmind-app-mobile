@@ -15,6 +15,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import com.relaxmind.app.ui.components.RelaxBackButton
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -158,26 +159,10 @@ fun EditProfileCaregiverScreen(
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .shadow(4.dp, CircleShape, ambientColor = Color(0x18000000))
-                                .clip(CircleShape)
-                                .background(Color.White)
-                                .clickable(
-                                    onClick = onNavigateBack,
-                                    indication = null,
-                                    interactionSource = remember { MutableInteractionSource() }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Volver",
-                                tint = CaregiverIndigo,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                        RelaxBackButton(
+                            onClick = onNavigateBack,
+                            role = AppRole.CAREGIVER
+                        )
 
                         Spacer(modifier = Modifier.width(16.dp))
 

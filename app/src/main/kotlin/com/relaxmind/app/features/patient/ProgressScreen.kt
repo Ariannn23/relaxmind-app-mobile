@@ -73,7 +73,6 @@ import com.relaxmind.app.ui.components.LoadingIndicator
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.ScreenHeader
 import com.relaxmind.app.ui.components.ProgressCalendarSkeleton
-import com.relaxmind.app.ui.components.ProgressChart
 import com.relaxmind.app.ui.components.ProgressEmptyState
 import com.relaxmind.app.ui.components.ErrorStateScreen
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
@@ -198,12 +197,6 @@ fun ProgressScreen(
                         StreakCard(
                             currentStreak = currentStreak,
                             longestStreak = longestStreak
-                        )
-
-                        // 3. Visual Chart
-                        ProgressChart(
-                            checkIns = allCheckIns,
-                            modifier = Modifier.fillMaxWidth()
                         )
 
                         // 4. Monthly Progress Card

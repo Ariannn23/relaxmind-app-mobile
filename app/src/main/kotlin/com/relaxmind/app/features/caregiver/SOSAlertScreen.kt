@@ -138,14 +138,10 @@ fun SOSAlertScreen(
                     .padding(horizontal = 16.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Volver",
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
+                com.relaxmind.app.ui.components.RelaxBackButton(
+                    onClick = onNavigateBack,
+                    role = com.relaxmind.app.ui.components.AppRole.CAREGIVER
+                )
                 
                 Spacer(modifier = Modifier.weight(1f))
                 

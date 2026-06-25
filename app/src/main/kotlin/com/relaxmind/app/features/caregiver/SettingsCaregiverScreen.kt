@@ -335,31 +335,11 @@ private fun CaregiverSettingsHeader(
             .height(56.dp),
         contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .size(50.dp)
-                .shadow(
-                    elevation = 4.dp,
-                    shape = CircleShape,
-                    ambientColor = Color(0xFF8A88A6).copy(alpha = 0.2f),
-                    spotColor = Color(0xFF8A88A6).copy(alpha = 0.2f)
-                )
-                .background(Color.White, CircleShape)
-                .clickable(
-                    onClick = onBackClick,
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() }
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = RelaxIcons.ArrowBack,
-                contentDescription = "Atrás",
-                tint = CaregiverIndigo,
-                modifier = Modifier.size(24.dp)
-            )
-        }
+        com.relaxmind.app.ui.components.RelaxBackButton(
+            onClick = onBackClick,
+            modifier = Modifier.align(Alignment.CenterStart),
+            role = com.relaxmind.app.ui.components.AppRole.CAREGIVER
+        )
 
         Text(
             text = "Ajustes",

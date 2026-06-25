@@ -74,8 +74,11 @@ fun NearbyHealthScreen(
             TopAppBar(
                 title = { Text("Centros de Salud", fontFamily = LexendFontFamily, fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    androidx.compose.foundation.layout.Box(modifier = androidx.compose.ui.Modifier.padding(start = 8.dp)) {
+                        com.relaxmind.app.ui.components.RelaxBackButton(
+                            onClick = onNavigateBack,
+                            role = com.relaxmind.app.ui.components.AppRole.PATIENT
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)

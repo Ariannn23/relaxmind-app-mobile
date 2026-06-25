@@ -393,31 +393,11 @@ fun SettingsHeader(
         contentAlignment = Alignment.Center
     ) {
         // Back Button
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .size(50.dp)
-                .shadow(
-                    elevation = 4.dp,
-                    shape = CircleShape,
-                    ambientColor = Color(0xFF8A88A6).copy(alpha = 0.2f),
-                    spotColor = Color(0xFF8A88A6).copy(alpha = 0.2f)
-                )
-                .background(Color.White, CircleShape)
-                .clickable(
-                    onClick = onBackClick,
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() }
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = RelaxIcons.ArrowBack,
-                contentDescription = "Atrás",
-                tint = PatientGreen,
-                modifier = Modifier.size(24.dp)
-            )
-        }
+        com.relaxmind.app.ui.components.RelaxBackButton(
+            onClick = onBackClick,
+            modifier = Modifier.align(Alignment.CenterStart),
+            role = com.relaxmind.app.ui.components.AppRole.PATIENT
+        )
 
         // Title
         Text(

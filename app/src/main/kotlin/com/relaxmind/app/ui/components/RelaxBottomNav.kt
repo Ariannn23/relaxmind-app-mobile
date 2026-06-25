@@ -58,7 +58,7 @@ fun RelaxBottomNav(
     selectedRoute: String,
     onNavigate: (String) -> Unit,
     role: AppRole,
-    darkMode: Boolean = false
+    darkMode: Boolean = androidx.compose.foundation.isSystemInDarkTheme()
 ) {
     val items = when (role) {
         AppRole.PATIENT -> patientNavItems
@@ -83,17 +83,20 @@ fun RelaxBottomNav(
 
     val navShape = RoundedCornerShape(40.dp)
     val navBgColor = when {
-        darkMode -> Color(0xFF0B211F)
+        darkMode && role == AppRole.CAREGIVER -> Color(0xFF130D26)
+        darkMode && role == AppRole.PATIENT -> Color(0xFF0F1E1B)
         role == AppRole.CAREGIVER -> Color(0xFFFAF8FF)
         else -> Color(0xFFF4FAF7)
     }
     val navShadowColor = when {
-        darkMode -> Color(0xFF1FBF8A).copy(alpha = 0.18f)
+        darkMode && role == AppRole.CAREGIVER -> Color(0xFF8B5CF6).copy(alpha = 0.15f)
+        darkMode && role == AppRole.PATIENT -> Color(0xFF1FBF8A).copy(alpha = 0.15f)
         role == AppRole.CAREGIVER -> Color(0xFF4338A8).copy(alpha = 0.16f)
         else -> Color(0xFF68D391).copy(alpha = 0.15f)
     }
     val navBorderColor = when {
-        darkMode -> Color(0xFF244B45)
+        darkMode && role == AppRole.CAREGIVER -> Color(0xFF2E2459)
+        darkMode && role == AppRole.PATIENT -> Color(0xFF244B45)
         role == AppRole.CAREGIVER -> Color(0xFFE5E0F7)
         else -> Color(0xFFE2F3EB)
     }
@@ -154,17 +157,20 @@ private fun ElevatedNavItem(
     darkMode: Boolean = false
 ) {
     val activeColor = when {
-        darkMode -> Color(0xFF68D391)
+        darkMode && role == AppRole.CAREGIVER -> Color(0xFF9F7AEA)
+        darkMode && role == AppRole.PATIENT -> Color(0xFF68D391)
         role == AppRole.CAREGIVER -> Color(0xFF4338A8)
         else -> PatientGreen
     }
     val inactiveColor = when {
-        darkMode -> Color(0xFF8AA39C)
+        darkMode && role == AppRole.CAREGIVER -> Color(0xFF716A8C)
+        darkMode && role == AppRole.PATIENT -> Color(0xFF8AA39C)
         role == AppRole.CAREGIVER -> Color(0xFF8A88A6)
         else -> Color(0xFF8FA89B)
     }
     val outerColor = when {
-        darkMode -> Color(0xFF0B211F)
+        darkMode && role == AppRole.CAREGIVER -> Color(0xFF130D26)
+        darkMode && role == AppRole.PATIENT -> Color(0xFF0F1E1B)
         role == AppRole.CAREGIVER -> Color(0xFFFAF8FF)
         else -> Color(0xFFF4FAF7)
     }

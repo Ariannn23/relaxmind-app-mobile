@@ -67,13 +67,10 @@ fun AchievementLibraryScreen(
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "Volver",
-                        tint = TextPrimary
-                    )
-                }
+                com.relaxmind.app.ui.components.RelaxBackButton(
+                    onClick = onNavigateBack,
+                    role = com.relaxmind.app.ui.components.AppRole.PATIENT
+                )
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(

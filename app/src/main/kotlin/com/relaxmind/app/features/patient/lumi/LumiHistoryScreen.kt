@@ -71,8 +71,11 @@ fun LumiHistoryScreen(
                             ) 
                         },
                         navigationIcon = {
-                            IconButton(onClick = onNavigateBack) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = LumiBlueDark)
+                            androidx.compose.foundation.layout.Box(modifier = androidx.compose.ui.Modifier.padding(start = 8.dp)) {
+                                com.relaxmind.app.ui.components.RelaxBackButton(
+                                    onClick = onNavigateBack,
+                                    role = com.relaxmind.app.ui.components.AppRole.PATIENT
+                                )
                             }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
