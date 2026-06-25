@@ -136,5 +136,8 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     // ExoPlayer Media3
     implementation("androidx.media3:media3-exoplayer:1.3.1")
+    
+    // Biometric Authentication
+    implementation("androidx.biometric:biometric-ktx:1.2.0-alpha05")
 }
 

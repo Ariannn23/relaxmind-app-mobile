@@ -167,11 +167,15 @@ fun SettingsCaregiverScreen(
                                 CaregiverSettingsDivider()
 
                                 // Biometría
+                                val context = androidx.compose.ui.platform.LocalContext.current
                                 CaregiverSettingsToggleRow(
                                     label = "Inicio con biometría",
                                     icon = Icons.Filled.Fingerprint,
                                     checked = currCaregiver.biometricEnabled,
-                                    onToggle = { viewModel.updateBiometricEnabled(it) }
+                                    onToggle = { 
+                                        viewModel.updateBiometricEnabled(it)
+                                        com.relaxmind.app.utils.SecurityPreferences.setBiometricEnabled(context, it)
+                                    }
                                 )
                             }
                         }

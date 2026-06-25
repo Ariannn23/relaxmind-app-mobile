@@ -69,6 +69,7 @@ sealed class Screen(val route: String) {
     data object AvatarSetup : Screen("avatar-setup")
     data object NotificationPermission : Screen("notification-permission")
     data object ForgotPassword : Screen("forgot-password")
+    data object BiometricLock : Screen("biometric-lock")
 
     data object PatientDashboard : Screen("patient/dashboard")
     data object CheckIn : Screen("patient/check-in")
@@ -143,10 +144,12 @@ fun resolveStartDestination(
     isAuthenticated: Boolean,
     role: String?,
     isNewPatient: Boolean = false,
-    onboardingSeen: Boolean = false
+    onboardingSeen: Boolean = false,
+    isBiometricEnabled: Boolean = false
 ): String = when {
     !isAuthenticated && !onboardingSeen -> Screen.Welcome.route
     !isAuthenticated -> Screen.Login.route
+    isAuthenticated && isBiometricEnabled -> Screen.BiometricLock.route
     role == "patient" && isNewPatient -> Screen.InitialTest.route
     role == "patient" -> Screen.PatientDashboard.route
     role == "caregiver" -> Screen.CaregiverDashboard.route
@@ -156,7 +159,8 @@ fun resolveStartDestination(
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
-    startDestination: String
+    startDestination: String,
+    userRole: String? = null
 ) {
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentBackStackEntry?.destination?.route
@@ -215,6 +219,22 @@ fun AppNavGraph(
             startDestination = startDestination,
             modifier = Modifier.padding(shellPadding)
         ) {
+        composable(Screen.BiometricLock.route) {
+            com.relaxmind.app.features.auth.BiometricLockScreen(
+                onUnlockSuccess = {
+                    val dest = if (userRole == "caregiver") Screen.CaregiverDashboard.route else Screen.PatientDashboard.route
+                    navController.navigate(dest) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onLogoutClick = {
+                    com.relaxmind.app.data.remote.FirebaseAuthService().logout()
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
+        }
         composable(Screen.Welcome.route) {
             WelcomeScreen(
                 onFinish = {

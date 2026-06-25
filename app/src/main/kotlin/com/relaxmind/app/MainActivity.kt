@@ -83,6 +83,12 @@ class MainActivity : ComponentActivity() {
 
                     LaunchedEffect(Unit) {
                         if (currentUser != null) {
+                            if (!com.relaxmind.app.utils.SecurityPreferences.isKeepLoggedIn(applicationContext)) {
+                                authService.logout()
+                                isAuthenticated = false
+                                isCheckingSession = false
+                                return@LaunchedEffect
+                            }
                             try {
                                 val patient = withTimeoutOrNull(5000L) {
                                     firestoreRepository.getPatientById(currentUser.uid).getOrNull()
@@ -128,8 +134,10 @@ class MainActivity : ComponentActivity() {
                                 isAuthenticated = isAuthenticated,
                                 role = userRole,
                                 isNewPatient = isNewPatient,
-                                onboardingSeen = onboardingSeen
-                            )
+                                onboardingSeen = onboardingSeen,
+                                isBiometricEnabled = com.relaxmind.app.utils.SecurityPreferences.isBiometricEnabled(applicationContext)
+                            ),
+                            userRole = userRole
                         )
                         
                         LaunchedEffect(intent) {

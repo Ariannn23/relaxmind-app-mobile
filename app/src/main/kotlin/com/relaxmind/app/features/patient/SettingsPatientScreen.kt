@@ -182,11 +182,15 @@ fun SettingsPatientScreen(
                                 SettingsDivider()
 
                                 // Biometría
+                                val context = androidx.compose.ui.platform.LocalContext.current
                                 SettingsToggleRow(
                                     label = "Inicio con biometría",
                                     icon = Icons.Filled.Fingerprint,
                                     checked = currPatient.biometricEnabled,
-                                    onToggle = { viewModel.updateBiometricEnabled(it) }
+                                    onToggle = { 
+                                        viewModel.updateBiometricEnabled(it)
+                                        com.relaxmind.app.utils.SecurityPreferences.setBiometricEnabled(context, it)
+                                    }
                                 )
                             }
                         }
