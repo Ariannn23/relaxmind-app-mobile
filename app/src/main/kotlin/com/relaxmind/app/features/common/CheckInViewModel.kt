@@ -10,6 +10,7 @@ import com.relaxmind.app.data.remote.FirebaseAuthService
 import com.relaxmind.app.data.remote.FirestoreRepository
 import com.relaxmind.app.utils.CheckInAnswers
 import com.relaxmind.app.utils.WellnessScoreCalculator
+import com.relaxmind.app.utils.toUserFriendlyMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -220,7 +221,7 @@ class CheckInViewModel(
                 _uiState.value = CheckInUiState.Success(calculatedScore, category)
             } else {
                 _uiState.value = CheckInUiState.Error(
-                    result.exceptionOrNull()?.localizedMessage ?: "Error al guardar el check-in."
+                    result.exceptionOrNull().toUserFriendlyMessage("Error al guardar el check-in.")
                 )
             }
         }

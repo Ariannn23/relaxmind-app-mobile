@@ -6,6 +6,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.relaxmind.app.data.model.BindingCode
 import com.relaxmind.app.data.remote.FirebaseAuthService
 import com.relaxmind.app.data.remote.FirestoreRepository
+import com.relaxmind.app.utils.toUserFriendlyMessage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -77,7 +78,7 @@ class LinkCaregiverViewModel(
                 }
             },
             onError = { exception ->
-                _error.value = exception.localizedMessage ?: "No se pudo escuchar la vinculación."
+                _error.value = exception.toUserFriendlyMessage("No se pudo escuchar la vinculación.")
             }
         )
     }

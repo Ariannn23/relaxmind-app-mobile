@@ -18,6 +18,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import com.relaxmind.app.utils.toUserFriendlyMessage
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -122,7 +123,7 @@ class PatientViewModel(
 
             val patientResult = firestoreRepository.getPatientById(userId)
             if (patientResult.isFailure) {
-                _error.value = patientResult.exceptionOrNull()?.localizedMessage ?: "Error al cargar datos del paciente."
+                _error.value = patientResult.exceptionOrNull().toUserFriendlyMessage("Error al cargar datos del paciente.")
                 _isLoading.value = false
                 return@launch
             }
@@ -206,8 +207,7 @@ class PatientViewModel(
                 val linkedCaregiver = caregiverResult?.getOrNull()
                 _caregiver.value = linkedCaregiver
                 if (patientData.caregiverId != null && linkedCaregiver == null) {
-                    _error.value = caregiverResult?.exceptionOrNull()?.localizedMessage
-                        ?: "No se pudieron cargar los datos del cuidador vinculado."
+                    _error.value = caregiverResult?.exceptionOrNull().toUserFriendlyMessage("Error al cargar cuidador.")
                 }
             }
 
@@ -222,7 +222,7 @@ class PatientViewModel(
             if (result.isSuccess) {
                 _dailyGoal.update { it?.copy(completed = completed) }
             } else {
-                _error.value = result.exceptionOrNull()?.localizedMessage ?: "Error al actualizar la meta."
+                _error.value = result.exceptionOrNull().toUserFriendlyMessage("Error al actualizar la meta.")
             }
         }
     }
@@ -233,7 +233,7 @@ class PatientViewModel(
             _patient.update { it?.let(updateLocal) }
             val result = firestoreRepository.updatePatient(userId, mapOf(fieldName to value))
             if (result.isFailure) {
-                _error.value = result.exceptionOrNull()?.localizedMessage ?: "Error al actualizar."
+                _error.value = result.exceptionOrNull().toUserFriendlyMessage("Error al actualizar.")
                 loadDashboardData()
             }
         }
@@ -302,7 +302,7 @@ class PatientViewModel(
             val result = firestoreRepository.updatePatient(userId, fields)
             _isLoading.value = false
             if (result.isSuccess) onSuccess()
-            else onError(result.exceptionOrNull()?.localizedMessage ?: "Error al guardar el perfil.")
+            else onError(result.exceptionOrNull().toUserFriendlyMessage("Error al guardar el perfil."))
         }
     }
 
@@ -314,7 +314,7 @@ class PatientViewModel(
 
             val reauthResult = authService.reauthenticate(passwordConfirm)
             if (reauthResult.isFailure) {
-                val errorMsg = reauthResult.exceptionOrNull()?.localizedMessage ?: "Contraseña incorrecta."
+                val errorMsg = reauthResult.exceptionOrNull().toUserFriendlyMessage("Contraseña incorrecta.")
                 onError(errorMsg)
                 _isLoading.value = false
                 return@launch
@@ -332,7 +332,7 @@ class PatientViewModel(
                 _caregiver.value = null
                 onSuccess()
             } else {
-                val errorMsg = updateResult.exceptionOrNull()?.localizedMessage ?: "Error al desvincular."
+                val errorMsg = updateResult.exceptionOrNull().toUserFriendlyMessage("Error al desvincular.")
                 onError(errorMsg)
             }
             _isLoading.value = false
@@ -352,7 +352,7 @@ class PatientViewModel(
 
             val reauthResult = authService.reauthenticate(passwordConfirm)
             if (reauthResult.isFailure) {
-                val errorMsg = reauthResult.exceptionOrNull()?.localizedMessage ?: "Contraseña incorrecta."
+                val errorMsg = reauthResult.exceptionOrNull().toUserFriendlyMessage("Contraseña incorrecta.")
                 onError(errorMsg)
                 _isLoading.value = false
                 return@launch
@@ -371,7 +371,7 @@ class PatientViewModel(
                 authService.logout()
                 onSuccess()
             } else {
-                val errorMsg = updateResult.exceptionOrNull()?.localizedMessage ?: "Error al borrar la cuenta."
+                val errorMsg = updateResult.exceptionOrNull().toUserFriendlyMessage("Error al borrar la cuenta.")
                 onError(errorMsg)
             }
             _isLoading.value = false
@@ -618,8 +618,7 @@ class PatientViewModel(
             if (result.isSuccess) {
                 _diaryEntries.value = result.getOrDefault(emptyList())
             } else {
-                _error.value = result.exceptionOrNull()?.localizedMessage
-                    ?: "Error al cargar el diario."
+                _error.value = result.exceptionOrNull().toUserFriendlyMessage("Error al cargar el diario.")
             }
 
             _isLoading.value = false
@@ -666,7 +665,7 @@ class PatientViewModel(
                 scheduleAppointmentReminder(context, appointment)
                 onSuccess()
             } else {
-                _error.value = result.exceptionOrNull()?.localizedMessage ?: "Error al guardar el evento."
+                _error.value = result.exceptionOrNull().toUserFriendlyMessage("Error al guardar el evento.")
             }
             _isLoading.value = false
         }
@@ -768,7 +767,7 @@ class PatientViewModel(
                     loadMonthlyEvents(year, month)
                 }
             } else {
-                _error.value = result.exceptionOrNull()?.localizedMessage ?: "Error al actualizar el evento."
+                _error.value = result.exceptionOrNull().toUserFriendlyMessage("Error al actualizar el evento.")
             }
             _isLoading.value = false
         }
@@ -791,7 +790,7 @@ class PatientViewModel(
                 }
                 onSuccess()
             } else {
-                _error.value = result.exceptionOrNull()?.localizedMessage ?: "Error al eliminar el evento."
+                _error.value = result.exceptionOrNull().toUserFriendlyMessage("Error al eliminar el evento.")
             }
             _isLoading.value = false
         }
@@ -836,7 +835,7 @@ class PatientViewModel(
                 checkDiaryAchievements(userId)
                 onSuccess()
             } else {
-                _error.value = result.exceptionOrNull()?.localizedMessage ?: "Error al guardar la entrada del diario."
+                _error.value = result.exceptionOrNull().toUserFriendlyMessage("Error al guardar la entrada del diario.")
             }
             _isLoading.value = false
         }
