@@ -223,8 +223,13 @@ fun DashboardCaregiverScreen(
                         colors = colors,
                         alerts = alerts,
                         onAlertsClick = onAlertsClick,
-                        onAlertClick = { alertId ->
-                            onNavigate(Screen.SOSAlert.createRoute(alertId))
+                        onAlertClick = { alert ->
+                            if (alert.type.equals("sos", ignoreCase = true) || alert.severity.equals("high", ignoreCase = true)) {
+                                onNavigate(Screen.SOSAlert.createRoute(alert.id))
+                            } else {
+                                viewModel.markAlertResolved(alert.id)
+                                onNavigate(Screen.PatientDetail.createRoute(alert.patientId))
+                            }
                         }
                     )
 
@@ -339,7 +344,7 @@ private fun ActiveAlertsCard(
     colors: CaregiverDashboardColors,
     alerts: List<CaregiverAlert>,
     onAlertsClick: () -> Unit,
-    onAlertClick: (String) -> Unit
+    onAlertClick: (CaregiverAlert) -> Unit
 ) {
     val hasAlerts = alerts.isNotEmpty()
     val cardBg = if (colors.isDark) {
@@ -455,7 +460,7 @@ private fun ActiveAlertsCard(
                             color = BorderSoft
                         )
                     }
-                    AlertRow(colors = colors, alert = alert, onClick = { onAlertClick(alert.id) })
+                    AlertRow(colors = colors, alert = alert, onClick = { onAlertClick(alert) })
                 }
             }
         }

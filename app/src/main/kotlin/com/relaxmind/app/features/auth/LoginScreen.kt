@@ -167,8 +167,12 @@ fun LoginScreen(
                                 globalError = displayError,
                                 isFormValid = isFormValid,
                                 isLoading = uiState.isLoading,
-                                onLogin = { viewModel.login(email, password) },
+                                onLogin = {
+                                    com.relaxmind.app.utils.SecurityPreferences.setKeepLoggedIn(context, keepSession)
+                                    viewModel.login(email, password)
+                                },
                                 onGoogleLogin = {
+                                    com.relaxmind.app.utils.SecurityPreferences.setKeepLoggedIn(context, true)
                                     scope.launch {
                                         val result = GoogleAuthHelper.getGoogleIdToken(context)
                                         result.onSuccess { token ->
