@@ -38,7 +38,6 @@ fun Context.findActivity(): FragmentActivity? {
     }
     return null
 }
-
 @Composable
 fun BiometricLockScreen(
     onUnlockSuccess: () -> Unit,
