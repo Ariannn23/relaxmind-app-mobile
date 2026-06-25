@@ -186,8 +186,8 @@ fun ScheduleScreen(
                         )
                     }
                     1 -> {
-                        // MONTHLY VIEW WITH DIARY COLLAGE
-                        MonthlyViewCollage(
+                        // MONTHLY VIEW
+                        MonthlyView(
                             currentMonth = calendarYearMonth,
                             appointments = monthlyAppointments,
                             diaryEntries = monthlyDiaryEntries,
@@ -816,7 +816,7 @@ private fun MonthlyViewSimple(
 }
 
 @Composable
-private fun MonthlyViewCollage(
+private fun MonthlyView(
     currentMonth: LocalDate,
     appointments: List<Appointment>,
     diaryEntries: List<DiaryEntry>,
@@ -835,11 +835,6 @@ private fun MonthlyViewCollage(
 
     val appointmentsByDay = remember(appointments) {
         appointments.groupBy { LocalDate.parse(it.date).dayOfMonth }
-    }
-    val diaryPhotoByDay = remember(diaryEntries) {
-        diaryEntries
-            .filter { it.photoUrls.isNotEmpty() }
-            .associate { LocalDate.parse(it.date).dayOfMonth to it.photoUrls.first() }
     }
     val diaryHasEntryByDay = remember(diaryEntries) {
         diaryEntries.associate { LocalDate.parse(it.date).dayOfMonth to true }
@@ -922,7 +917,7 @@ private fun MonthlyViewCollage(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Calendar Grid with Collage background images
+                // Calendar Grid
                 val totalCells = emptyCellsBefore + daysInMonth
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(7),
@@ -939,7 +934,6 @@ private fun MonthlyViewCollage(
                         } else {
                             val dayNumber = index - emptyCellsBefore + 1
                             val dayAppointments = appointmentsByDay[dayNumber] ?: emptyList()
-                            val diaryPhoto = diaryPhotoByDay[dayNumber]
                             val hasDiary = diaryHasEntryByDay[dayNumber] == true
                             val isCellToday = today.year == year && today.monthValue == month && today.dayOfMonth == dayNumber
 
@@ -953,18 +947,6 @@ private fun MonthlyViewCollage(
                                     .clickable { onDayClick(dayNumber) },
                                 contentAlignment = Alignment.Center
                             ) {
-                                // Background image crop with white overlay for readability
-                                if (diaryPhoto != null && !isCellToday) {
-                                    AsyncImage(
-                                        model = diaryPhoto,
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .alpha(0.45f)
-                                    )
-                                }
-
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center,

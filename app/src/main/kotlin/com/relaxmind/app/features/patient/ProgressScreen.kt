@@ -1,4 +1,4 @@
-﻿package com.relaxmind.app.features.patient
+package com.relaxmind.app.features.patient
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -12,6 +12,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,9 +27,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -90,27 +94,7 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private data class AchievementCatalogItem(
-    val key: String,
-    val title: String,
-    val condition: String,
-    val defaultIconUrl: String
-)
-
-private val AchievementCatalog = listOf(
-    AchievementCatalogItem("first_checkin", "Primeros pasos", "Primer check-in completado", "https://cdn-icons-png.flaticon.com/512/825/825590.png"),
-    AchievementCatalogItem("streak_3", "3 dí­as seguidos", "Racha de 3 dí­as", "https://cdn-icons-png.flaticon.com/512/785/785116.png"),
-    AchievementCatalogItem("streak_7", "7 dí­as de calma", "Racha de 7 dí­as", "https://cdn-icons-png.flaticon.com/512/785/785116.png"),
-    AchievementCatalogItem("streak_14", "Dos semanas imparable", "Racha de 14 dí­as", "https://cdn-icons-png.flaticon.com/512/785/785116.png"),
-    AchievementCatalogItem("streak_30", "30 dí­as seguidos", "Racha de 30 dí­as", "https://cdn-icons-png.flaticon.com/512/3112/3112946.png"),
-    AchievementCatalogItem("first_meditation", "Enfoque total", "Primera meditación completada", "https://cdn-icons-png.flaticon.com/512/2913/2913520.png"),
-    AchievementCatalogItem("meditations_10", "Mente en calma", "10 meditaciones completadas", "https://cdn-icons-png.flaticon.com/512/414/414927.png"),
-    AchievementCatalogItem("first_diary", "Mi historia", "Primera entrada de diario", "https://cdn-icons-png.flaticon.com/512/3068/3068327.png"),
-    AchievementCatalogItem("diary_7", "Una semana de notas", "7 entradas de diario", "https://cdn-icons-png.flaticon.com/512/3068/3068327.png"),
-    AchievementCatalogItem("score_80", "Bienestar alto", "Check-in con 80+ puntos", "https://cdn-icons-png.flaticon.com/512/1828/1828884.png"),
-    AchievementCatalogItem("score_100", "Día perfecto", "Check-in con 100 puntos", "https://cdn-icons-png.flaticon.com/512/616/616489.png"),
-    AchievementCatalogItem("lumi_first", "Hola Lumi", "Primera conversación con Lumi", "https://cdn-icons-png.flaticon.com/512/134/134914.png")
-)
+// AchievementCatalog is now in AchievementCatalog.kt
 
 private enum class AchievementIconType {
     SPROUT,
@@ -131,22 +115,11 @@ fun ProgressScreen(
     val allCheckIns by viewModel.allCheckIns.collectAsState()
     val selectedMonth by viewModel.selectedMonth.collectAsState()
     val selectedYear by viewModel.selectedYear.collectAsState()
-    var observedAchievementCount by remember { mutableStateOf<Int?>(null) }
-    var achievementDialog by remember { mutableStateOf<UserAchievement?>(null) }
-
     val currentStreak = streakData?.currentStreak ?: 0
     val longestStreak = streakData?.longestStreak ?: 0
 
     LaunchedEffect(Unit) {
         viewModel.loadProgressData()
-    }
-
-    LaunchedEffect(unlockedAchievements) {
-        val previousCount = observedAchievementCount
-        if (previousCount != null && unlockedAchievements.size > previousCount) {
-            achievementDialog = unlockedAchievements.maxByOrNull { it.unlockedAt }
-        }
-        observedAchievementCount = unlockedAchievements.size
     }
 
     // Filter check-ins by selected month/year
@@ -227,8 +200,9 @@ fun ProgressScreen(
 
                         // 4. Achievements Section
                         AchievementsSection(
-                            unlockedAchievements = unlockedAchievements,
-                            catalog = AchievementCatalog
+                            unlockedCount = unlockedAchievements.size,
+                            totalCount = AchievementCatalog.items.size,
+                            onNavigateToLibrary = { onNavigate("patient/achievement_library") }
                         )
 
                         // 5. History Section
@@ -262,13 +236,6 @@ fun ProgressScreen(
                         )
                     }
 
-                    achievementDialog?.let { achievement ->
-                        AchievementUnlockedDialog(
-                            title = achievement.title.ifBlank { "Nuevo logro" },
-                            iconUrl = achievement.iconUrl,
-                            onDismiss = { achievementDialog = null }
-                        )
-                    }
                 }
             }
         }
@@ -673,11 +640,10 @@ private fun LegendItem(color: Color, text: String) {
 // -----------------------------------------------------------------------------
 @Composable
 private fun AchievementsSection(
-    unlockedAchievements: List<UserAchievement>,
-    catalog: List<AchievementCatalogItem>
+    unlockedCount: Int,
+    totalCount: Int,
+    onNavigateToLibrary: () -> Unit
 ) {
-    var showAll by remember { mutableStateOf(false) }
-
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -691,349 +657,64 @@ private fun AchievementsSection(
                 fontSize = 18.sp,
                 color = TextPrimary
             )
-            Text(
-                text = if (showAll) "Ver destacados" else "Ver todos",
-                fontFamily = LexendFontFamily,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 13.sp,
-                color = PatientGreenLight,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .clickable { showAll = !showAll }
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
-            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (showAll) {
-            // Chunked list of all achievements for vertical display inside ScrollView
-            val columns = 3
-            val chunked = remember(catalog) { catalog.chunked(columns) }
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                chunked.forEach { rowItems ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceAround
-                    ) {
-                        rowItems.forEach { item ->
-                            val isUnlocked = unlockedAchievements.any { it.achievementKey == item.key }
-                            val iconType = when (item.key) {
-                                "first_checkin" -> AchievementIconType.SPROUT
-                                "streak_7" -> AchievementIconType.MEDITATION
-                                "first_meditation" -> AchievementIconType.TARGET
-                                "streak_30" -> AchievementIconType.TROPHY
-                                else -> {
-                                    if (item.key.contains("streak")) AchievementIconType.TROPHY
-                                    else if (item.key.contains("meditation")) AchievementIconType.MEDITATION
-                                    else if (item.key.contains("diary")) AchievementIconType.SPROUT
-                                    else AchievementIconType.TARGET
-                                }
-                            }
-                            AchievementCard(
-                                title = item.title,
-                                isUnlocked = isUnlocked,
-                                iconType = iconType
-                            )
-                        }
-                        if (rowItems.size < columns) {
-                            repeat(columns - rowItems.size) {
-                                Spacer(modifier = Modifier.width(76.dp))
-                            }
-                        }
-                    }
-                }
-            }
-        } else {
-            // Row of 4 featured achievements
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                AchievementCard(
-                    title = "Primeros pasos",
-                    isUnlocked = unlockedAchievements.any { it.achievementKey == "first_checkin" },
-                    iconType = AchievementIconType.SPROUT
-                )
-                AchievementCard(
-                    title = "7 días de calma",
-                    isUnlocked = unlockedAchievements.any { it.achievementKey == "streak_7" },
-                    iconType = AchievementIconType.MEDITATION
-                )
-                AchievementCard(
-                    title = "Enfoque total",
-                    isUnlocked = unlockedAchievements.any { it.achievementKey == "first_meditation" },
-                    iconType = AchievementIconType.TARGET
-                )
-                AchievementCard(
-                    title = "30 dí­as seguidos",
-                    isUnlocked = unlockedAchievements.any { it.achievementKey == "streak_30" },
-                    iconType = AchievementIconType.TROPHY
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AchievementCard(
-    title: String,
-    isUnlocked: Boolean,
-    iconType: AchievementIconType
-) {
-    var isPressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.95f else 1f,
-        animationSpec = spring(stiffness = Spring.StiffnessMedium),
-        label = "ach-scale"
-    )
-
-    val cardBg = if (isUnlocked) {
-        when (iconType) {
-            AchievementIconType.SPROUT -> Color(0xFFF4FBF7)
-            AchievementIconType.MEDITATION -> Color(0xFFF1EDFF)
-            AchievementIconType.TARGET -> Color(0xFFEBF8FF)
-            AchievementIconType.TROPHY -> Color(0xFFFFF9EF)
-        }
-    } else {
-        Color(0xFFF7F7F7)
-    }
-
-    val borderStrokeColor = if (isUnlocked) BorderSoft else Color(0xFFE6E8EF)
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .width(76.dp)
-            .scale(scale)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = { isPressed = !isPressed }
-            )
-    ) {
-        Box(
+        Row(
             modifier = Modifier
-                .size(68.dp)
-                .shadow(
-                    elevation = if (isUnlocked) 4.dp else 1.dp,
-                    shape = RoundedCornerShape(20.dp),
-                    ambientColor = Color(0xFF8A88A6).copy(alpha = 0.1f),
-                    spotColor = Color(0xFF8A88A6).copy(alpha = 0.1f)
-                )
-                .border(1.2.dp, borderStrokeColor, RoundedCornerShape(20.dp))
-                .background(cardBg, RoundedCornerShape(20.dp)),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .shadow(12.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = 0.05f))
+                .background(Color.White, RoundedCornerShape(20.dp))
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            AchievementVectorIcon(
-                iconType = iconType,
-                isUnlocked = isUnlocked,
-                modifier = Modifier.size(40.dp)
-            )
-
-            if (!isUnlocked) {
-                Box(
-                    modifier = Modifier
-                        .size(18.dp)
-                        .align(Alignment.BottomEnd)
-                        .offset(x = 2.dp, y = 2.dp)
-                        .clip(CircleShape)
-                        .background(Color.White)
-                        .border(1.dp, Color(0xFFE2F3EB), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Lock,
-                        contentDescription = "Bloqueado",
-                        tint = TextSecondary,
-                        modifier = Modifier.size(11.dp)
-                    )
-                }
+            Box(
+                modifier = Modifier
+                    .size(60.dp)
+                    .background(PatientGreenLight.copy(alpha = 0.3f), RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = PatientGreen,
+                    modifier = Modifier.size(32.dp)
+                )
             }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = title,
-            fontFamily = LexendFontFamily,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 11.sp,
-            color = if (isUnlocked) TextPrimary else TextSecondary,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            lineHeight = 13.sp,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(2.dp))
-
-        Text(
-            text = if (isUnlocked) "Completado" else "Bloqueada",
-            fontFamily = LexendFontFamily,
-            fontWeight = FontWeight.Medium,
-            fontSize = 10.sp,
-            color = if (isUnlocked) PatientGreen else TextSecondary.copy(alpha = 0.6f),
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-@Composable
-private fun AchievementVectorIcon(
-    iconType: AchievementIconType,
-    isUnlocked: Boolean,
-    modifier: Modifier = Modifier
-) {
-    when (iconType) {
-        AchievementIconType.SPROUT -> {
-            Canvas(modifier = modifier) {
-                val w = size.width
-                val h = size.height
-                val primaryColor = if (isUnlocked) Color(0xFF0F6E56) else Color(0xFF7A7F8F)
-                val leafColor = if (isUnlocked) Color(0xFF68D391) else Color(0xFFCBD5E0)
-
-                val stem = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(w * 0.5f, h * 0.85f)
-                    quadraticBezierTo(w * 0.5f, h * 0.45f, w * 0.46f, h * 0.25f)
-                }
-                drawPath(
-                    path = stem,
-                    color = primaryColor,
-                    style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Tus logros",
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = TextPrimary
                 )
-
-                val leftLeaf = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(w * 0.48f, h * 0.52f)
-                    quadraticBezierTo(w * 0.26f, h * 0.40f, w * 0.22f, h * 0.46f)
-                    quadraticBezierTo(w * 0.32f, h * 0.62f, w * 0.48f, h * 0.52f)
-                    close()
-                }
-                drawPath(path = leftLeaf, color = leafColor)
-
-                val rightLeaf = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(w * 0.48f, h * 0.42f)
-                    quadraticBezierTo(w * 0.70f, h * 0.28f, w * 0.74f, h * 0.34f)
-                    quadraticBezierTo(w * 0.64f, h * 0.52f, w * 0.48f, h * 0.42f)
-                    close()
-                }
-                drawPath(path = rightLeaf, color = leafColor)
+                Text(
+                    text = "$unlockedCount de $totalCount Completados",
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 13.sp,
+                    color = TextSecondary
+                )
             }
-        }
-        AchievementIconType.MEDITATION -> {
-            Canvas(modifier = modifier) {
-                val w = size.width
-                val h = size.height
-                val primaryColor = if (isUnlocked) Color(0xFF7C3AED) else Color(0xFF7A7F8F)
-                val bodyColor = if (isUnlocked) Color(0xFFC084FC) else Color(0xFFCBD5E0)
-
-                drawCircle(
-                    color = primaryColor,
-                    radius = w * 0.12f,
-                    center = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.25f)
+            
+            Button(
+                onClick = onNavigateToLibrary,
+                colors = ButtonDefaults.buttonColors(containerColor = PatientGreen),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = "Ver todos",
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 13.sp,
+                    color = Color.White
                 )
-
-                val body = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(w * 0.5f, h * 0.38f)
-                    lineTo(w * 0.36f, h * 0.45f)
-                    quadraticBezierTo(w * 0.22f, h * 0.60f, w * 0.32f, h * 0.70f)
-                    lineTo(w * 0.68f, h * 0.70f)
-                    quadraticBezierTo(w * 0.78f, h * 0.60f, w * 0.64f, h * 0.45f)
-                    close()
-                }
-                drawPath(path = body, color = bodyColor)
-                drawPath(path = body, color = primaryColor, style = Stroke(width = 1.5.dp.toPx(), join = StrokeJoin.Round))
-            }
-        }
-        AchievementIconType.TARGET -> {
-            Canvas(modifier = modifier) {
-                val w = size.width
-                val h = size.height
-                val primaryColor = if (isUnlocked) Color(0xFF1E88E5) else Color(0xFF7A7F8F)
-                val ringColor = if (isUnlocked) Color(0xFF90CAF9) else Color(0xFFCBD5E0)
-                val centerColor = if (isUnlocked) Color(0xFFE53E3E) else Color(0xFF90A4AE)
-
-                drawCircle(
-                    color = primaryColor,
-                    radius = w * 0.38f,
-                    center = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.5f),
-                    style = Stroke(width = 2.dp.toPx())
-                )
-                drawCircle(
-                    color = ringColor,
-                    radius = w * 0.25f,
-                    center = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.5f),
-                    style = Stroke(width = 2.dp.toPx())
-                )
-                drawCircle(
-                    color = centerColor,
-                    radius = w * 0.12f,
-                    center = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.5f)
-                )
-
-                drawLine(
-                    color = primaryColor,
-                    start = androidx.compose.ui.geometry.Offset(w * 0.15f, h * 0.85f),
-                    end = androidx.compose.ui.geometry.Offset(w * 0.75f, h * 0.25f),
-                    strokeWidth = 2.dp.toPx(),
-                    cap = StrokeCap.Round
-                )
-
-                val tip = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(w * 0.75f, h * 0.25f)
-                    lineTo(w * 0.64f, h * 0.22f)
-                    lineTo(w * 0.78f, h * 0.22f)
-                    lineTo(w * 0.78f, h * 0.36f)
-                    close()
-                }
-                drawPath(path = tip, color = primaryColor)
-            }
-        }
-        AchievementIconType.TROPHY -> {
-            Canvas(modifier = modifier) {
-                val w = size.width
-                val h = size.height
-                val primaryColor = if (isUnlocked) Color(0xFFD84315) else Color(0xFF7A7F8F)
-                val cupColor = if (isUnlocked) Color(0xFFFFB74D) else Color(0xFFCBD5E0)
-
-                drawRect(
-                    color = primaryColor,
-                    topLeft = androidx.compose.ui.geometry.Offset(w * 0.32f, h * 0.75f),
-                    size = androidx.compose.ui.geometry.Size(w * 0.36f, h * 0.08f)
-                )
-                drawRect(
-                    color = primaryColor,
-                    topLeft = androidx.compose.ui.geometry.Offset(w * 0.46f, h * 0.62f),
-                    size = androidx.compose.ui.geometry.Size(w * 0.08f, h * 0.13f)
-                )
-
-                val cup = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(w * 0.25f, h * 0.20f)
-                    lineTo(w * 0.75f, h * 0.20f)
-                    quadraticBezierTo(w * 0.70f, h * 0.62f, w * 0.50f, h * 0.62f)
-                    quadraticBezierTo(w * 0.30f, h * 0.62f, w * 0.25f, h * 0.20f)
-                    close()
-                }
-                drawPath(path = cup, color = cupColor)
-                drawPath(path = cup, color = primaryColor, style = Stroke(width = 2.dp.toPx()))
-
-                val leftHandle = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(w * 0.25f, h * 0.28f)
-                    quadraticBezierTo(w * 0.12f, h * 0.30f, w * 0.18f, h * 0.46f)
-                    quadraticBezierTo(w * 0.23f, h * 0.50f, w * 0.26f, h * 0.44f)
-                }
-                drawPath(path = leftHandle, color = primaryColor, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round))
-
-                val rightHandle = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(w * 0.75f, h * 0.28f)
-                    quadraticBezierTo(w * 0.88f, h * 0.30f, w * 0.82f, h * 0.46f)
-                    quadraticBezierTo(w * 0.77f, h * 0.50f, w * 0.74f, h * 0.44f)
-                }
-                drawPath(path = rightHandle, color = primaryColor, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round))
             }
         }
     }

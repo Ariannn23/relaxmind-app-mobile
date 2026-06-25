@@ -473,13 +473,10 @@ fun SettingsProfileCard(
         modifier = modifier
             .fillMaxWidth()
             .shadow(
-                elevation = 8.dp,
-                shape = RoundedCornerShape(28.dp),
-                ambientColor = Color(0xFF319F89).copy(alpha = 0.25f),
-                spotColor = Color(0xFF319F89).copy(alpha = 0.25f)
+                elevation = 12.dp,
+                shape = RoundedCornerShape(28.dp)
             )
-            .background(Color(0xFFE8F6EF), RoundedCornerShape(28.dp))
-            .border(2.dp, Color(0xFF87D0A8), RoundedCornerShape(28.dp))
+            .background(Color.White, RoundedCornerShape(28.dp))
             .clickable(onClick = onClick)
             .padding(24.dp)
     ) {

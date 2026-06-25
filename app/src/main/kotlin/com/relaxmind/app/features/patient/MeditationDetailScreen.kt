@@ -953,14 +953,6 @@ fun MeditationDetailScreen(
                             textAlign = TextAlign.Center,
                             color = TextPrimary
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "+${successCompletion?.second} Calm XP",
-                            fontFamily = LexendFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = themeConfig.primaryColor
-                        )
                     }
                 },
                 confirmButton = {

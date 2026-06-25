@@ -1,4 +1,5 @@
 # Plan de Desarrollo — RelaxMind
+
 > Grupo 4, 2026 · Curso: Desarrollo de Aplicaciones Móviles · Prof. Blancas Núñez, Mitchell Paula  
 > Duración total estimada: **12 sprints de 1 semana cada uno**
 
@@ -31,6 +32,7 @@ Cada sprint tiene: objetivo claro, pantallas/archivos a crear, qué conectar con
 ---
 
 ## Sprint 0 — Configuración del Proyecto y Sistema de Diseño
+
 > **Duración:** 1 semana  
 > **Objetivo:** Tener el proyecto configurado, todas las dependencias instaladas y el sistema visual definido antes de tocar cualquier pantalla.
 
@@ -49,6 +51,7 @@ Cada sprint tiene: objetivo claro, pantallas/archivos a crear, qué conectar con
   - Descargar `google-services.json` y colocarlo en `/app`
   - Habilitar: **Authentication**, **Firestore**, **Storage**, **FCM**
 - Agregar dependencias en `build.gradle`:
+
   ```kotlin
   // Jetpack Compose
   implementation("androidx.compose.ui:ui")
@@ -74,6 +77,7 @@ Cada sprint tiene: objetivo claro, pantallas/archivos a crear, qué conectar con
   // Coil (carga de imágenes)
   implementation("io.coil-kt:coil-compose")
   ```
+
 - Configurar Google Maps API Key en `AndroidManifest.xml`
 - Configurar permisos en `AndroidManifest.xml`:
   ```xml
@@ -92,6 +96,7 @@ Cada sprint tiene: objetivo claro, pantallas/archivos a crear, qué conectar con
 Crear en `ui/themes/`:
 
 **`ColorPalette.kt`** — definir todos los colores de la app:
+
 ```kotlin
 // Paciente
 val PatientGreen = Color(0xFF0F6E56)
@@ -119,6 +124,7 @@ val SurfaceDark = Color(0xFF252536)
 ```
 
 **`Typography.kt`** — configurar las tres fuentes:
+
 ```kotlin
 // Outfit → títulos y headers
 // Urbanist → textos, descripciones, párrafos
@@ -141,12 +147,14 @@ Crear en `ui/components/` los componentes que se van a usar en toda la app:
 ### 0.4 Navegación principal
 
 Crear `AppNavGraph.kt` en la raíz de `features/`:
+
 - Definir todas las rutas de la app como sealed class o enum
 - Configurar `NavController` con Compose Navigation
 - Definir dos grafos separados: `AuthGraph` y `MainGraph`
 - El `MainGraph` debe ramificarse según el rol: `PatientGraph` y `CaregiverGraph`
 
 ### ✅ Criterio de éxito del Sprint 0
+
 - El proyecto compila sin errores
 - Firebase está conectado (verificar en Firebase Console que el proyecto aparece)
 - Los componentes base se pueden ver en una pantalla de prueba con los colores y tipografías correctos
@@ -155,12 +163,14 @@ Crear `AppNavGraph.kt` en la raíz de `features/`:
 ---
 
 ## Sprint 1 — Onboarding y Autenticación
+
 > **Duración:** 1 semana  
 > **Objetivo:** El usuario puede registrarse, verificar su correo, iniciar sesión y recuperar contraseña. Todo conectado con Firebase Auth y Firestore.
 
 ### Pantallas a crear
 
 **`WelcomeScreen.kt`** (en `features/common/`)
+
 - 3 slides de introducción con imagen + título + descripción
 - Indicador de posición (dots)
 - Botón "Omitir" arriba a la derecha
@@ -169,6 +179,7 @@ Crear `AppNavGraph.kt` en la raíz de `features/`:
 - Guardar en `SharedPreferences` o en `patients.onboardingCompleted` que ya se vio
 
 **`RegisterScreen.kt`** (en `features/auth/`)
+
 - Campos: nombre, apellidos, fecha de nacimiento (DatePicker), correo, contraseña, confirmar contraseña
 - Selector de rol con cambio de color animado: verde = paciente / índigo = cuidador
 - Checkbox de términos y condiciones con link
@@ -177,18 +188,21 @@ Crear `AppNavGraph.kt` en la raíz de `features/`:
 - Navegar a `EmailVerificationScreen`
 
 **`EmailVerificationScreen.kt`** (en `features/auth/`)
+
 - Mostrar campo para ingresar código de 6 dígitos
 - Temporizador visible de 120 segundos
 - Botón "Reenviar código" (habilitado solo cuando el temporizador llega a 0, máximo 5 veces)
 - Al verificar correctamente: navegar a `AvatarSetupScreen`
 
 **`AvatarSetupScreen.kt`** (en `features/auth/`)
+
 - Grid de avatares predefinidos en estilo clay para elegir
 - Botón "Omitir" para usar avatar por defecto
 - Guardar `avatarUrl` en el documento del usuario en Firestore
 - Navegar a `NotificationPermissionScreen`
 
 **`NotificationPermissionScreen.kt`** (en `features/auth/`)
+
 - Pantalla simple explicando por qué se necesitan notificaciones
 - Botón "Permitir" → solicitar permiso `POST_NOTIFICATIONS`
 - Botón "Ahora no" → continuar sin permiso
@@ -196,6 +210,7 @@ Crear `AppNavGraph.kt` en la raíz de `features/`:
 - Navegar al dashboard correspondiente según rol
 
 **`LoginScreen.kt`** (en `features/auth/`)
+
 - Campos: correo y contraseña
 - Toggle "Mantener sesión iniciada" → guardar `keepSessionActive` en Firestore
 - Botón "¿Olvidaste tu contraseña?" → navegar a `ForgotPasswordScreen`
@@ -204,6 +219,7 @@ Crear `AppNavGraph.kt` en la raíz de `features/`:
 - Soporte de biometría si `biometricEnabled = true` en Firestore
 
 **`ForgotPasswordScreen.kt`** (en `features/auth/`)
+
 - Campo de correo electrónico
 - Enviar código de recuperación con Firebase Auth (`sendPasswordResetEmail`)
 - Confirmar al usuario que revise su correo
@@ -211,17 +227,21 @@ Crear `AppNavGraph.kt` en la raíz de `features/`:
 ### Modelos de datos a crear
 
 En `data/model/`:
+
 - **`Patient.kt`** — data class con todos los campos de `patients/` en Firestore
 - **`Caregiver.kt`** — data class con todos los campos de `caregivers/`
 
 En `data/remote/`:
+
 - **`FirebaseAuthService.kt`** — funciones: `register()`, `login()`, `logout()`, `sendVerificationCode()`, `resetPassword()`
 - **`FirestoreRepository.kt`** — funciones: `createPatient()`, `createCaregiver()`, `getPatientById()`, `getCaregiverById()`, `updatePatient()`, `updateCaregiver()`
 
 En `features/auth/`:
+
 - **`AuthViewModel.kt`** — maneja estados de UI, llama a los servicios, expone StateFlow para cada pantalla
 
 ### ✅ Criterio de éxito del Sprint 1
+
 - Un usuario nuevo puede registrarse como paciente o cuidador
 - El correo de verificación llega y el código funciona
 - El usuario puede iniciar sesión y se le redirige al dashboard correcto según su rol
@@ -231,12 +251,14 @@ En `features/auth/`:
 ---
 
 ## Sprint 2 — Dashboard del Paciente + Check-in Diario
+
 > **Duración:** 1 semana  
 > **Objetivo:** El paciente ve su dashboard principal y puede completar su check-in diario. El puntaje se calcula y se guarda en Firestore.
 
 ### Pantallas a crear
 
 **`DashboardPatientScreen.kt`** (en `features/patient/`)
+
 - Saludo con nombre del paciente y avatar
 - Card de puntuación del día (puntaje + color según categoría + texto del estado)
 - Card "Meta de Hoy": nombre del ejercicio + botón "Ir a meditar" + check de completado (consulta `dailyGoals/`)
@@ -246,6 +268,7 @@ En `features/auth/`:
 - Bottom navigation: Dashboard / Meditar / Progreso / Agenda / Lumi
 
 **`CheckInScreen.kt`** (en `features/common/`)
+
 - Pantalla de check-in reutilizable para test inicial y check-in diario
 - Paso 1 — Estado emocional: 5 tarjetas con emoji + texto (Muy mal / Mal / Bien / Muy bien / Excelente)
 - Paso 2 — Sueño (solo check-in diario): 5 tarjetas (Pésimo / Mal / Regular / Bien / Excelente)
@@ -261,6 +284,7 @@ En `features/auth/`:
 ### Lógica de negocio a implementar
 
 En `utils/`:
+
 - **`WellnessScoreCalculator.kt`** — implementar el algoritmo completo de puntuación:
   - Bloque 1: promedio emocional × 0.30
   - Bloque 2: (sueño/2 + energía/2 + estrés/2) / 3 × 0.40
@@ -271,12 +295,15 @@ En `utils/`:
 - **`AchievementChecker.kt`** — al guardar un check-in: verificar si se desbloqueó algún logro y crearlo en `achievements/`
 
 En `data/model/`:
+
 - **`CheckIn.kt`** — data class completa
 
 En `data/remote/` (agregar a `FirestoreRepository.kt`):
+
 - `createCheckIn()`, `getTodayCheckIn()`, `updateStreak()`, `unlockAchievement()`
 
 ### ✅ Criterio de éxito del Sprint 2
+
 - El dashboard carga los datos del paciente desde Firestore
 - El paciente puede completar el check-in diario paso a paso
 - El puntaje se calcula correctamente y se guarda en Firestore
@@ -287,17 +314,20 @@ En `data/remote/` (agregar a `FirestoreRepository.kt`):
 ---
 
 ## Sprint 3 — Test Inicial + Ajustes del Paciente
+
 > **Duración:** 1 semana  
 > **Objetivo:** El paciente pasa por el test inicial al registrarse y puede editar su perfil y preferencias desde ajustes.
 
 ### Pantallas a crear
 
 **`InitialTestScreen.kt`** (en `features/patient/`)
+
 - Reutiliza `CheckInScreen` con `type = "initial_test"` (sin pregunta de sueño)
 - Botón "Omitir" visible en todo momento → asignar score = 0 si se salta
 - Al completar: guardar en `checkIns/` con `type = "initial_test"`, navegar al dashboard
 
 **`SettingsPatientScreen.kt`** (en `features/patient/`)
+
 - Sección "Mi perfil": nombre, apellidos, fecha de nacimiento, sexo, condición — editable en línea
 - Sección "Apariencia": toggle de modo oscuro (actualiza `darkMode` en Firestore y aplica el tema inmediatamente)
 - Sección "Idioma": selector ES / EN (actualiza `language` en Firestore)
@@ -313,6 +343,7 @@ En `data/remote/` (agregar a `FirestoreRepository.kt`):
   - Botón "Borrar cuenta" (coral) → flujo completo de eliminación
 
 **`EditProfileScreen.kt`** (en `features/patient/`)
+
 - Editar avatar (elegir de lista predefinida o subir foto propia a Firebase Storage)
 - Editar campos del perfil
 - Guardar cambios en Firestore
@@ -325,6 +356,7 @@ En `data/remote/` (agregar a `FirestoreRepository.kt`):
 - Subida de fotos de avatar a Firebase Storage con `put()` y obtener URL de descarga
 
 ### ✅ Criterio de éxito del Sprint 3
+
 - El test inicial se muestra correctamente al nuevo paciente y puede omitirse
 - Los ajustes se sincronizan con Firestore al guardar
 - El modo oscuro cambia el tema en tiempo real
@@ -333,19 +365,22 @@ En `data/remote/` (agregar a `FirestoreRepository.kt`):
 ---
 
 ## Sprint 4 — Progreso y Logros del Paciente
+
 > **Duración:** 1 semana  
-> **Objetivo:** El paciente ve su historial de bienestar en un gráfico mensual con colores, su racha activa y sus logros desbloqueados.
+> **Objetivo:** El paciente ve su historial de bienestar en un gráfico mensual con colores, su racha activa y sus logros Completados.
 
 ### Pantallas a crear
 
 **`ProgressScreen.kt`** (en `features/patient/`)
 
 Sección 1 — Racha:
+
 - Número grande del streak actual con ícono de llama
 - Texto "Mejor racha: X días"
 - Animación Lottie de celebración al ver una racha nueva
 
 Sección 2 — Gráfico mensual:
+
 - Grid de círculos (uno por día del mes)
 - Cada círculo coloreado según el puntaje del check-in de ese día
 - Leyenda de colores con rangos de puntaje
@@ -353,11 +388,13 @@ Sección 2 — Gráfico mensual:
 - Cargar check-ins del mes seleccionado desde Firestore
 
 Sección 3 — Logros:
+
 - Grid de tarjetas de logros
-- Logros desbloqueados: ícono a color + título + fecha de desbloqueo
+- Logros Completados: ícono a color + título + fecha de desbloqueo
 - Logros bloqueados: ícono en gris + título + condición para desbloquear (texto gris)
 
 Sección 4 — Historial:
+
 - Lista cronológica de check-ins: fecha, puntaje, categoría, chip de color
 - Scroll infinito o paginación
 
@@ -365,31 +402,35 @@ Sección 4 — Historial:
 
 - Query a Firestore: obtener todos los `checkIns` del paciente filtrados por mes y año
 - Mapear puntajes a colores con la función de la paleta
-- Query a `achievements/` filtrada por `patientId` para mostrar logros desbloqueados
-- Comparar lista de logros desbloqueados vs catálogo completo para mostrar los bloqueados
+- Query a `achievements/` filtrada por `patientId` para mostrar logros Completados
+- Comparar lista de logros Completados vs catálogo completo para mostrar los bloqueados
 
 ### ✅ Criterio de éxito del Sprint 4
+
 - El gráfico mensual se pinta correctamente con los colores según puntaje
 - Los días sin check-in se muestran en gris
 - Se puede cambiar de mes y los datos se actualizan
-- Los logros desbloqueados aparecen correctamente
+- Los logros Completados aparecen correctamente
 - Los logros bloqueados muestran su condición
 
 ---
 
 ## Sprint 5 — Módulo de Meditación
+
 > **Duración:** 1 semana  
 > **Objetivo:** El paciente accede a los ejercicios de respiración y meditación, los completa con animaciones y la "Meta de Hoy" del dashboard funciona correctamente.
 
 ### Pantallas a crear
 
 **`MeditateScreen.kt`** (en `features/patient/`)
+
 - Lista de ejercicios cargada desde `meditationExercises/` en Firestore
 - Cards por ejercicio: nombre, tipo (respiración / mindfulness / relajación), duración en minutos
 - Chip de "Meta de hoy" en el ejercicio asignado del día (consulta `dailyGoals/`)
 - Al tocar un ejercicio → navegar a `MeditationDetailScreen`
 
 **`MeditationDetailScreen.kt`** (en `features/patient/`)
+
 - Nombre y descripción del ejercicio
 - Animación Lottie centralizada (la animación varía según tipo de ejercicio)
 - Guía paso a paso sincronizada con la animación (texto que cambia en cada fase)
@@ -400,6 +441,7 @@ Sección 4 — Historial:
 ### Lógica a implementar
 
 En `data/remote/`:
+
 - `getMeditationExercises()` → cargar catálogo desde Firestore
 - `getTodayGoal(patientId)` → obtener la meta del día desde `dailyGoals/`
 - `createDailyGoalIfNotExists(patientId)` → al abrir el dashboard, si no existe meta del día, asignar un ejercicio aleatorio y crearlo en `dailyGoals/`
@@ -408,6 +450,7 @@ En `data/remote/`:
 ### Seed de datos en Firestore
 
 Cargar manualmente (o con script) los ejercicios iniciales en `meditationExercises/`:
+
 - Respiración 4-7-8
 - Respiración de caja (box breathing)
 - Escaneo corporal (body scan)
@@ -415,6 +458,7 @@ Cargar manualmente (o con script) los ejercicios iniciales en `meditationExercis
 - Respiración diafragmática
 
 ### ✅ Criterio de éxito del Sprint 5
+
 - Los ejercicios se cargan desde Firestore
 - La animación Lottie se reproduce durante el ejercicio
 - Al completar un ejercicio, se registra en Firestore
@@ -424,6 +468,7 @@ Cargar manualmente (o con script) los ejercicios iniciales en `meditationExercis
 ---
 
 ## Sprint 6 — Agenda del Paciente
+
 > **Duración:** 1 semana  
 > **Objetivo:** El paciente puede crear, ver y gestionar citas, medicaciones y recordatorios. El diario de fotos y notas funciona con el collage mensual.
 
@@ -432,12 +477,14 @@ Cargar manualmente (o con script) los ejercicios iniciales en `meditationExercis
 **`ScheduleScreen.kt`** (en `features/patient/`)
 
 Vista de calendario:
+
 - Selector de vista: semanal o mensual
 - Vista semanal: lista de eventos del día seleccionado
 - Vista mensual: collage con miniaturas de fotos de `diaryEntries/` en los días que tienen entradas
 - Días con eventos de `appointments/` marcados con punto de color según tipo
 
 **`CreateAppointmentScreen.kt`** (en `features/patient/`)
+
 - Campo de título
 - Selector de tipo: cita médica / medicación / recordatorio
 - Campo de categoría (psicólogo, neurología, etc.)
@@ -447,11 +494,13 @@ Vista de calendario:
 - Botón guardar → crear documento en `appointments/`, programar notificación push local para 15 minutos antes
 
 **`AppointmentDetailScreen.kt`** (en `features/patient/`)
+
 - Ver detalle de un evento
 - Botón "Marcar como completado" → actualizar `completed = true` en Firestore
 - Botón "Eliminar" con confirmación
 
 **`DiaryEntryScreen.kt`** (en `features/patient/`)
+
 - Selector de categoría (estrés / familia / trabajo / logro / otro)
 - Selector de etiqueta emocional rápida (ansioso / tranquilo / feliz / triste / etc.)
 - Campo de notas de texto libre
@@ -466,6 +515,7 @@ Vista de calendario:
 - Carga del collage mensual: query `diaryEntries/` por `patientId` y mes, mostrar miniaturas
 
 ### ✅ Criterio de éxito del Sprint 6
+
 - El paciente puede crear un evento y aparece en el calendario
 - La notificación push de recordatorio llega 15 minutos antes del evento
 - El paciente puede crear entradas de diario con fotos
@@ -475,12 +525,14 @@ Vista de calendario:
 ---
 
 ## Sprint 7 — Vinculación y Dashboard del Cuidador
+
 > **Duración:** 1 semana  
 > **Objetivo:** El flujo de vinculación QR/código funciona. El cuidador ve su dashboard con el estado de sus pacientes.
 
 ### Pantallas a crear
 
 **`LinkCaregiverScreen.kt`** (en `features/patient/`)
+
 - Botón "Generar QR" → crear documento en `bindingCodes/` con código de 6 dígitos aleatorio y TTL de 10 minutos
 - Mostrar QR generado con la librería `zxing-android-embedded` o similar
 - Mostrar también el código de 6 dígitos en texto para quienes no pueden escanear
@@ -488,6 +540,7 @@ Vista de calendario:
 - Botón "Generar nuevo código" cuando expira
 
 **`ScanQRScreen.kt`** (en `features/caregiver/`)
+
 - Solicitar permiso de cámara
 - Visor de cámara para escanear QR
 - Campo alternativo para ingresar código de 6 dígitos manualmente
@@ -497,6 +550,7 @@ Vista de calendario:
   - Si es válido: actualizar `patients.caregiverId = caregiverId`, `patients.linkedCaregiverAt = now()` → eliminar el código de `bindingCodes/`
 
 **`DashboardCaregiverScreen.kt`** (en `features/caregiver/`)
+
 - Header con nombre y avatar del cuidador
 - Sección "Alertas activas": lista de alertas `resolved = false` de sus pacientes, ordenadas por fecha
 - Sección "Mis pacientes": lista horizontal scrolleable con nombre, avatar y chip de estado de bienestar (color según último puntaje)
@@ -510,6 +564,7 @@ Vista de calendario:
 - Al cargar el dashboard: query `patients/` donde `caregiverId == currentCaregiverId`
 
 ### ✅ Criterio de éxito del Sprint 7
+
 - El paciente genera un QR y el cuidador puede escanearlo
 - El código de 6 dígitos también funciona como alternativa
 - El intento de vincular con un paciente ya vinculado muestra el mensaje de error correcto
@@ -519,17 +574,20 @@ Vista de calendario:
 ---
 
 ## Sprint 8 — Vistas del Cuidador: Pacientes y Alertas
+
 > **Duración:** 1 semana  
 > **Objetivo:** El cuidador puede ver el perfil detallado de cada paciente con su gráfico de bienestar, y gestionar el historial de alertas.
 
 ### Pantallas a crear
 
 **`PatientsListScreen.kt`** (en `features/caregiver/`)
+
 - Lista completa de pacientes vinculados con buscador
 - Cada ítem: avatar, nombre, último puntaje con chip de color, indicador de check-in hoy (sí/no)
 - Al tocar → navegar a `PatientDetailScreen`
 
 **`PatientDetailScreen.kt`** (en `features/caregiver/`)
+
 - Avatar, nombre, condición de salud del paciente
 - Gráfico mensual de bienestar (mismo componente del Sprint 4, reutilizado)
 - Selector de mes
@@ -538,6 +596,7 @@ Vista de calendario:
 - Sección de alertas SOS pasadas de ese paciente específico
 
 **`AlertsHistoryScreen.kt`** (en `features/caregiver/`)
+
 - Lista de las últimas 10 alertas de todos sus pacientes
 - Filtro por tipo: SOS / Check-in bajo / Sin check-in
 - Filtro por paciente (si tiene varios)
@@ -546,6 +605,7 @@ Vista de calendario:
 - Botón "Marcar como resuelta" en alertas pendientes → actualizar `resolved = true`, `resolvedAt = now()`
 
 **`SettingsCaregiverScreen.kt`** (en `features/caregiver/`)
+
 - Mismas secciones que `SettingsPatientScreen` pero sin vinculación
 - Incluye flujo de eliminación de cuenta
 
@@ -556,6 +616,7 @@ Vista de calendario:
 - `tel:` intent para llamar directamente desde la pantalla de perfil del paciente
 
 ### ✅ Criterio de éxito del Sprint 8
+
 - El cuidador puede ver el gráfico mensual de cualquiera de sus pacientes
 - El botón "Llamar" abre la app de teléfono con el número correcto
 - Las alertas se muestran con sus filtros funcionando
@@ -564,12 +625,14 @@ Vista de calendario:
 ---
 
 ## Sprint 9 — Sistema SOS
+
 > **Duración:** 1 semana  
 > **Objetivo:** El botón SOS del paciente funciona completamente: activa la alerta, notifica al cuidador con ubicación en tiempo real y el cuidador puede ver el minimapa y trazar ruta.
 
 ### Pantallas a crear
 
 **`SOSPatientScreen.kt`** (en `features/patient/`)
+
 - Se activa al mantener presionado el botón SOS 2 segundos (LongPressGestureDetector)
 - Fondo coral `#E8582A`
 - Botón grande "LLAMAR A CUIDADOR" → `tel:` intent con el número del cuidador
@@ -577,6 +640,7 @@ Vista de calendario:
 - Botón "Cancelar" para cerrar la pantalla
 
 **`SOSAlertScreen.kt`** (en `features/caregiver/`)
+
 - Se abre al tocar la notificación push de SOS
 - Nombre y avatar del paciente en crisis
 - Botón "LLAMAR AL PACIENTE" → `tel:` intent con el número del paciente
@@ -598,6 +662,7 @@ Vista de calendario:
 > **Nota**: El envío de FCM desde el cliente no es posible directamente. Se necesita un **Cloud Function** o un backend Node.js mínimo que reciba el trigger de Firestore (nuevo documento en `alerts/`) y envíe la notificación push al `fcmToken` del cuidador.
 
 ### ✅ Criterio de éxito del Sprint 9
+
 - El long press de 2 segundos activa la pantalla SOS
 - La notificación push llega al cuidador con el mensaje de emergencia
 - El minimapa en la pantalla del cuidador muestra la ubicación del paciente
@@ -607,12 +672,14 @@ Vista de calendario:
 ---
 
 ## Sprint 10 — Lumi (Asistente IA)
+
 > **Duración:** 1 semana  
 > **Objetivo:** El paciente puede chatear con Lumi, la conversación persiste entre sesiones y el paciente puede iniciar nuevos chats.
 
 ### Pantallas a crear
 
 **`LumiChatScreen.kt`** (en `features/patient/`)
+
 - Header con avatar de Lumi + nombre "Lumi" + botón "Nuevo chat" (ícono de lápiz)
 - Lista de mensajes con burbujas diferenciadas: paciente (verde derecha) / Lumi (gris claro izquierda)
 - Campo de texto con botón de enviar
@@ -621,12 +688,14 @@ Vista de calendario:
 - Al tocar "Nuevo chat": confirmar ("¿Iniciar nueva conversación? La actual quedará guardada") → marcar sesión actual como `isActive = false`, crear nueva sesión en `lumiSessions/`
 
 **`LumiHistoryScreen.kt`** (en `features/patient/`)
+
 - Lista de sesiones archivadas con título y fecha
 - Al tocar una sesión → abrir en modo solo lectura (no se puede responder en sesiones archivadas)
 
 ### Lógica a implementar
 
 En `data/remote/`:
+
 - **`GeminiApiService.kt`**:
   - Inicializar el modelo `gemini-1.5-flash` con el SDK de Android
   - Configurar el system prompt (prompt inicial de Lumi como asistente de salud mental empático)
@@ -639,16 +708,18 @@ En `data/remote/`:
   - Verificar logro `lumi_first` si es la primera sesión
 
 **System prompt sugerido para Lumi:**
+
 ```
 Eres Lumi, un asistente de bienestar emocional empático y cálido dentro de la app RelaxMind.
 Tu rol es acompañar al paciente, escuchar sus emociones sin juzgar, sugerir técnicas simples
 de relajación y respiración, y motivarlo a mantener sus hábitos saludables.
-Nunca reemplazas a un profesional de salud mental. Si el paciente expresa pensamientos de 
+Nunca reemplazas a un profesional de salud mental. Si el paciente expresa pensamientos de
 autolesión o crisis grave, debes sugerirle contactar a su cuidador o a una línea de crisis.
 Responde siempre en español, con un tono cálido, conciso y esperanzador.
 ```
 
 ### ✅ Criterio de éxito del Sprint 10
+
 - El paciente puede enviar mensajes y Lumi responde correctamente
 - El historial de la conversación persiste al cerrar y reabrir la app
 - "Nuevo chat" archiva la sesión anterior y crea una nueva
@@ -658,12 +729,14 @@ Responde siempre en español, con un tono cálido, conciso y esperanzador.
 ---
 
 ## Sprint 11 — Notificaciones Push y Automatizaciones
+
 > **Duración:** 1 semana  
 > **Objetivo:** Todas las notificaciones push funcionan: recordatorio de check-in a las 8PM, recordatorio de agenda 15 min antes, alertas al cuidador (SOS y check-in bajo), alerta de no check-in a las 23:59.
 
 ### Tareas
 
 **Configuración de FCM en el cliente:**
+
 - Implementar `FirebaseMessagingService` para recibir notificaciones en segundo plano
 - Al recibir push de SOS: abrir `SOSAlertScreen` directamente desde la notificación
 - Al recibir push de check-in bajo: abrir `PatientDetailScreen` del paciente afectado
@@ -673,30 +746,36 @@ Responde siempre en español, con un tono cálido, conciso y esperanzador.
   - Canal "Alertas de bienestar" — importancia alta
 
 **Recordatorio de check-in a las 8PM (cliente):**
+
 - Usar `WorkManager` con `PeriodicWorkRequest` diaria a las 20:00
 - Antes de mostrar la notificación: verificar si `checkInReminderEnabled = true` y si el paciente ya hizo check-in hoy (consulta `checkIns/` por fecha)
 - Si ya lo hizo: cancelar la notificación del día
 
 **Recordatorio de agenda 15 minutos antes (cliente):**
+
 - Al crear un `appointment`, programar un `OneTimeWorkRequest` con `WorkManager` para ejecutarse 15 minutos antes de la hora del evento
 - Al ejecutarse: verificar `notificationSent = false`, mostrar notificación, actualizar `notificationSent = true`
 
 **Alertas al cuidador — SOS y check-in bajo (backend):**
+
 - Implementar **Firebase Cloud Functions** (Node.js):
   - Trigger `onDocumentCreated` en `alerts/`: al crear una alerta de tipo `sos` o `low_score`, leer el `fcmToken` del cuidador desde `caregivers/` y enviar push con `firebase-admin` SDK
 
 **Alerta de no check-in a las 23:59 (backend):**
+
 - Cloud Function con trigger `pubsub.schedule` a las 23:59 diariamente:
   - Obtener todos los pacientes con `caregiverId != null`
   - Para cada uno: verificar si tiene check-in con la fecha de hoy en `checkIns/`
   - Si no tiene: crear alerta `no_checkin` en `alerts/` y verificar `lastNoCheckinAlertDate` para evitar duplicados
 
 **`NotificationUtils.kt`** en `utils/`:
+
 - `showLocalNotification(title, body, channel)` — mostrar notificación local
 - `scheduleAppointmentReminder(appointment)` — programar recordatorio de evento
 - `cancelAppointmentReminder(appointmentId)` — cancelar si el evento se elimina
 
 ### ✅ Criterio de éxito del Sprint 11
+
 - El paciente recibe el recordatorio de check-in a las 8PM (solo si no lo hizo y tiene el toggle activo)
 - El paciente recibe el recordatorio de agenda 15 minutos antes del evento
 - El cuidador recibe push de SOS con el mensaje correcto
@@ -706,39 +785,47 @@ Responde siempre en español, con un tono cálido, conciso y esperanzador.
 ---
 
 ## Sprint 12 — Pulido Visual, Animaciones y Pruebas Finales
+
 > **Duración:** 1 semana  
 > **Objetivo:** La app se ve y siente terminada. Animaciones fluidas, transiciones entre pantallas, estados de carga correctos y pruebas en dispositivo real.
 
 ### Tareas de pulido visual
 
 **Transiciones entre pantallas:**
+
 - Configurar animaciones de entrada/salida en `AppNavGraph` con `AnimatedContentTransitionScope`
 - Transición suave de fade + slide entre pantallas principales
 - Transición de slide vertical para modales y pantallas de detalle
 
 **Estados de carga:**
+
 - Implementar skeleton loaders para: dashboard, lista de pacientes, historial de check-ins, gráfico de progreso
 - Mostrar `CircularProgressIndicator` mientras se espera respuesta de Gemini en el chat
 
 **Animaciones de logros:**
+
 - Al desbloquear un logro: mostrar un modal de celebración con animación Lottie de confeti
 - El ícono del logro aparece con animación de escala (pop in)
 
 **Animaciones del check-in:**
+
 - Transición suave entre pasos del check-in (slide horizontal)
 - Animación de check al completar el check-in (Lottie)
 
 **Animación del botón SOS:**
+
 - Pulso visual mientras se mantiene presionado (círculo que crece)
 - Feedback háptico (vibración) al activar
 
 **Modo oscuro:**
+
 - Revisar todas las pantallas en modo oscuro y corregir colores que no se adapten correctamente
 - Asegurar que los textos tengan contraste suficiente en ambos modos
 
 ### Pruebas finales
 
 **Pruebas de flujo completo:**
+
 - Registro → verificación → onboarding → test inicial → dashboard ✓
 - Check-in diario → cálculo de puntaje → actualización de racha → desbloqueo de logro ✓
 - Generación de QR → escaneo → vinculación paciente-cuidador ✓
@@ -749,11 +836,13 @@ Responde siempre en español, con un tono cálido, conciso y esperanzador.
 - Alerta de no check-in a las 23:59 aparece en historial del cuidador ✓
 
 **Pruebas en dispositivos reales:**
+
 - Probar en al menos 2 dispositivos físicos con versiones de Android distintas (API 28 y API 33+)
 - Verificar permisos en Android 13+ (READ_MEDIA_IMAGES vs READ_EXTERNAL_STORAGE)
 - Verificar notificaciones en segundo plano (algunos fabricantes las bloquean)
 
 ### ✅ Criterio de éxito del Sprint 12
+
 - Todos los flujos principales funcionan de principio a fin sin crashes
 - La app se ve consistente en modo claro y oscuro
 - Las animaciones no causan lag perceptible (60fps)
@@ -763,21 +852,21 @@ Responde siempre en español, con un tono cálido, conciso y esperanzador.
 
 ## Resumen de Sprints
 
-| Sprint | Enfoque | Pantallas principales |
-|---|---|---|
-| **0** | Configuración + sistema de diseño | Componentes base, temas, navegación |
-| **1** | Onboarding + autenticación | Welcome, Register, Login, Verify Email, Avatar |
-| **2** | Dashboard paciente + check-in | Dashboard paciente, CheckIn |
-| **3** | Test inicial + ajustes paciente | InitialTest, Settings |
-| **4** | Progreso y logros | Progress, gráfico mensual, logros |
-| **5** | Meditación | Meditate, MeditationDetail |
-| **6** | Agenda y diario | Schedule, CreateAppointment, DiaryEntry |
-| **7** | Vinculación + dashboard cuidador | LinkCaregiver, ScanQR, Dashboard cuidador |
-| **8** | Vistas del cuidador | PatientsList, PatientDetail, AlertsHistory |
-| **9** | Sistema SOS | SOSPatient, SOSAlert + mapa en tiempo real |
-| **10** | Lumi IA | LumiChat, LumiHistory |
-| **11** | Notificaciones push + backend | Cloud Functions, WorkManager, FCM |
-| **12** | Pulido + pruebas | Animaciones, modo oscuro, QA |
+| Sprint | Enfoque                           | Pantallas principales                          |
+| ------ | --------------------------------- | ---------------------------------------------- |
+| **0**  | Configuración + sistema de diseño | Componentes base, temas, navegación            |
+| **1**  | Onboarding + autenticación        | Welcome, Register, Login, Verify Email, Avatar |
+| **2**  | Dashboard paciente + check-in     | Dashboard paciente, CheckIn                    |
+| **3**  | Test inicial + ajustes paciente   | InitialTest, Settings                          |
+| **4**  | Progreso y logros                 | Progress, gráfico mensual, logros              |
+| **5**  | Meditación                        | Meditate, MeditationDetail                     |
+| **6**  | Agenda y diario                   | Schedule, CreateAppointment, DiaryEntry        |
+| **7**  | Vinculación + dashboard cuidador  | LinkCaregiver, ScanQR, Dashboard cuidador      |
+| **8**  | Vistas del cuidador               | PatientsList, PatientDetail, AlertsHistory     |
+| **9**  | Sistema SOS                       | SOSPatient, SOSAlert + mapa en tiempo real     |
+| **10** | Lumi IA                           | LumiChat, LumiHistory                          |
+| **11** | Notificaciones push + backend     | Cloud Functions, WorkManager, FCM              |
+| **12** | Pulido + pruebas                  | Animaciones, modo oscuro, QA                   |
 
 ---
 

@@ -98,6 +98,9 @@ class PatientViewModel(
     private val _monthlyAppointments = MutableStateFlow<List<Appointment>>(emptyList())
     val monthlyAppointments = _monthlyAppointments.asStateFlow()
 
+    private val _achievementUnlockedEvent = MutableSharedFlow<UserAchievement>()
+    val achievementUnlockedEvent = _achievementUnlockedEvent.asSharedFlow()
+
     private val _monthlyDiaryEntries = MutableStateFlow<List<DiaryEntry>>(emptyList())
     val monthlyDiaryEntries = _monthlyDiaryEntries.asStateFlow()
 
@@ -531,40 +534,24 @@ class PatientViewModel(
                 if (completionsResult.isSuccess) {
                     val completions = completionsResult.getOrDefault(emptyList())
                     val totalCompletions = completions.size
-                    val unlockedAchievements = _achievements.value
-
-                    suspend fun checkAndUnlock(key: String, title: String, desc: String, icon: String) {
-                        if (unlockedAchievements.none { it.achievementKey == key }) {
-                            val userAch = UserAchievement(
-                                id = UUID.randomUUID().toString(),
-                                patientId = userId,
-                                achievementKey = key,
-                                type = "meditation",
-                                title = title,
-                                description = desc,
-                                iconUrl = icon,
-                                unlockedAt = LocalDate.now().toString()
-                            )
-                            firestoreRepository.unlockAchievement(userAch)
-                            _achievements.value = _achievements.value + userAch
-                        }
-                    }
+                    val achievementsResult = firestoreRepository.getPatientAchievements(userId)
+                    val unlockedAchievements = achievementsResult.getOrDefault(emptyList())
 
                     if (totalCompletions >= 1) {
-                        checkAndUnlock(
+                        AchievementManager.checkAndUnlock(
                             "first_meditation",
-                             "Primer respiro",
-                             "Primera meditación completada",
-                             "https://cdn-icons-png.flaticon.com/512/2913/2913520.png"
-                        )
+                            userId,
+                            unlockedAchievements,
+                            firestoreRepository
+                        ) { ach -> _achievements.value = _achievements.value + ach }
                     }
                     if (totalCompletions >= 10) {
-                        checkAndUnlock(
+                        AchievementManager.checkAndUnlock(
                             "meditations_10",
-                             "Mente en calma",
-                             "10 meditaciones completadas",
-                             "https://cdn-icons-png.flaticon.com/512/414/414927.png"
-                        )
+                            userId,
+                            unlockedAchievements,
+                            firestoreRepository
+                        ) { ach -> _achievements.value = _achievements.value + ach }
                     }
                 }
 
@@ -845,6 +832,7 @@ class PatientViewModel(
             
             val result = firestoreRepository.createDiaryEntry(diaryEntry)
             if (result.isSuccess) {
+                _diaryEntries.update { it + diaryEntry } // Actualización local inmediata
                 checkDiaryAchievements(userId)
                 onSuccess()
             } else {
@@ -858,41 +846,24 @@ class PatientViewModel(
         val countResult = firestoreRepository.getDiaryEntriesCount(userId)
         val achievementsResult = firestoreRepository.getPatientAchievements(userId)
         
-        val totalCount = countResult.getOrDefault(0)
+        val totalEntries = countResult.getOrDefault(0)
         val unlockedAchievements = achievementsResult.getOrDefault(emptyList())
         
-        suspend fun checkAndUnlock(key: String, title: String, desc: String, icon: String) {
-            if (unlockedAchievements.none { it.achievementKey == key }) {
-                val userAch = UserAchievement(
-                    id = UUID.randomUUID().toString(),
-                    patientId = userId,
-                    achievementKey = key,
-                    type = "diary",
-                    title = title,
-                    description = desc,
-                    iconUrl = icon,
-                    unlockedAt = LocalDate.now().toString()
-                )
-                firestoreRepository.unlockAchievement(userAch)
-                _achievements.value = _achievements.value + userAch
-            }
-        }
-        
-        if (totalCount >= 1) {
-            checkAndUnlock(
+        if (totalEntries >= 1) {
+            AchievementManager.checkAndUnlock(
                 "first_diary",
-                "Primer relato",
-                "Primera entrada de diario creada",
-                "https://cdn-icons-png.flaticon.com/512/3588/3588658.png"
-            )
+                userId,
+                unlockedAchievements,
+                firestoreRepository
+            ) { ach -> _achievements.value = _achievements.value + ach }
         }
-        if (totalCount >= 7) {
-            checkAndUnlock(
+        if (totalEntries >= 7) {
+            AchievementManager.checkAndUnlock(
                 "diary_7",
-                "Hábito de reflexión",
-                "7 entradas de diario completadas",
-                "https://cdn-icons-png.flaticon.com/512/3588/3588667.png"
-            )
+                userId,
+                unlockedAchievements,
+                firestoreRepository
+            ) { ach -> _achievements.value = _achievements.value + ach }
         }
     }
 
@@ -921,7 +892,7 @@ class PatientViewModel(
             val data = outputStream.toByteArray()
             
             val fileName = "${System.currentTimeMillis()}_$index.jpg"
-            val storageRef = FirebaseStorage.getInstance().getReference("diary_photos/$userId/$fileName")
+            val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().getReference("diary_photos/$userId/$fileName")
             storageRef.putBytes(data).await()
             storageRef.downloadUrl.await().toString()
         }.getOrNull()

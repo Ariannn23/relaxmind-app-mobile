@@ -1,4 +1,5 @@
 # Documentación Técnica Completa — RelaxMind
+
 > Versión actualizada · Grupo 4, 2026 · Curso: Desarrollo de Aplicaciones Móviles · Prof. Blancas Núñez, Mitchell Paula
 
 ---
@@ -11,22 +12,22 @@ RelaxMind es una aplicación móvil enfocada en la salud mental y el bienestar e
 
 ## 2. Tecnologías y Versiones
 
-| Tecnología | Versión / Detalle |
-|---|---|
-| **Lenguaje** | Kotlin |
-| **UI Framework** | Jetpack Compose (estable, 1.6+) |
-| **Versión mínima de Android** | API 28 (Android 9.0) |
-| **Versión objetivo** | API 34 (Android 14) |
-| **Base de datos en la nube** | Firebase Firestore (NoSQL, tiempo real) |
-| **Autenticación** | Firebase Authentication |
-| **Notificaciones push** | Firebase Cloud Messaging (FCM) |
-| **Mapas y ubicación** | Google Maps API + Location Services |
-| **IA conversacional (Lumi)** | Gemini API (Google AI SDK para Android) |
-| **Animaciones** | Lottie + Compose Animations |
-| **Fuentes** | Outfit (títulos), Urbanist (textos), Montserrat (botones) |
-| **Modo oscuro** | Configurable en ajustes, disponible tras iniciar sesión |
+| Tecnología                     | Versión / Detalle                                             |
+| ------------------------------ | ------------------------------------------------------------- |
+| **Lenguaje**                   | Kotlin                                                        |
+| **UI Framework**               | Jetpack Compose (estable, 1.6+)                               |
+| **Versión mínima de Android**  | API 28 (Android 9.0)                                          |
+| **Versión objetivo**           | API 34 (Android 14)                                           |
+| **Base de datos en la nube**   | Firebase Firestore (NoSQL, tiempo real)                       |
+| **Autenticación**              | Firebase Authentication                                       |
+| **Notificaciones push**        | Firebase Cloud Messaging (FCM)                                |
+| **Mapas y ubicación**          | Google Maps API + Location Services                           |
+| **IA conversacional (Lumi)**   | Gemini API (Google AI SDK para Android)                       |
+| **Animaciones**                | Lottie + Compose Animations                                   |
+| **Fuentes**                    | Outfit (títulos), Urbanist (textos), Montserrat (botones)     |
+| **Modo oscuro**                | Configurable en ajustes, disponible tras iniciar sesión       |
 | **Almacenamiento de archivos** | Firebase Storage (fotos del diario y avatares personalizados) |
-| **Caché local** | No aplica — todo se gestiona vía Firestore |
+| **Caché local**                | No aplica — todo se gestiona vía Firestore                    |
 
 > **¿Por qué API 28 como mínimo?**
 > Cubre el ~90% de dispositivos Android activos. Garantiza compatibilidad estable con Jetpack Compose, biometría (huella/face unlock), Firebase FCM, Google Maps API y Gemini API sin necesidad de workarounds.
@@ -35,11 +36,11 @@ RelaxMind es una aplicación móvil enfocada en la salud mental y el bienestar e
 
 ## 3. Paleta de Colores
 
-| Rol | Color principal | Código HEX |
-|---|---|---|
-| Paciente | Verde | `#0F6E56` |
-| Cuidador | Índigo | `#4338A8` |
-| SOS / Alerta crítica | Coral | `#E8582A` |
+| Rol                  | Color principal | Código HEX |
+| -------------------- | --------------- | ---------- |
+| Paciente             | Verde           | `#0F6E56`  |
+| Cuidador             | Índigo          | `#4338A8`  |
+| SOS / Alerta crítica | Coral           | `#E8582A`  |
 
 ---
 
@@ -116,6 +117,7 @@ app/
 ## 5. Flujo General de la Aplicación
 
 ### 5.1 Pantalla de Bienvenida (Onboarding)
+
 - Se muestra solo al abrir la app por primera vez.
 - Contiene logo y nombre de la app.
 - Tres slides de introducción con imágenes y texto explicativo.
@@ -124,6 +126,7 @@ app/
 ### 5.2 Inicio de Sesión / Registro
 
 **Registro:**
+
 - Campos: nombre, apellidos, fecha de nacimiento, correo, contraseña, confirmación de contraseña.
 - Selector de tipo de cuenta con cambio de color: verde (paciente) / azul índigo (cuidador).
 - Check de términos y condiciones con link visible.
@@ -131,6 +134,7 @@ app/
 - Configuración inicial opcional: elegir avatar, activar notificaciones.
 
 **Inicio de sesión:**
+
 - Campos: correo y contraseña.
 - Opción "Mantener sesión iniciada".
 - Inicio con biometría (configurable desde ajustes).
@@ -168,24 +172,24 @@ La puntuación final siempre se muestra en una **escala de 0 a 100 puntos** (red
 
 ### 8.1 Estructura de Bloques
 
-| Bloque | Peso |
-|---|---|
-| Estado emocional reciente | 30% |
-| Hábitos y percepción personal (sueño, energía, estrés) | 40% |
-| Escala de frecuencia | 20% |
-| Preguntas Sí/No | 10% |
+| Bloque                                                 | Peso |
+| ------------------------------------------------------ | ---- |
+| Estado emocional reciente                              | 30%  |
+| Hábitos y percepción personal (sueño, energía, estrés) | 40%  |
+| Escala de frecuencia                                   | 20%  |
+| Preguntas Sí/No                                        | 10%  |
 
 ### 8.2 Bloque 1 — Estado emocional reciente (30%)
 
-Pregunta: *"¿Cómo te has sentido durante los últimos días?"*
+Pregunta: _"¿Cómo te has sentido durante los últimos días?"_
 
 | Respuesta | Valor |
-|---|---|
-| Muy mal | 1 |
-| Mal | 2 |
-| Bien | 3 |
-| Muy bien | 4 |
-| Excelente | 5 |
+| --------- | ----- |
+| Muy mal   | 1     |
+| Mal       | 2     |
+| Bien      | 3     |
+| Muy bien  | 4     |
+| Excelente | 5     |
 
 Si hay varios días registrados, se calcula el promedio. El resultado se divide entre 5 y se multiplica por 0.30.
 
@@ -199,6 +203,7 @@ Incluye barras deslizables de 1 a 10 para: **Sueño, Energía, Estrés**.
 Conversión a escala 1–5: `valor ÷ 2`
 
 **Ejemplo:**
+
 - Sueño: 8 ÷ 2 = 4
 - Energía: 6 ÷ 2 = 3
 - Estrés: 7 ÷ 2 = 3.5
@@ -207,13 +212,13 @@ Conversión a escala 1–5: `valor ÷ 2`
 
 ### 8.4 Bloque 3 — Escala de frecuencia (20%)
 
-| Respuesta | Valor |
-|---|---|
-| Nunca | 1 |
-| Casi nunca | 2 |
-| A veces | 3 |
-| Casi siempre | 4 |
-| Siempre | 5 |
+| Respuesta    | Valor |
+| ------------ | ----- |
+| Nunca        | 1     |
+| Casi nunca   | 2     |
+| A veces      | 3     |
+| Casi siempre | 4     |
+| Siempre      | 5     |
 
 **Ejemplo:**
 Respuestas: 2, 3, 4, 1, 5 → Promedio: 3 → Aporte: 3 × 0.20 = **0.60**
@@ -233,12 +238,12 @@ Puntuación final = (3.18 ÷ 5) × 100 = 63.6 → Redondeado: 64 / 100
 
 ### 8.7 Interpretación del Resultado
 
-| Puntaje | Estado |
-|---|---|
-| 0 – 20 | Muy bajo |
-| 21 – 40 | Bajo |
-| 41 – 60 | Moderado |
-| 61 – 80 | Bueno |
+| Puntaje  | Estado    |
+| -------- | --------- |
+| 0 – 20   | Muy bajo  |
+| 21 – 40  | Bajo      |
+| 41 – 60  | Moderado  |
+| 61 – 80  | Bueno     |
 | 81 – 100 | Excelente |
 
 ### 8.8 Datos Guardados por Registro
@@ -252,6 +257,7 @@ Cada registro almacena: fecha, puntaje obtenido, categoría del estado, respuest
 Lumi es el asistente de inteligencia artificial de RelaxMind, diseñado para acompañar emocionalmente al paciente.
 
 ### Características
+
 - **Motor**: Gemini API (Google AI SDK para Android).
 - **Prompt inicial del sistema**: fijo e invisible para el usuario; define la personalidad y rol de Lumi como asistente de salud mental.
 - **Persistencia de conversación**: el historial de cada sesión se guarda en Firestore. Al reabrir el chat, Lumi recuerda todo lo que se habló anteriormente.
@@ -271,6 +277,7 @@ Ver estructura completa en **Sección 17.13 `lumiSessions`**.
 ## 10. Flujo del Paciente
 
 ### 10.1 Dashboard
+
 - Puntuación del check-in diario.
 - Card **"Meta de Hoy"**: ejercicio de meditación sugerido con botón "Ir a meditar" y check de completado.
 - Card **"Próximo recordatorio"**: siguiente evento agendado (vacío si no hay ninguno).
@@ -279,43 +286,46 @@ Ver estructura completa en **Sección 17.13 `lumiSessions`**.
 - Card de vinculación con cuidador.
 
 ### 10.2 Meditar
+
 - Ejercicios de respiración con animaciones guiadas (Lottie).
 - Guías visuales paso a paso.
 
 ### 10.3 Progreso
+
 - **Gráfico mensual de bienestar**: cada día del mes se representa con un círculo coloreado según el puntaje del check-in de ese día. Si no hubo check-in, el círculo queda en gris neutro.
 
-| Puntaje | Color | HEX |
-|---|---|---|
-| Sin check-in | Gris | `#CBD5E0` |
-| 0 – 20 | Rojo | `#E53E3E` |
-| 21 – 40 | Naranja | `#ED8936` |
-| 41 – 60 | Amarillo | `#ECC94B` |
-| 61 – 80 | Verde claro | `#68D391` |
-| 81 – 100 | Verde oscuro | `#0F6E56` |
+| Puntaje      | Color        | HEX       |
+| ------------ | ------------ | --------- |
+| Sin check-in | Gris         | `#CBD5E0` |
+| 0 – 20       | Rojo         | `#E53E3E` |
+| 21 – 40      | Naranja      | `#ED8936` |
+| 41 – 60      | Amarillo     | `#ECC94B` |
+| 61 – 80      | Verde claro  | `#68D391` |
+| 81 – 100     | Verde oscuro | `#0F6E56` |
 
 - **Racha activa**: días consecutivos con check-in completado. Se rompe si no se registra check-in antes de las 23:59 del día.
-- **Logros desbloqueados**: iconos específicos por tipo de logro (ver tabla de logros abajo).
+- **Logros Completados**: iconos específicos por tipo de logro (ver tabla de logros abajo).
 - **Historial de check-ins**: lista cronológica con puntaje y categoría por registro.
 
 #### 10.3.1 Catálogo de Logros
 
-| ID | Título | Condición | Ícono sugerido (clay plasticine) |
-|---|---|---|---|
-| `first_checkin` | Primer paso | Primer check-in completado | Brote verde |
-| `streak_3` | 3 días seguidos | Racha de 3 días | Llama pequeña |
-| `streak_7` | Una semana fuerte | Racha de 7 días | Llama mediana |
-| `streak_14` | Dos semanas imparable | Racha de 14 días | Llama grande |
-| `streak_30` | Mes completo | Racha de 30 días | Trofeo dorado |
-| `first_meditation` | Primer respiro | Primera meditación completada | Figura meditando |
-| `meditations_10` | Mente en calma | 10 meditaciones completadas | Nube tranquila |
-| `first_diary` | Mi historia | Primera entrada de diario | Diario con estrella |
-| `diary_7` | Una semana de notas | 7 entradas de diario | Diario brillante |
-| `score_80` | Bienestar alto | Check-in con 80+ puntos | Estrella dorada |
-| `score_100` | Día perfecto | Check-in con 100 puntos | Gema azul |
-| `lumi_first` | Hola Lumi | Primera conversación con Lumi | Burbuja de chat verde |
+| ID                 | Título                | Condición                     | Ícono sugerido (clay plasticine) |
+| ------------------ | --------------------- | ----------------------------- | -------------------------------- |
+| `first_checkin`    | Primer paso           | Primer check-in completado    | Brote verde                      |
+| `streak_3`         | 3 días seguidos       | Racha de 3 días               | Llama pequeña                    |
+| `streak_7`         | Una semana fuerte     | Racha de 7 días               | Llama mediana                    |
+| `streak_14`        | Dos semanas imparable | Racha de 14 días              | Llama grande                     |
+| `streak_30`        | Mes completo          | Racha de 30 días              | Trofeo dorado                    |
+| `first_meditation` | Primer respiro        | Primera meditación completada | Figura meditando                 |
+| `meditations_10`   | Mente en calma        | 10 meditaciones completadas   | Nube tranquila                   |
+| `first_diary`      | Mi historia           | Primera entrada de diario     | Diario con estrella              |
+| `diary_7`          | Una semana de notas   | 7 entradas de diario          | Diario brillante                 |
+| `score_80`         | Bienestar alto        | Check-in con 80+ puntos       | Estrella dorada                  |
+| `score_100`        | Día perfecto          | Check-in con 100 puntos       | Gema azul                        |
+| `lumi_first`       | Hola Lumi             | Primera conversación con Lumi | Burbuja de chat verde            |
 
 ### 10.4 Agenda
+
 - Calendario semanal y mensual.
 - Crear entradas con categoría: cita médica, medicación o recordatorio.
 - Agregar notas y fotos del día (entradas de diario independientes).
@@ -323,11 +333,13 @@ Ver estructura completa en **Sección 17.13 `lumiSessions`**.
 - Cada evento envía una **notificación push 15 minutos antes** de la hora programada.
 
 ### 10.5 Lumi (Chat IA)
+
 - Interfaz de chat con historial persistente.
 - Botón **"Nuevo chat"** para iniciar una conversación limpia.
 - Historial de sesiones anteriores accesible.
 
 ### 10.6 Ajustes del Paciente
+
 - Editar perfil: nombre, apellidos, fecha de nacimiento, sexo, condición.
 - Modo oscuro.
 - Idioma.
@@ -344,16 +356,19 @@ Ver estructura completa en **Sección 17.13 `lumiSessions`**.
 ## 11. Flujo del Cuidador
 
 ### 11.1 Dashboard
+
 - Resumen de los check-ins más recientes de todos sus pacientes vinculados.
 - Alertas activas destacadas (SOS sin resolver y check-ins bajos del día).
 - Acceso rápido a la lista de pacientes.
 
 ### 11.2 Lista de Pacientes
+
 - Lista de todos los pacientes vinculados con buscador.
 - Indicador de estado de bienestar por paciente (color según último puntaje).
 - Al tocar un paciente se accede a su perfil detallado.
 
 ### 11.3 Perfil del Paciente (vista del cuidador)
+
 - Nombre, avatar y datos básicos del paciente.
 - **Gráfico mensual de bienestar** (misma visualización por colores que ve el paciente).
 - Historial de check-ins: puntaje y categoría por día.
@@ -361,19 +376,21 @@ Ver estructura completa en **Sección 17.13 `lumiSessions`**.
 - Acceso al historial de alertas SOS de ese paciente específico.
 
 ### 11.4 Historial de Alertas
+
 Muestra las últimas **10 alertas** de todos los pacientes vinculados al cuidador, ordenadas por fecha descendente. Incluye filtro por fecha y por paciente.
 
 Tipos de alerta que aparecen en el historial:
 
-| Tipo | Condición de disparo | Notificación push |
-|---|---|---|
-| **SOS** | Paciente activa el botón SOS | Sí — con ubicación en tiempo real |
-| **Check-in bajo** | Puntaje del check-in es 20 o menos | Sí |
-| **Sin check-in** | El paciente no registró check-in antes de las 23:59 | No |
+| Tipo              | Condición de disparo                                | Notificación push                 |
+| ----------------- | --------------------------------------------------- | --------------------------------- |
+| **SOS**           | Paciente activa el botón SOS                        | Sí — con ubicación en tiempo real |
+| **Check-in bajo** | Puntaje del check-in es 20 o menos                  | Sí                                |
+| **Sin check-in**  | El paciente no registró check-in antes de las 23:59 | No                                |
 
 Cada alerta en el historial muestra: tipo, nombre del paciente, fecha/hora y estado (resuelta / pendiente).
 
 ### 11.5 Ajustes del Cuidador
+
 - Mismas opciones que el paciente (perfil, modo oscuro, idioma, notificaciones, biometría, términos).
 - No incluye vinculación con cuidador.
 - Opción de eliminar cuenta.
@@ -383,20 +400,23 @@ Cada alerta en el historial muestra: tipo, nombre del paciente, fecha/hora y est
 ## 12. Vinculación y Desvinculación Paciente–Cuidador
 
 ### Regla de relación
+
 - Un paciente puede tener **un solo cuidador** a la vez.
 - Un cuidador puede tener **varios pacientes**.
 
 ### Vinculación
+
 - El **paciente** genera el código de vinculación (QR o código de 6 dígitos) desde su dashboard.
 - El código tiene una validez de **10 minutos**. Pasado ese tiempo, el paciente debe generar uno nuevo.
 - El cuidador escanea el QR o ingresa el código manualmente para vincularse.
 - El control total de la vinculación es del paciente.
-- **Si el paciente ya tiene un cuidador vinculado**, al intentar escanear su código un segundo cuidador verá el mensaje: *"Este paciente ya está vinculado a un cuidador. El paciente debe desvincularse primero."* No se realiza ninguna acción.
+- **Si el paciente ya tiene un cuidador vinculado**, al intentar escanear su código un segundo cuidador verá el mensaje: _"Este paciente ya está vinculado a un cuidador. El paciente debe desvincularse primero."_ No se realiza ninguna acción.
 
 ### Desvinculación
+
 1. El paciente va a **Ajustes > Datos personales**.
 2. Aparece la opción **"Desvincular cuidador"** (encima del botón "Borrar cuenta").
-3. Se muestra una ventana de confirmación: *"¿Deseas desvincularte de [nombre del cuidador]?"*
+3. Se muestra una ventana de confirmación: _"¿Deseas desvincularte de [nombre del cuidador]?"_
 4. El paciente ingresa su **contraseña** para confirmar.
 5. Tras confirmar, la desvinculación es inmediata.
 
@@ -405,6 +425,7 @@ Cada alerta en el historial muestra: tipo, nombre del paciente, fecha/hora y est
 ## 13. Flujo SOS
 
 ### Activación por el paciente
+
 1. El paciente **mantiene presionado el botón SOS durante 2 segundos**.
 2. Aparece una ventana SOS con:
    - Botón grande **"Llamar a cuidador"** → abre la app de teléfono con el número del cuidador ya cargado.
@@ -413,7 +434,9 @@ Cada alerta en el historial muestra: tipo, nombre del paciente, fecha/hora y est
    - **Alerta in-app** si el cuidador tiene la app abierta.
 
 ### Respuesta del cuidador
+
 Al tocar la notificación push, el cuidador accede a la **pantalla SOS del cuidador**, que incluye:
+
 - Nombre e información básica del paciente.
 - Botón **"Llamar al paciente"** → abre la app de teléfono con el número del paciente.
 - Botón **"Ver ubicación"** → expande el minimapa con la ubicación en tiempo real.
@@ -427,7 +450,7 @@ Al tocar la notificación push, el cuidador accede a la **pantalla SOS del cuida
 Aplica tanto para pacientes como para cuidadores.
 
 1. Ir a **Ajustes > Datos personales > Borrar cuenta**.
-2. Ventana de confirmación: *"¿Estás seguro de que deseas eliminar tu cuenta?"*
+2. Ventana de confirmación: _"¿Estás seguro de que deseas eliminar tu cuenta?"_
 3. Seleccionar **motivo** de eliminación (lista de opciones + "Otro" con campo de texto libre).
 4. Ingresar **contraseña** para confirmar.
 5. La cuenta entra en un período de gracia de **7 días** durante los cuales puede ser **reactivada**.
@@ -441,16 +464,16 @@ Todas las notificaciones usan **Firebase Cloud Messaging (FCM)**. El token del d
 
 ### 15.1 Notificaciones al Paciente
 
-| Evento | Hora / Disparador | Mensaje |
-|---|---|---|
+| Evento                          | Hora / Disparador                | Mensaje                                                        |
+| ------------------------------- | -------------------------------- | -------------------------------------------------------------- |
 | Recordatorio de check-in diario | Todos los días a las **8:00 PM** | "No olvides registrar tu check-in de hoy y mantener tu racha." |
-| Recordatorio de agenda | **15 minutos antes** del evento | "En 15 minutos: [título del evento]" |
+| Recordatorio de agenda          | **15 minutos antes** del evento  | "En 15 minutos: [título del evento]"                           |
 
 ### 15.2 Notificaciones al Cuidador
 
-| Evento | Disparador | Mensaje |
-|---|---|---|
-| Alerta SOS | Paciente activa el botón SOS | "EMERGENCIA: [nombre del paciente] necesita ayuda. Ubicación adjunta." |
+| Evento                        | Disparador                      | Mensaje                                                                               |
+| ----------------------------- | ------------------------------- | ------------------------------------------------------------------------------------- |
+| Alerta SOS                    | Paciente activa el botón SOS    | "EMERGENCIA: [nombre del paciente] necesita ayuda. Ubicación adjunta."                |
 | Check-in con puntaje muy bajo | Check-in con puntaje 20 o menos | "[nombre del paciente] registró un bienestar muy bajo hoy (X/100). Revisa su estado." |
 
 > Las alertas de tipo "Sin check-in" (paciente que no hizo check-in antes de las 23:59) **NO generan notificación push** al cuidador. Solo aparecen en el historial de alertas dentro de la app.
@@ -459,12 +482,12 @@ Todas las notificaciones usan **Firebase Cloud Messaging (FCM)**. El token del d
 
 ## 16. Permisos de la App
 
-| Permiso | Cuándo se solicita |
-|---|---|
-| **Ubicación** | Al acceder a la pantalla de mapas o al activar SOS |
-| **Cámara** | Al escanear un código QR o al subir/cambiar avatar |
-| **Notificaciones** | Durante la configuración inicial tras registrarse |
-| **Biometría** | Al activarla desde ajustes (opcional) |
+| Permiso                      | Cuándo se solicita                                                                                         |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Ubicación**                | Al acceder a la pantalla de mapas o al activar SOS                                                         |
+| **Cámara**                   | Al escanear un código QR o al subir/cambiar avatar                                                         |
+| **Notificaciones**           | Durante la configuración inicial tras registrarse                                                          |
+| **Biometría**                | Al activarla desde ajustes (opcional)                                                                      |
 | **Almacenamiento / Galería** | Al adjuntar fotos en entradas del diario. API 28–32: `READ_EXTERNAL_STORAGE`; API 33+: `READ_MEDIA_IMAGES` |
 
 ---
@@ -476,6 +499,7 @@ Todas las notificaciones usan **Firebase Cloud Messaging (FCM)**. El token del d
 ---
 
 ### 17.1 `patients`
+
 Almacena los datos de cada usuario con rol paciente.
 
 ```
@@ -510,6 +534,7 @@ patients/
 ---
 
 ### 17.2 `caregivers`
+
 Almacena los datos de cada usuario con rol cuidador.
 
 ```
@@ -539,6 +564,7 @@ caregivers/
 ---
 
 ### 17.3 `bindingCodes`
+
 Códigos temporales generados por el paciente para vincularse con un cuidador. Se eliminan automáticamente al usarse o al expirar.
 
 ```
@@ -553,6 +579,7 @@ bindingCodes/
 ---
 
 ### 17.4 `checkIns`
+
 Registros del test inicial y del check-in diario del paciente.
 
 ```
@@ -578,6 +605,7 @@ checkIns/
 ---
 
 ### 17.5 `appointments`
+
 Citas médicas, tomas de medicación y recordatorios del paciente.
 
 ```
@@ -599,6 +627,7 @@ appointments/
 ---
 
 ### 17.6 `diaryEntries`
+
 Entradas del diario personal del paciente. Distintas a las citas; son reflexiones del día con notas y fotos que forman el collage del calendario mensual.
 
 ```
@@ -616,6 +645,7 @@ diaryEntries/
 ---
 
 ### 17.7 `meditationExercises`
+
 Catálogo de ejercicios de meditación y respiración disponibles en la app. Se define una vez y no cambia por usuario.
 
 ```
@@ -632,6 +662,7 @@ meditationExercises/
 ---
 
 ### 17.8 `completedMeditations`
+
 Registro de qué ejercicios completó cada paciente. Soporte para la card "Meta de Hoy" y los logros.
 
 ```
@@ -646,6 +677,7 @@ completedMeditations/
 ---
 
 ### 17.9 `streaks`
+
 Racha activa de cada paciente (días consecutivos con check-in completado).
 
 ```
@@ -661,6 +693,7 @@ streaks/
 ---
 
 ### 17.10 `dailyGoals`
+
 Meta de meditación asignada a cada paciente por día. Garantiza que el dashboard siempre muestre el mismo ejercicio sugerido aunque el paciente abra y cierre la app varias veces.
 
 ```
@@ -675,7 +708,8 @@ dailyGoals/
 ---
 
 ### 17.11 `achievements`
-Logros desbloqueados por cada paciente. Cada logro tiene su ícono en estilo clay plasticine (coherente con los assets visuales de la app).
+
+Logros Completados por cada paciente. Cada logro tiene su ícono en estilo clay plasticine (coherente con los assets visuales de la app).
 
 ```
 achievements/
@@ -692,24 +726,25 @@ achievements/
 
 Logros definidos:
 
-| achievementKey | Título | Condición | Ícono |
-|---|---|---|---|
-| `first_checkin` | Primer paso | Primer check-in completado | Brote verde |
-| `streak_3` | 3 días seguidos | Racha de 3 días | Llama pequeña |
-| `streak_7` | Una semana fuerte | Racha de 7 días | Llama mediana |
-| `streak_14` | Dos semanas imparable | Racha de 14 días | Llama grande |
-| `streak_30` | Mes completo | Racha de 30 días | Trofeo dorado |
-| `first_meditation` | Primer respiro | Primera meditación completada | Figura meditando |
-| `meditations_10` | Mente en calma | 10 meditaciones completadas | Nube tranquila |
-| `first_diary` | Mi historia | Primera entrada de diario | Diario con estrella |
-| `diary_7` | Una semana de notas | 7 entradas de diario | Diario brillante |
-| `score_80` | Bienestar alto | Check-in con 80 puntos o más | Estrella dorada |
-| `score_100` | Día perfecto | Check-in con 100 puntos | Gema azul |
-| `lumi_first` | Hola Lumi | Primera conversación con Lumi | Burbuja de chat verde |
+| achievementKey     | Título                | Condición                     | Ícono                 |
+| ------------------ | --------------------- | ----------------------------- | --------------------- |
+| `first_checkin`    | Primer paso           | Primer check-in completado    | Brote verde           |
+| `streak_3`         | 3 días seguidos       | Racha de 3 días               | Llama pequeña         |
+| `streak_7`         | Una semana fuerte     | Racha de 7 días               | Llama mediana         |
+| `streak_14`        | Dos semanas imparable | Racha de 14 días              | Llama grande          |
+| `streak_30`        | Mes completo          | Racha de 30 días              | Trofeo dorado         |
+| `first_meditation` | Primer respiro        | Primera meditación completada | Figura meditando      |
+| `meditations_10`   | Mente en calma        | 10 meditaciones completadas   | Nube tranquila        |
+| `first_diary`      | Mi historia           | Primera entrada de diario     | Diario con estrella   |
+| `diary_7`          | Una semana de notas   | 7 entradas de diario          | Diario brillante      |
+| `score_80`         | Bienestar alto        | Check-in con 80 puntos o más  | Estrella dorada       |
+| `score_100`        | Día perfecto          | Check-in con 100 puntos       | Gema azul             |
+| `lumi_first`       | Hola Lumi             | Primera conversación con Lumi | Burbuja de chat verde |
 
 ---
 
 ### 17.12 `alerts`
+
 Alertas generadas por eventos críticos del paciente. Aparecen en el historial del cuidador.
 
 ```
@@ -728,15 +763,16 @@ alerts/
 
 Reglas de disparo:
 
-| type | Condición | Push al cuidador |
-|---|---|---|
-| `sos` | Paciente activa el botón SOS | Sí |
-| `low_score` | Puntaje del check-in es 20 o menos | Sí |
-| `no_checkin` | No se registró check-in antes de las 23:59 | No |
+| type         | Condición                                  | Push al cuidador |
+| ------------ | ------------------------------------------ | ---------------- |
+| `sos`        | Paciente activa el botón SOS               | Sí               |
+| `low_score`  | Puntaje del check-in es 20 o menos         | Sí               |
+| `no_checkin` | No se registró check-in antes de las 23:59 | No               |
 
 ---
 
 ### 17.13 `lumiSessions`
+
 Sesiones de conversación entre el paciente y Lumi.
 
 ```

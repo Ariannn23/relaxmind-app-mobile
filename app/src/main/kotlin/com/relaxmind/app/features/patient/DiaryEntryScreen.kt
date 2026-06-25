@@ -2,9 +2,7 @@ package com.relaxmind.app.features.patient
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,45 +10,39 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.relaxmind.app.ui.components.FullScreenLoadingOverlay
+import com.relaxmind.app.ui.components.FullScreenLoadingScreen
 import com.relaxmind.app.ui.themes.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 
 private data class EmotionOption(val label: String)
+private data class CategoryOption(val label: String, val icon: ImageVector)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiaryEntryScreen(
     viewModel: PatientViewModel = viewModel(),
@@ -65,15 +57,21 @@ fun DiaryEntryScreen(
     var selectedEmotion by remember { mutableStateOf("Tranquilo") }
     var notes by remember { mutableStateOf("") }
     var selectedPhotoUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var showValidationError by remember { mutableStateOf(false) }
 
-    val categories = listOf("Estrés", "Familia", "Trabajo", "Logro", "Otro")
+    val categories = listOf(
+        CategoryOption("Estrés", Icons.Default.Cloud),
+        CategoryOption("Familia", Icons.Default.Groups),
+        CategoryOption("Trabajo", Icons.Default.Work),
+        CategoryOption("Logro", Icons.Default.Star),
+        CategoryOption("Otro", Icons.Default.MoreHoriz)
+    )
     val emotions = listOf(
         EmotionOption("Ansioso"),
         EmotionOption("Tranquilo"),
         EmotionOption("Feliz"),
         EmotionOption("Triste"),
-        EmotionOption("Frustrado"),
-        EmotionOption("Emocionado")
+        EmotionOption("Frustrado")
     )
 
     // Launch photo picker
@@ -87,85 +85,125 @@ fun DiaryEntryScreen(
         }
     }
 
+    if (isLoading) {
+        FullScreenLoadingScreen(text = "Guardando entrada...")
+        return
+    }
+
     Scaffold(
-        containerColor = Color.Transparent
+        containerColor = Color(0xFFFEFCF8),
+        bottomBar = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 24.dp)
+            ) {
+                Button(
+                    onClick = {
+                        if (notes.isBlank()) {
+                            showValidationError = true
+                        } else {
+                            showValidationError = false
+                            viewModel.createDiaryEntry(
+                                category = selectedCategory,
+                                emotion = selectedEmotion,
+                                notes = notes,
+                                localPhotoUris = selectedPhotoUris,
+                                context = context,
+                                onSuccess = {
+                                    onSaved()
+                                }
+                            )
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DiaryOrange),
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.Edit, contentDescription = "Guardar", tint = Color.White)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Guardar entrada",
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = Color.White
+                    )
+                }
+            }
+        }
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            DiaryAnimatedBackground()
-
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                // Back Button & Header Area
-                Row(
+                // Header Area
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 20.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 20.dp, vertical = 20.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .shadow(
-                                elevation = 4.dp,
-                                shape = CircleShape,
-                                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.15f),
-                                spotColor = Color(0xFF8A88A6).copy(alpha = 0.15f)
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        IconButton(
+                            onClick = onNavigateBack,
+                            modifier = Modifier.align(Alignment.CenterStart)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                contentDescription = "Volver",
+                                tint = TextPrimary
                             )
-                            .background(Color.White, CircleShape)
-                            .clickable(onClick = onNavigateBack),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                            contentDescription = "Volver",
-                            tint = PatientGreen,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column {
-                        Text(
-                            text = "Nueva entrada",
-                            fontFamily = LexendFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 24.sp,
-                            color = TextPrimary
-                        )
-                        Text(
-                            text = "Guarda un momento de tu día",
-                            fontFamily = LexendFontFamily,
-                            fontWeight = FontWeight.Normal,
-                            fontSize = 12.sp,
-                            color = TextSecondary
-                        )
+                        }
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.align(Alignment.Center)
+                        ) {
+                            Text(
+                                text = "Nueva nota",
+                                fontFamily = LexendFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = "Guarda un momento de tu día ✨",
+                                fontFamily = LexendFontFamily,
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 13.sp,
+                                color = TextSecondary
+                            )
+                        }
                     }
                 }
 
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(28.dp)
                 ) {
                     // CATEGORÍA CHIPS
                     Column {
-                        Text(
-                            text = "Categoría",
-                            fontFamily = LexendFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            color = TextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Label, contentDescription = null, tint = DiaryOrange, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Categoría",
+                                fontFamily = LexendFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = TextPrimary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -173,28 +211,35 @@ fun DiaryEntryScreen(
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             categories.forEach { cat ->
-                                val isSelected = cat == selectedCategory
+                                val isSelected = cat.label == selectedCategory
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(20.dp))
-                                        .background(
-                                            if (isSelected) DiaryOrange else Color.White
-                                        )
+                                        .background(if (isSelected) DiaryOrange else Color.White)
                                         .border(
                                             width = 1.dp,
                                             color = if (isSelected) DiaryOrange else BorderSoft,
                                             shape = RoundedCornerShape(20.dp)
                                         )
-                                        .clickable { selectedCategory = cat }
-                                        .padding(horizontal = 18.dp, vertical = 10.dp)
+                                        .clickable { selectedCategory = cat.label }
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
                                 ) {
-                                    Text(
-                                        text = cat,
-                                        fontFamily = LexendFontFamily,
-                                        color = if (isSelected) Color.White else TextSecondary,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        fontSize = 13.sp
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = cat.icon,
+                                            contentDescription = cat.label,
+                                            tint = if (isSelected) Color.White else TextSecondary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = cat.label,
+                                            fontFamily = LexendFontFamily,
+                                            color = if (isSelected) Color.White else TextSecondary,
+                                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                                            fontSize = 13.sp
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -202,32 +247,36 @@ fun DiaryEntryScreen(
 
                     // ESTADOS EMOCIONALES
                     Column {
-                        Text(
-                            text = "¿Cómo te sientes hoy?",
-                            fontFamily = LexendFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            color = TextPrimary
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Favorite, contentDescription = null, tint = DiaryOrange, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "¿Cómo te sientes hoy?",
+                                fontFamily = LexendFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = TextPrimary
+                            )
+                        }
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .horizontalScroll(rememberScrollState())
                                 .padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             emotions.forEach { option ->
                                 val isSelected = option.label == selectedEmotion
                                 Card(
                                     colors = CardDefaults.cardColors(
-                                        containerColor = if (isSelected) DiaryOrangeLight else Color.White
+                                        containerColor = if (isSelected) DiaryOrange.copy(alpha = 0.1f) else Color.White
                                     ),
                                     border = androidx.compose.foundation.BorderStroke(
                                         width = if (isSelected) 1.5.dp else 1.dp,
                                         color = if (isSelected) DiaryOrange else BorderSoft
                                     ),
-                                    shape = RoundedCornerShape(18.dp),
+                                    shape = RoundedCornerShape(16.dp),
                                     modifier = Modifier
                                         .width(90.dp)
                                         .height(110.dp)
@@ -244,238 +293,219 @@ fun DiaryEntryScreen(
                                         // Custom Drawn Emotion Sticker Face
                                         EmotionSticker(
                                             emotion = option.label,
-                                            tint = if (isSelected) DiaryOrange else TextSecondary,
-                                            modifier = Modifier.size(46.dp)
+                                            tint = if (isSelected) DiaryOrange else Color(0xFF6B7280),
+                                            modifier = Modifier.size(48.dp)
                                         )
-
                                         Spacer(modifier = Modifier.height(8.dp))
-
                                         Text(
                                             text = option.label,
                                             fontFamily = LexendFontFamily,
-                                            color = if (isSelected) DiaryOrange else TextPrimary,
+                                            color = if (isSelected) DiaryOrange else TextSecondary,
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                            fontSize = 11.sp
+                                            fontSize = 12.sp
                                         )
-
-                                        if (isSelected) {
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            Box(
-                                                modifier = Modifier
-                                                    .width(28.dp)
-                                                    .height(2.dp)
-                                                    .background(PatientGreen, RoundedCornerShape(1.dp))
-                                            )
-                                        }
                                     }
                                 }
                             }
                         }
                     }
 
-                    // TEXT FIELD ¿QUÉ QUIERES RECORDAR DE HOY?
+                    // NOTAS
                     Column {
-                        Text(
-                            text = "¿Qué quieres recordar de hoy?",
-                            fontFamily = LexendFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            color = TextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Edit, contentDescription = null, tint = DiaryOrange, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "¿Qué quieres recordar de hoy?",
+                                fontFamily = LexendFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = TextPrimary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
                         Box(
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.White)
+                                .border(1.dp, DiaryOrange.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
                         ) {
-                            OutlinedTextField(
+                            TextField(
                                 value = notes,
-                                onValueChange = { if (it.length <= 500) notes = it },
-                                placeholder = { Text("Hoy fue un día bastante tranquilo...", fontFamily = LexendFontFamily, color = Color.LightGray) },
-                                shape = RoundedCornerShape(18.dp),
+                                onValueChange = { 
+                                    if (it.length <= 500) notes = it 
+                                    if (notes.isNotBlank()) showValidationError = false
+                                },
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(180.dp)
-                                    .shadow(
-                                        elevation = 3.dp,
-                                        shape = RoundedCornerShape(18.dp),
-                                        ambientColor = Color(0xFF8A88A6).copy(alpha = 0.08f),
-                                        spotColor = Color(0xFF8A88A6).copy(alpha = 0.08f)
-                                    ),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = PatientGreen,
-                                    unfocusedBorderColor = BorderSoft,
-                                    focusedContainerColor = Color.White,
-                                    unfocusedContainerColor = Color.White,
-                                    cursorColor = PatientGreen
+                                    .fillMaxSize()
+                                    .padding(bottom = 24.dp),
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    cursorColor = DiaryOrange
                                 ),
-                                maxLines = 10
+                                textStyle = androidx.compose.ui.text.TextStyle(
+                                    fontFamily = LexendFontFamily,
+                                    fontSize = 14.sp,
+                                    color = TextPrimary
+                                ),
+                                placeholder = {
+                                    Text(
+                                        text = "Empieza a escribir aquí...",
+                                        fontFamily = LexendFontFamily,
+                                        color = TextSecondary,
+                                        fontSize = 14.sp
+                                    )
+                                }
                             )
                             Text(
-                                text = "${notes.length}/500",
+                                text = "${notes.length} / 500",
                                 fontFamily = LexendFontFamily,
                                 fontSize = 11.sp,
                                 color = TextSecondary,
                                 modifier = Modifier
                                     .align(Alignment.BottomEnd)
-                                    .padding(bottom = 8.dp, end = 12.dp)
+                                    .padding(end = 16.dp, bottom = 12.dp)
+                            )
+                        }
+                        if (showValidationError) {
+                            Text(
+                                text = "La nota no puede estar vacía",
+                                color = MaterialTheme.colorScheme.error,
+                                fontSize = 12.sp,
+                                fontFamily = LexendFontFamily,
+                                modifier = Modifier.padding(top = 4.dp, start = 4.dp)
                             )
                         }
                     }
 
-                    // SECCIÓN DE FOTOS
+                    // FOTOS (REMOVIDO TEMPORALMENTE)
+                    /*
                     Column {
-                        Text(
-                            text = "Fotos",
-                            fontFamily = LexendFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            color = TextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Image, contentDescription = null, tint = DiaryOrange, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Fotos",
+                                fontFamily = LexendFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = TextPrimary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
                         LazyRow(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            // Display selected photos
-                            itemsIndexed(selectedPhotoUris) { index, uri ->
-                                Box(
-                                    modifier = Modifier
-                                        .size(110.dp)
-                                        .clip(RoundedCornerShape(18.dp))
-                                        .border(1.dp, BorderSoft, RoundedCornerShape(18.dp))
-                                        .shadow(
-                                            elevation = 2.dp,
-                                            shape = RoundedCornerShape(18.dp),
-                                            ambientColor = Color(0xFF8A88A6).copy(alpha = 0.05f),
-                                            spotColor = Color(0xFF8A88A6).copy(alpha = 0.05f)
-                                        )
-                                ) {
-                                    AsyncImage(
-                                        model = uri,
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                    // Remove button (X)
+                            if (selectedPhotoUris.size < 5) {
+                                item {
                                     Box(
                                         modifier = Modifier
-                                            .align(Alignment.TopEnd)
-                                            .padding(6.dp)
-                                            .size(24.dp)
-                                            .clip(CircleShape)
-                                            .background(Color.Black.copy(alpha = 0.6f))
+                                            .width(110.dp)
+                                            .height(90.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(DiaryOrange.copy(alpha = 0.05f))
+                                            .drawBehind {
+                                                drawRoundRect(
+                                                    color = DiaryOrange.copy(alpha = 0.5f),
+                                                    style = Stroke(
+                                                        width = 1.dp.toPx(),
+                                                        pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                                                    ),
+                                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(12.dp.toPx(), 12.dp.toPx())
+                                                )
+                                            }
                                             .clickable {
-                                                selectedPhotoUris = selectedPhotoUris.toMutableList().apply {
-                                                    removeAt(index)
-                                                }
+                                                photoPickerLauncher.launch(
+                                                    androidx.activity.result.PickVisualMediaRequest(
+                                                        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                                                    )
+                                                )
                                             },
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = "Eliminar foto",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                    }
-                                }
-                            }
-
-                            // Add Photo Button (Dotted/dashed card style)
-                            if (selectedPhotoUris.size < 5) {
-                                item {
-                                    Card(
-                                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                                        border = BorderStroke(1.5.dp, DiaryOrange),
-                                        shape = RoundedCornerShape(18.dp),
-                                        modifier = Modifier
-                                            .size(110.dp)
-                                            .clickable {
-                                                photoPickerLauncher.launch(
-                                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                                )
-                                            }
-                                    ) {
-                                        Column(
-                                            modifier = Modifier.fillMaxSize(),
-                                            verticalArrangement = Arrangement.Center,
-                                            horizontalAlignment = Alignment.CenterHorizontally
-                                        ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                             Icon(
                                                 imageVector = Icons.Default.Add,
                                                 contentDescription = "Agregar foto",
-                                                tint = DiaryOrange,
-                                                modifier = Modifier.size(28.dp)
+                                                tint = DiaryOrange
                                             )
-                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Spacer(modifier = Modifier.height(4.dp))
                                             Text(
                                                 text = "Agregar foto",
                                                 fontFamily = LexendFontFamily,
+                                                fontSize = 12.sp,
                                                 color = DiaryOrange,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold
+                                                fontWeight = FontWeight.SemiBold
                                             )
                                         }
                                     }
                                 }
                             }
-                        }
-                    }
 
-                    if (errorMsg != null) {
-                        Text(
-                            text = errorMsg ?: "",
-                            fontFamily = LexendFontFamily,
-                            color = SOSCoral,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(start = 4.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // GUARDAR ENTRADA BUTTON (Pill-shaped green)
-                    Button(
-                        onClick = {
-                            viewModel.createDiaryEntry(
-                                category = selectedCategory,
-                                emotion = selectedEmotion,
-                                notes = notes,
-                                localPhotoUris = selectedPhotoUris,
-                                context = context,
-                                onSuccess = {
-                                    viewModel.clearError()
-                                    onSaved()
+                            itemsIndexed(selectedPhotoUris) { index, uri ->
+                                Box(
+                                    modifier = Modifier
+                                        .width(90.dp)
+                                        .height(90.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .border(1.dp, BorderSoft, RoundedCornerShape(12.dp))
+                                ) {
+                                    AsyncImage(
+                                        model = uri,
+                                        contentDescription = "Foto $index",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(4.dp)
+                                            .size(24.dp)
+                                            .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                            .clickable {
+                                                selectedPhotoUris = selectedPhotoUris.filterIndexed { i, _ -> i != index }
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Eliminar",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
                                 }
+                            }
+                        }
+
+                        // Privacy Text
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 16.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(imageVector = Icons.Default.Security, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Tus fotos son privadas y solo tú puedes verlas.",
+                                fontFamily = LexendFontFamily,
+                                fontSize = 11.sp,
+                                color = TextSecondary
                             )
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = PatientGreen),
-                        shape = RoundedCornerShape(24.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                            .shadow(
-                                elevation = 6.dp,
-                                shape = RoundedCornerShape(24.dp),
-                                ambientColor = PatientGreen.copy(alpha = 0.25f),
-                                spotColor = PatientGreen.copy(alpha = 0.25f)
-                            )
-                    ) {
-                        Text(
-                            text = "Guardar entrada",
-                            fontFamily = LexendFontFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 15.sp,
-                            color = Color.White
-                        )
                     }
+                    */
 
-                    Spacer(modifier = Modifier.height(30.dp))
+                    Spacer(modifier = Modifier.height(100.dp))
                 }
-            }
-
-            if (isLoading) {
-                FullScreenLoadingOverlay()
             }
         }
     }
@@ -494,12 +524,6 @@ private fun EmotionSticker(
         val cx = w / 2f
         val cy = h / 2f
         
-        // Draw face background fill
-        drawCircle(
-            color = tint.copy(alpha = 0.08f),
-            radius = radius,
-            center = androidx.compose.ui.geometry.Offset(cx, cy)
-        )
         // Draw face outline
         drawCircle(
             color = tint,
@@ -579,9 +603,6 @@ private fun EmotionSticker(
                     quadraticBezierTo(cx, cy + radius * 0.15f, cx + radius * 0.25f, cy + radius * 0.32f)
                 }
                 drawPath(path = frown, color = tint, style = Stroke(width = 1.8.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
-                
-                // Small tear
-                drawCircle(color = Color(0xFF1E88E5), radius = 2.dp.toPx(), center = androidx.compose.ui.geometry.Offset(cx - radius * 0.35f, cy + radius * 0.1f))
             }
             "frustrado" -> {
                 // Angry eyebrows/eyes
@@ -594,205 +615,16 @@ private fun EmotionSticker(
                 // Straight line mouth
                 drawLine(color = tint, start = androidx.compose.ui.geometry.Offset(cx - radius * 0.3f, cy + radius * 0.25f), end = androidx.compose.ui.geometry.Offset(cx + radius * 0.3f, cy + radius * 0.25f), strokeWidth = 1.8.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
             }
-            "emocionado" -> {
-                // Wide open happy eyes
-                drawCircle(color = tint, radius = 2.5.dp.toPx(), center = androidx.compose.ui.geometry.Offset(cx - radius * 0.3f, cy - radius * 0.15f))
-                drawCircle(color = tint, radius = 2.5.dp.toPx(), center = androidx.compose.ui.geometry.Offset(cx + radius * 0.3f, cy - radius * 0.15f))
-                
-                // Raised eyebrows
-                val ebLeft = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(cx - radius * 0.45f, cy - radius * 0.3f)
-                    quadraticBezierTo(cx - radius * 0.3f, cy - radius * 0.38f, cx - radius * 0.15f, cy - radius * 0.3f)
-                }
-                val ebRight = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(cx + 0.15f * radius, cy - radius * 0.3f)
-                    quadraticBezierTo(cx + radius * 0.3f, cy - radius * 0.38f, cx + radius * 0.45f, cy - radius * 0.3f)
-                }
-                drawPath(path = ebLeft, color = tint, style = Stroke(width = 1.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
-                drawPath(path = ebRight, color = tint, style = Stroke(width = 1.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
-
-                // Open mouth
-                drawCircle(
-                    color = tint,
-                    radius = radius * 0.2f,
-                    center = androidx.compose.ui.geometry.Offset(cx, cy + radius * 0.22f)
-                )
-            }
             else -> {
-                // Default calm face
                 drawCircle(color = tint, radius = 2.dp.toPx(), center = androidx.compose.ui.geometry.Offset(cx - radius * 0.3f, cy - radius * 0.1f))
                 drawCircle(color = tint, radius = 2.dp.toPx(), center = androidx.compose.ui.geometry.Offset(cx + radius * 0.3f, cy - radius * 0.1f))
+                
                 val smile = androidx.compose.ui.graphics.Path().apply {
                     moveTo(cx - radius * 0.25f, cy + radius * 0.2f)
                     quadraticBezierTo(cx, cy + radius * 0.35f, cx + radius * 0.25f, cy + radius * 0.2f)
                 }
                 drawPath(path = smile, color = tint, style = Stroke(width = 1.8.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
             }
-        }
-    }
-}
-
-@Composable
-private fun DiaryAnimatedBackground() {
-    val infiniteTransition = rememberInfiniteTransition(label = "diary-bg-anim")
-    
-    val floatOffset1 by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 18f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(4500, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "float1"
-    )
-    val floatOffset2 by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = -25f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(6000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "float2"
-    )
-    val alphaAnim by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 0.8f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(3000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "alpha"
-    )
-    val rotationAnim by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(12000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "rotation"
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(BackgroundWhite)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(360.dp)
-                .offset(x = (-100).dp, y = (-80).dp)
-                .blur(100.dp)
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            DiaryOrangeLight.copy(alpha = 0.28f),
-                            DiaryPeach.copy(alpha = 0.12f),
-                            Color.Transparent
-                        )
-                    ),
-                    shape = CircleShape
-                )
-        )
-
-        Box(
-            modifier = Modifier
-                .size(300.dp)
-                .offset(x = 180.dp, y = 350.dp)
-                .blur(90.dp)
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            DiaryOrangeLight.copy(alpha = 0.22f),
-                            DiaryPeach.copy(alpha = 0.1f),
-                            Color.Transparent
-                        )
-                    ),
-                    shape = CircleShape
-                )
-        )
-
-        Box(
-            modifier = Modifier
-                .size(320.dp)
-                .offset(x = (-50).dp, y = 700.dp)
-                .blur(95.dp)
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            DiaryOrangeLight.copy(alpha = 0.25f),
-                            Color.Transparent
-                        )
-                    ),
-                    shape = CircleShape
-                )
-        )
-
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
-
-            fun drawSparkle(cx: Float, cy: Float, size: Float, rotationDegrees: Float, alpha: Float) {
-                val path = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(cx, cy - size)
-                    quadraticBezierTo(cx, cy, cx + size, cy)
-                    quadraticBezierTo(cx, cy, cx, cy + size)
-                    quadraticBezierTo(cx, cy, cx - size, cy)
-                    quadraticBezierTo(cx, cy, cx, cy - size)
-                    close()
-                }
-                
-                rotate(degrees = rotationDegrees, pivot = androidx.compose.ui.geometry.Offset(cx, cy)) {
-                    drawPath(
-                        path = path,
-                        color = DiaryOrange.copy(alpha = alpha),
-                    )
-                }
-            }
-
-            drawSparkle(
-                cx = w * 0.15f,
-                cy = h * 0.25f + floatOffset1.dp.toPx(),
-                size = 18.dp.toPx(),
-                rotationDegrees = rotationAnim,
-                alpha = 0.18f * alphaAnim
-            )
-
-            drawSparkle(
-                cx = w * 0.82f,
-                cy = h * 0.15f + floatOffset2.dp.toPx(),
-                size = 24.dp.toPx(),
-                rotationDegrees = -rotationAnim * 0.5f,
-                alpha = 0.22f * alphaAnim
-            )
-
-            drawSparkle(
-                cx = w * 0.78f,
-                cy = h * 0.72f + floatOffset1.dp.toPx(),
-                size = 15.dp.toPx(),
-                rotationDegrees = rotationAnim * 1.2f,
-                alpha = 0.15f * alphaAnim
-            )
-
-            drawSparkle(
-                cx = w * 0.22f,
-                cy = h * 0.8f + floatOffset2.dp.toPx(),
-                size = 20.dp.toPx(),
-                rotationDegrees = -rotationAnim,
-                alpha = 0.20f * alphaAnim
-            )
-            
-            drawCircle(
-                color = DiaryOrange.copy(alpha = 0.05f),
-                radius = 12.dp.toPx(),
-                center = androidx.compose.ui.geometry.Offset(w * 0.45f, h * 0.48f + floatOffset1.dp.toPx() * 0.8f)
-            )
-            
-            drawCircle(
-                color = DiaryOrange.copy(alpha = 0.04f),
-                radius = 8.dp.toPx(),
-                center = androidx.compose.ui.geometry.Offset(w * 0.88f, h * 0.48f + floatOffset2.dp.toPx() * 1.2f)
-            )
         }
     }
 }

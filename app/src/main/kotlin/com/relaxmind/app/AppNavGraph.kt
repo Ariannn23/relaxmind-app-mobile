@@ -7,7 +7,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -74,6 +78,7 @@ sealed class Screen(val route: String) {
         fun createRoute(exerciseId: String): String = "patient/meditation/$exerciseId"
     }
     data object Progress : Screen("patient/progress")
+    data object PatientAchievementLibrary : Screen("patient/achievement_library")
     data object Schedule : Screen("patient/schedule")
     data object CreateAppointment : Screen("patient/appointments/create")
     data object AppointmentDetail : Screen("patient/appointments/{appointmentId}") {
@@ -83,6 +88,10 @@ sealed class Screen(val route: String) {
     }
     data object Diary : Screen("patient/diary")
     data object DiaryEntry : Screen("patient/diary-entry")
+    data object DiaryDayEntries : Screen("patient/diary/entries/{dateString}") {
+        const val DateStringArg = "dateString"
+        fun createRoute(dateString: String): String = "patient/diary/entries/$dateString"
+    }
     data object LumiChat : Screen("patient/lumi?sessionId={sessionId}") {
         const val SessionIdArg = "sessionId"
         fun createRoute(sessionId: String? = null): String {
@@ -165,6 +174,25 @@ fun AppNavGraph(
             launchSingleTop = true
             restoreState = true
         }
+    }
+
+    var unlockedAchievement by remember { mutableStateOf<com.relaxmind.app.data.model.UserAchievement?>(null) }
+    
+    LaunchedEffect(Unit) {
+        com.relaxmind.app.features.patient.AchievementManager.achievementUnlockedEvent.collect { achievement ->
+            unlockedAchievement = achievement
+        }
+    }
+
+    if (unlockedAchievement != null) {
+        com.relaxmind.app.features.patient.AchievementUnlockedScreen(
+            achievement = unlockedAchievement!!,
+            onContinue = { unlockedAchievement = null },
+            onNavigateToLibrary = {
+                unlockedAchievement = null
+                navController.navigate(Screen.PatientAchievementLibrary.route)
+            }
+        )
     }
 
     Scaffold(
@@ -343,6 +371,11 @@ fun AppNavGraph(
                 showBottomNav = false
             )
         }
+        composable(Screen.PatientAchievementLibrary.route) {
+            com.relaxmind.app.features.patient.AchievementLibraryScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
         composable(Screen.Schedule.route) {
             ScheduleScreen(
                 onNavigate = { route ->
@@ -373,17 +406,25 @@ fun AppNavGraph(
         composable(Screen.Diary.route) {
             DiaryScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onCreateEntry = { navController.navigate(Screen.DiaryEntry.route) }
+                onCreateEntry = { navController.navigate(Screen.DiaryEntry.route) },
+                onDayClick = { dateString -> navController.navigate(Screen.DiaryDayEntries.createRoute(dateString)) }
             )
         }
         composable(Screen.DiaryEntry.route) {
-            DiaryEntryScreen(
+            com.relaxmind.app.features.patient.DiaryEntryScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onSaved = {
-                    navController.navigate(Screen.Diary.route) {
-                        popUpTo(Screen.Diary.route) { inclusive = true }
-                    }
-                }
+                onSaved = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = Screen.DiaryDayEntries.route,
+            arguments = listOf(navArgument(Screen.DiaryDayEntries.DateStringArg) { type = NavType.StringType })
+        ) { backStackEntry ->
+            val dateString = backStackEntry.arguments?.getString(Screen.DiaryDayEntries.DateStringArg).orEmpty()
+            com.relaxmind.app.features.patient.DiaryDayEntriesScreen(
+                dateString = dateString,
+                onNavigateBack = { navController.popBackStack() },
+                onCreateEntry = { navController.navigate(Screen.DiaryEntry.route) }
             )
         }
         composable(

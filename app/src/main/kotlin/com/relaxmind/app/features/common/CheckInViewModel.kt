@@ -157,7 +157,42 @@ class CheckInViewModel(
                 }
                 
                 // Update streak
-                firestoreRepository.updatePatientStreak(userId, dateStr)
+                val streakResult = firestoreRepository.updatePatientStreak(userId, dateStr)
+                
+                // Evaluate achievements
+                val achievementsResult = firestoreRepository.getPatientAchievements(userId)
+                val unlocked = achievementsResult.getOrDefault(emptyList())
+                
+                com.relaxmind.app.features.patient.AchievementManager.checkAndUnlock(
+                    "first_checkin", userId, unlocked, firestoreRepository
+                )
+                
+                if (calculatedScore >= 80) {
+                    com.relaxmind.app.features.patient.AchievementManager.checkAndUnlock(
+                        "score_80", userId, unlocked, firestoreRepository
+                    )
+                }
+                if (calculatedScore == 100) {
+                    com.relaxmind.app.features.patient.AchievementManager.checkAndUnlock(
+                        "score_100", userId, unlocked, firestoreRepository
+                    )
+                }
+                
+                streakResult.getOrNull()?.let { streakObj ->
+                    val currentStreak = streakObj.currentStreak
+                    if (currentStreak >= 3) {
+                        com.relaxmind.app.features.patient.AchievementManager.checkAndUnlock("streak_3", userId, unlocked, firestoreRepository)
+                    }
+                    if (currentStreak >= 7) {
+                        com.relaxmind.app.features.patient.AchievementManager.checkAndUnlock("streak_7", userId, unlocked, firestoreRepository)
+                    }
+                    if (currentStreak >= 14) {
+                        com.relaxmind.app.features.patient.AchievementManager.checkAndUnlock("streak_14", userId, unlocked, firestoreRepository)
+                    }
+                    if (currentStreak >= 30) {
+                        com.relaxmind.app.features.patient.AchievementManager.checkAndUnlock("streak_30", userId, unlocked, firestoreRepository)
+                    }
+                }
                 
                 _uiState.value = CheckInUiState.Success(calculatedScore, category)
             } else {

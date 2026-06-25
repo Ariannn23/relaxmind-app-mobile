@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Edit
@@ -17,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -39,16 +41,13 @@ import java.util.Locale
 fun DiaryScreen(
     viewModel: PatientViewModel = viewModel(),
     onNavigateBack: () -> Unit,
-    onCreateEntry: () -> Unit
+    onCreateEntry: () -> Unit,
+    onDayClick: (String) -> Unit
 ) {
     val isLoading by viewModel.isLoading.collectAsState()
     val entries by viewModel.diaryEntries.collectAsState()
     
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
-    var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
-    var showBottomSheet by remember { mutableStateOf(false) }
-
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
 
     LaunchedEffect(Unit) {
         viewModel.loadDiaryEntries()
@@ -63,12 +62,16 @@ fun DiaryScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            ExtendedFloatingActionButton(
                 onClick = onCreateEntry,
-                containerColor = DiaryOrange,
-                contentColor = Color.White
+                containerColor = DiaryOrange.copy(alpha = 0.2f),
+                contentColor = DiaryOrange,
+                shape = RoundedCornerShape(24.dp),
+                elevation = FloatingActionButtonDefaults.elevation(0.dp)
             ) {
-                Icon(Icons.Default.Edit, "Nueva nota")
+                Icon(Icons.Default.Add, contentDescription = "Nueva entrada")
+                Spacer(Modifier.width(8.dp))
+                Text("Nueva entrada", fontFamily = LexendFontFamily, fontWeight = FontWeight.Bold)
             }
         }
     ) { innerPadding ->
@@ -89,10 +92,9 @@ fun DiaryScreen(
                     onMonthPrevious = { currentMonth = currentMonth.minusMonths(1) },
                     onMonthNext = { currentMonth = currentMonth.plusMonths(1) },
                     onDayClick = { date ->
-                        selectedDate = date
                         val dayEntries = entries.filter { runCatching { LocalDate.parse(it.date) }.getOrNull() == date }
                         if (dayEntries.isNotEmpty()) {
-                            showBottomSheet = true
+                            onDayClick(date.toString())
                         }
                     }
                 )
@@ -100,36 +102,6 @@ fun DiaryScreen(
 
             if (isLoading) {
                 FullScreenLoadingOverlay()
-            }
-        }
-    }
-
-    if (showBottomSheet && selectedDate != null) {
-        ModalBottomSheet(
-            onDismissRequest = { showBottomSheet = false },
-            sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface,
-            dragHandle = { BottomSheetDefaults.DragHandle() }
-        ) {
-            val dayEntries = entries.filter { runCatching { LocalDate.parse(it.date) }.getOrNull() == selectedDate }
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp)
-            ) {
-                Text(
-                    text = selectedDate!!.format(DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", Locale("es", "ES"))).replaceFirstChar { it.uppercase() },
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = DiaryOrange,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                
-                dayEntries.forEach { entry ->
-                    DiaryHistoryCard(entry = entry)
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
@@ -271,11 +243,12 @@ private fun DiaryCalendarCell(
             .aspectRatio(0.85f)
             .padding(4.dp)
             .clip(RoundedCornerShape(12.dp))
-            .clickable(enabled = hasEntries) { onClick() }
+            .background(if (isToday) DiaryOrange.copy(alpha = 0.15f) else Color(0xFFF7FAFC))
             .then(
-                if (isToday && !hasEntries) Modifier.border(1.dp, DiaryPeach, RoundedCornerShape(12.dp))
+                if (isToday && !hasEntries) Modifier.border(1.dp, DiaryOrange, RoundedCornerShape(12.dp))
                 else Modifier
-            ),
+            )
+            .clickable(enabled = hasEntries) { onClick() },
         contentAlignment = Alignment.Center
     ) {
         if (photoUrl != null) {
@@ -285,26 +258,36 @@ private fun DiaryCalendarCell(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-        } else {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "${date.dayOfMonth}",
-                    fontFamily = LexendFontFamily,
-                    fontWeight = if (hasEntries) FontWeight.Bold else FontWeight.Normal,
-                    fontSize = 14.sp,
-                    color = if (hasEntries) TextPrimary else TextSecondary.copy(alpha = 0.5f)
-                )
-                if (hasEntries) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(4.dp)
-                            .background(dotColor, CircleShape)
+            // Overlay gradient to ensure day number is visible
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Black.copy(alpha = 0.3f), Color.Transparent, Color.Black.copy(alpha = 0.4f))
+                        )
                     )
-                }
+            )
+        }
+        
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "${date.dayOfMonth}",
+                fontFamily = LexendFontFamily,
+                fontWeight = if (hasEntries) FontWeight.Bold else FontWeight.Normal,
+                fontSize = 14.sp,
+                color = if (photoUrl != null) Color.White else if (hasEntries) TextPrimary else TextSecondary.copy(alpha = 0.5f)
+            )
+            if (hasEntries && photoUrl == null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .size(4.dp)
+                        .background(dotColor, CircleShape)
+                )
             }
         }
         
@@ -322,70 +305,96 @@ private fun DiaryCalendarCell(
 private fun DiaryHistoryCard(entry: DiaryEntry) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = DiaryOrangeLight)
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(Color.White, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = null,
-                            tint = DiaryOrange,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    Column {
-                        Text(
-                            text = "Estado: ${entry.emotion}",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                    }
-                }
+            // Photo at the top if it exists (Polaroid style)
+            if (entry.photoUrls.isNotEmpty()) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.White)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .fillMaxWidth()
+                        .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 4.dp)
                 ) {
-                    Text(
-                        text = entry.category,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = DiaryOrange,
-                        fontWeight = FontWeight.Bold
+                    DiaryPhotoCollage(
+                        photoUrls = entry.photoUrls.take(5),
+                        modifier = Modifier.clip(RoundedCornerShape(8.dp))
                     )
                 }
             }
 
-            if (entry.notes.isNotBlank()) {
-                Text(
-                    text = entry.notes,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextPrimary.copy(alpha = 0.8f)
-                )
-            }
+            // Text and info below
+            Column(
+                modifier = Modifier.padding(
+                    start = 20.dp, 
+                    end = 20.dp, 
+                    bottom = 24.dp, 
+                    top = if (entry.photoUrls.isEmpty()) 24.dp else 12.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                if (entry.notes.isNotBlank()) {
+                    Text(
+                        text = "\"${entry.notes}\"",
+                        fontFamily = LexendFontFamily,
+                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 16.sp,
+                        color = TextPrimary.copy(alpha = 0.85f),
+                        lineHeight = 24.sp
+                    )
+                }
 
-            if (entry.photoUrls.isNotEmpty()) {
-                DiaryPhotoCollage(photoUrls = entry.photoUrls.take(5))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Emotion
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        val emotionLabel = entry.emotion.lowercase()
+                        val dotColor = when {
+                            emotionLabel.contains("triste") || emotionLabel.contains("ansios") -> Color(0xFF90CDF4)
+                            emotionLabel.contains("feliz") || emotionLabel.contains("alegre") -> ScoreGreenLight
+                            emotionLabel.contains("enojad") || emotionLabel.contains("frustrad") -> ScoreRed.copy(alpha = 0.6f)
+                            else -> ScoreYellow
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(dotColor, CircleShape)
+                        )
+                        Text(
+                            text = entry.emotion,
+                            fontFamily = LexendFontFamily,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                    }
+
+                    // Category Pill
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFF7FAFC))
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = entry.category,
+                            fontFamily = LexendFontFamily,
+                            fontSize = 11.sp,
+                            color = TextSecondary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
         }
     }

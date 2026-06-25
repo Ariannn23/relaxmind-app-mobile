@@ -182,7 +182,7 @@ fun DashboardPatientScreen(
                         DashboardHeader(
                             patientName = patient?.name ?: "Carlos",
                             avatarUrl = patient?.avatarUrl ?: "",
-                            onAvatarClick = onNavigateToEditProfile,
+                            onAvatarClick = { onNavigate(Screen.PatientSettings.route) },
                             hasNotifications = true // Visual notification bell badge as mockup
                         )
 

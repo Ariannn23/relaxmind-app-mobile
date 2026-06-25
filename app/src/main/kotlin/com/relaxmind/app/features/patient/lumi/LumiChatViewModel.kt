@@ -89,6 +89,20 @@ class LumiChatViewModel(
             if (isFirstMessage) {
                 val newTitle = text.split(" ").take(5).joinToString(" ") + if (text.split(" ").size > 5) "..." else ""
                 firestoreRepository.updateLumiSessionTitle(sessionId, newTitle)
+                
+                // Unlock first Lumi chat achievement
+                val patientId = authService.getCurrentUser()?.uid
+                if (patientId != null) {
+                    val achievementsResult = firestoreRepository.getPatientAchievements(patientId)
+                    if (achievementsResult.isSuccess) {
+                        com.relaxmind.app.features.patient.AchievementManager.checkAndUnlock(
+                            key = "lumi_first",
+                            userId = patientId,
+                            unlockedAchievements = achievementsResult.getOrNull() ?: emptyList(),
+                            firestoreRepository = firestoreRepository
+                        )
+                    }
+                }
             } else {
                 // Also update title if it's an old chat and the title is still default
                 firestoreRepository.updateLumiSessionTitleIfDefault(sessionId, text)
