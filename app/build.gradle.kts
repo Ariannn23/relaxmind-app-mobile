@@ -14,6 +14,8 @@ if (localPropertiesFile.exists()) {
 val groqApiKey = localProperties.getProperty("GROQ_API_KEY") ?: "MOCK_KEY"
 val mapsApiKey = localProperties.getProperty("MAPS_API_KEY") ?: "MOCK_MAPS_KEY"
 val googleWebClientId = localProperties.getProperty("GOOGLE_WEB_CLIENT_ID") ?: "MOCK_WEB_CLIENT_ID"
+val notificationsBaseUrl = localProperties.getProperty("NOTIFICATIONS_BASE_URL")
+    ?: "https://relaxmind-notifications.vercel.app"
 
 android {
     namespace = "com.relaxmind.app"
@@ -33,6 +35,7 @@ android {
         buildConfigField("String", "GROQ_API_KEY", "\"$groqApiKey\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
         buildConfigField("String", "MAPS_API_KEY", "\"$mapsApiKey\"")
+        buildConfigField("String", "NOTIFICATIONS_BASE_URL", "\"$notificationsBaseUrl\"")
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 

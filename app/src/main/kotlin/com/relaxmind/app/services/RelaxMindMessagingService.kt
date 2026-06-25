@@ -66,18 +66,15 @@ class RelaxMindMessagingService : FirebaseMessagingService() {
                     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
                 )
 
-                val builder = NotificationCompat.Builder(this, NotificationUtils.CHANNEL_SOS)
-                    .setSmallIcon(R.drawable.icono_plano2)
-                    .setContentTitle(title)
-                    .setContentText(body)
-                    .setPriority(NotificationCompat.PRIORITY_MAX)
-                    .setCategory(NotificationCompat.CATEGORY_ALARM)
-                    .setContentIntent(pendingIntent)
-                    .setFullScreenIntent(pendingIntent, true)
-                    .setAutoCancel(true)
+                val notification = NotificationUtils.buildSosNotification(
+                    context = this,
+                    title = title,
+                    body = body,
+                    contentIntent = pendingIntent
+                )
 
                 with(NotificationManagerCompat.from(this)) {
-                    notify((alertId ?: "sos").hashCode(), builder.build())
+                    notify((alertId ?: "sos").hashCode(), notification)
                 }
             }
             "low_score", "wellness" -> {

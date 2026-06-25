@@ -13,6 +13,7 @@ import com.google.android.gms.location.Priority
 import com.relaxmind.app.data.model.CaregiverAlert
 import com.relaxmind.app.data.remote.FirebaseAuthService
 import com.relaxmind.app.data.remote.FirestoreRepository
+import com.relaxmind.app.data.remote.NotificationApiService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +26,7 @@ import java.util.Locale
 class SOSPatientViewModel(
     private val firestoreRepository: FirestoreRepository = FirestoreRepository(),
     private val authService: FirebaseAuthService = FirebaseAuthService(),
+    private val notificationApiService: NotificationApiService = NotificationApiService(),
     private val fusedLocationClient: FusedLocationProviderClient
 ) : ViewModel() {
 
@@ -140,7 +142,25 @@ class SOSPatientViewModel(
             viewModelScope.launch {
                 val result = firestoreRepository.createAlert(newAlert)
                 if (result.isSuccess) {
-                    currentAlertId = result.getOrNull()
+                    val createdAlertId = result.getOrNull()
+                    currentAlertId = createdAlertId
+                    if (createdAlertId != null) {
+                        val linkedCaregiverId = state.caregiverId
+                        if (linkedCaregiverId != null) {
+                            notificationApiService.sendSosAlert(
+                                patientId = state.patientId,
+                                caregiverId = linkedCaregiverId,
+                                alertId = createdAlertId,
+                                patientName = state.patientName
+                            ).onFailure { throwable ->
+                                Log.w(
+                                    "SOSPatientViewModel",
+                                    "La alerta se guardó, pero no se pudo enviar la notificación push.",
+                                    throwable
+                                )
+                            }
+                        }
+                    }
                     if (pendingLatitude != null && pendingLongitude != null) {
                         createOrUpdateAlert(pendingLatitude, pendingLongitude)
                         pendingLatitude = null
