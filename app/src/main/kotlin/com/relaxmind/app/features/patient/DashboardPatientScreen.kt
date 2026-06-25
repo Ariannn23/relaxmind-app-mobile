@@ -774,7 +774,6 @@ private fun DailyCheckInStatusCard(
 
             Row(
                 modifier = Modifier
-                    .shadow(2.dp, RoundedCornerShape(18.dp))
                     .background(if (completed) colors.checkInAccent.copy(alpha = 0.16f) else colors.checkInAccent, RoundedCornerShape(18.dp))
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
