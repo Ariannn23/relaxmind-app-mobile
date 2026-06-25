@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -158,4 +159,121 @@ private fun SkeletonLine(
             .clip(RoundedCornerShape(50))
             .then(ShimmerEffect())
     )
+}
+
+@Composable
+fun MeditateSkeleton(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        SkeletonBlock(height = 200, modifier = Modifier.clip(CircleShape))
+        SkeletonLine(widthFraction = 0.6f, height = 28)
+        SkeletonLine(widthFraction = 0.4f, height = 16)
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            SkeletonBlock(modifier = Modifier.weight(1f), height = 80)
+            SkeletonBlock(modifier = Modifier.weight(1f), height = 80)
+        }
+        SkeletonBlock(height = 64)
+    }
+}
+
+@Composable
+fun ScheduleSkeleton(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        SkeletonLine(widthFraction = 0.5f, height = 28)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            repeat(4) {
+                SkeletonBlock(modifier = Modifier.weight(1f), height = 80)
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        repeat(3) {
+            SkeletonBlock(height = 100)
+        }
+    }
+}
+
+@Composable
+fun SettingsSkeleton(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SkeletonBlock(modifier = Modifier.size(72.dp).clip(CircleShape), height = 72)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SkeletonLine(widthFraction = 0.5f, height = 24)
+                SkeletonLine(widthFraction = 0.3f, height = 16)
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        repeat(5) {
+            SkeletonBlock(height = 64)
+        }
+    }
+}
+
+@Composable
+fun AlertsHistorySkeleton(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        SkeletonLine(widthFraction = 0.4f, height = 28)
+        Spacer(modifier = Modifier.height(8.dp))
+        repeat(5) {
+            SkeletonBlock(height = 96)
+        }
+    }
+}
+
+@Composable
+fun CaregiverDashboardSkeleton(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Top Card
+        SkeletonBlock(height = 200, modifier = Modifier.clip(RoundedCornerShape(32.dp)))
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Horizontal Scroll Area
+        SkeletonLine(widthFraction = 0.4f, height = 24)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            SkeletonBlock(modifier = Modifier.weight(1f), height = 180)
+            SkeletonBlock(modifier = Modifier.weight(1f), height = 180)
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Alerts
+        SkeletonLine(widthFraction = 0.4f, height = 24)
+        repeat(3) {
+            SkeletonBlock(height = 90, modifier = Modifier.clip(RoundedCornerShape(20.dp)))
+        }
+    }
 }

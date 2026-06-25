@@ -1,4 +1,4 @@
-﻿package com.relaxmind.app.features.patient
+package com.relaxmind.app.features.patient
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -69,6 +69,9 @@ import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.LoadingIndicator
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.ScreenHeader
+import com.relaxmind.app.ui.components.MeditateSkeleton
+import com.relaxmind.app.ui.components.ErrorStateScreen
+import com.relaxmind.app.ui.components.LoadingIndicator
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.LexendFontFamily
 import com.relaxmind.app.ui.themes.LexendTypography
@@ -968,6 +971,7 @@ fun MeditateScreen(
     showBottomNav: Boolean = true
 ) {
     val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
     val exercises by viewModel.meditationExercises.collectAsState()
     val dailyGoal by viewModel.dailyGoal.collectAsState()
     val dailyGoalExercise by viewModel.dailyGoalExercise.collectAsState()
@@ -1002,8 +1006,16 @@ fun MeditateScreen(
                 // Soft background gradient spots
                 SoftGradientBackground(animateBlobs = true)
 
-                if (isLoading && exercises.isEmpty()) {
-                    LoadingIndicator(modifier = Modifier.align(Alignment.Center))
+                if (isLoading && exercises.isEmpty() && error == null) {
+                    MeditateSkeleton(modifier = Modifier.align(Alignment.Center))
+                } else if (error != null && exercises.isEmpty()) {
+                    ErrorStateScreen(
+                        message = error ?: "",
+                        onRetry = { 
+                            viewModel.loadDashboardData()
+                            viewModel.loadMeditationExercises()
+                        }
+                    )
                 } else {
                     LazyColumn(
                         modifier = Modifier

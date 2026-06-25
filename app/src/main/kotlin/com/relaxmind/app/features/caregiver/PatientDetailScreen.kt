@@ -75,6 +75,8 @@ import com.relaxmind.app.data.model.CheckIn
 import com.relaxmind.app.data.model.Patient
 import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.LoadingIndicator
+import com.relaxmind.app.ui.components.ProgressChart
+import com.relaxmind.app.ui.components.ProgressEmptyState
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxToastHost
 import com.relaxmind.app.ui.components.rememberRelaxToastState
@@ -210,7 +212,8 @@ fun PatientDetailScreen(
                             when (tab) {
                                 PatientDetailTab.PROGRESS -> PatientProgressTab(
                                     checkIns = checkIns,
-                                    streakDays = streak?.currentStreak ?: 0
+                                    streakDays = streak?.currentStreak ?: 0,
+                                    patientName = fullName
                                 )
                                 PatientDetailTab.HISTORY -> PatientHistoryTab(
                                     checkIns = checkIns,
@@ -441,21 +444,30 @@ private fun PatientDetailTabs(
 @Composable
 private fun PatientProgressTab(
     checkIns: List<CheckIn>,
-    streakDays: Int
+    streakDays: Int,
+    patientName: String
 ) {
     var selectedMonth by remember { mutableStateOf(YearMonth.now()) }
     var selectedDay by remember { mutableIntStateOf(LocalDate.now().dayOfMonth) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        PatientMonthlyCalendarCard(
-            month = selectedMonth,
-            checkIns = checkIns,
-            selectedDay = selectedDay,
-            onSelectedDayChange = { selectedDay = it },
-            onPreviousMonth = { selectedMonth = selectedMonth.minusMonths(1) },
-            onNextMonth = { selectedMonth = selectedMonth.plusMonths(1) }
-        )
-        PatientStreakCard(streakDays = streakDays)
+    if (checkIns.isEmpty()) {
+        ProgressEmptyState(patientName = patientName)
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            ProgressChart(
+                checkIns = checkIns,
+                modifier = Modifier.fillMaxWidth()
+            )
+            PatientMonthlyCalendarCard(
+                month = selectedMonth,
+                checkIns = checkIns,
+                selectedDay = selectedDay,
+                onSelectedDayChange = { selectedDay = it },
+                onPreviousMonth = { selectedMonth = selectedMonth.minusMonths(1) },
+                onNextMonth = { selectedMonth = selectedMonth.plusMonths(1) }
+            )
+            PatientStreakCard(streakDays = streakDays)
+        }
     }
 }
 

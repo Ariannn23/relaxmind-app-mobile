@@ -96,6 +96,8 @@ import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxIcons
 import com.relaxmind.app.ui.components.getAvatarDrawableRes
+import com.relaxmind.app.ui.components.DashboardSkeleton
+import com.relaxmind.app.ui.components.ErrorStateScreen
 import com.relaxmind.app.ui.components.LoadingIndicator
 import com.relaxmind.app.ui.components.RelaxCard
 import com.relaxmind.app.utils.SoundPlayerManager
@@ -215,6 +217,7 @@ fun DashboardPatientScreen(
     showBottomNav: Boolean = true
 ) {
     val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
     val patient by viewModel.patient.collectAsState()
     val todayCheckIn by viewModel.todayCheckIn.collectAsState()
     val dailyGoal by viewModel.dailyGoal.collectAsState()
@@ -274,8 +277,13 @@ fun DashboardPatientScreen(
                     SoftGradientBackground(animateBlobs = true)
                 }
 
-                if (isLoading && patient == null) {
-                    LoadingIndicator(modifier = Modifier.align(Alignment.Center))
+                if (isLoading && patient == null && error == null) {
+                    DashboardSkeleton(modifier = Modifier.align(Alignment.Center))
+                } else if (error != null && patient == null) {
+                    ErrorStateScreen(
+                        message = error ?: "",
+                        onRetry = { viewModel.loadDashboardData() }
+                    )
                 } else {
                     Column(
                         modifier = Modifier

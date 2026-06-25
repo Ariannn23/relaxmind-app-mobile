@@ -13,6 +13,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonOff
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -41,6 +43,8 @@ import com.relaxmind.app.ui.components.getAvatarDrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import com.relaxmind.app.ui.components.rememberRelaxToastState
+import com.relaxmind.app.ui.components.CaregiverDashboardSkeleton
+import com.relaxmind.app.ui.components.ErrorStateScreen
 import com.relaxmind.app.ui.themes.*
 
 //  Caregiver-specific palette 
@@ -136,8 +140,18 @@ fun DashboardCaregiverScreen(
         }
     }
 
-    if (isLoading && caregiver == null) {
-        FullScreenLoadingScreen(text = "Cargando dashboard...")
+    if (isLoading && caregiver == null && error == null) {
+        Box(modifier = Modifier.fillMaxSize().background(colors.background)) {
+            CaregiverDashboardSkeleton(modifier = Modifier.align(Alignment.Center))
+        }
+        return
+    } else if (error != null && caregiver == null) {
+        Box(modifier = Modifier.fillMaxSize().background(colors.background)) {
+            ErrorStateScreen(
+                message = error ?: "",
+                onRetry = { viewModel.loadDashboard() }
+            )
+        }
         return
     }
 
@@ -451,25 +465,45 @@ private fun ActiveAlertsCard(
 @Composable
 private fun AlertRow(colors: CaregiverDashboardColors, alert: CaregiverAlert, onClick: () -> Unit) {
     val isSOS = alert.severity.lowercase() in listOf("high", "sos")
-    val iconBg = if (isSOS) AlertRed else AlertOrange
-    val iconContent: @Composable () -> Unit = if (isSOS) {
-        {
-            Text(
-                text = "SOS",
-                fontFamily = LexendFontFamily,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 9.sp,
-                color = Color.White
-            )
+    val isUnlink = alert.type.equals("UNLINK", ignoreCase = true)
+    
+    val iconBg = when {
+        isSOS -> AlertRed
+        isUnlink -> Color(0xFF6B7280) // Gray
+        else -> AlertOrange
+    }
+    
+    val iconContent: @Composable () -> Unit = when {
+        isSOS -> {
+            {
+                Text(
+                    text = "SOS",
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 9.sp,
+                    color = Color.White
+                )
+            }
         }
-    } else {
-        {
-            Icon(
-                imageVector = Icons.Default.BarChart,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(20.dp)
-            )
+        isUnlink -> {
+            {
+                Icon(
+                    imageVector = Icons.Default.PersonOff,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+        else -> {
+            {
+                Icon(
+                    imageVector = Icons.Default.BarChart,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 

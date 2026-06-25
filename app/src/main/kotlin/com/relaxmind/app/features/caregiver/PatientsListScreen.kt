@@ -173,8 +173,15 @@ fun PatientsListScreen(
 
                     item { Spacer(modifier = Modifier.height(16.dp)) }
 
-                    if (isLoading && patients.isEmpty()) {
+                    if (isLoading && patients.isEmpty() && error == null) {
                         item { PatientsLoadingSkeleton() }
+                    } else if (error != null && patients.isEmpty()) {
+                        item {
+                            com.relaxmind.app.ui.components.ErrorStateScreen(
+                                message = error ?: "",
+                                onRetry = { viewModel.observeCaregiverData() }
+                            )
+                        }
                     } else if (patients.isEmpty()) {
                         item { EmptyPatientsState(onScanQr = onScanQr) }
                     } else if (filteredPatients.isEmpty()) {

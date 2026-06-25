@@ -57,6 +57,8 @@ import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxIcons
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.components.getAvatarDrawableRes
+import com.relaxmind.app.ui.components.SettingsSkeleton
+import com.relaxmind.app.ui.components.ErrorStateScreen
 import com.relaxmind.app.ui.themes.*
 
 private val CaregiverIndigo = Color(0xFF4338A8)
@@ -73,6 +75,7 @@ fun SettingsCaregiverScreen(
 ) {
     val context = LocalContext.current
     val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
     val caregiver by viewModel.caregiver.collectAsState()
 
     var showLogoutDialog by remember { mutableStateOf(false) }
@@ -106,14 +109,22 @@ fun SettingsCaregiverScreen(
                 // Background decoration
                 SoftGradientBackground(animateBlobs = true, role = AppRole.CAREGIVER)
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 24.dp, vertical = 20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(24.dp)
-                ) {
+                if (isLoading && caregiver == null && error == null) {
+                    SettingsSkeleton(modifier = Modifier.align(Alignment.Center))
+                } else if (error != null && caregiver == null) {
+                    ErrorStateScreen(
+                        message = error ?: "",
+                        onRetry = { viewModel.loadDashboard() }
+                    )
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 24.dp, vertical = 20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(24.dp)
+                    ) {
                     // 1. Header
                     CaregiverSettingsHeader(
                         onBackClick = { onNavigate("caregiver/dashboard") },
@@ -221,23 +232,20 @@ fun SettingsCaregiverScreen(
                             color = TextSecondary
                         )
                     }
+                    }
                 }
 
                 // Loading overlay
-                if (isLoading) {
-                    if (caregiver == null) {
-                        FullScreenLoadingOverlay(overlayColor = Color.Transparent)
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clickable(
-                                    onClick = {},
-                                    indication = null,
-                                    interactionSource = remember { MutableInteractionSource() }
-                                )
-                        )
-                    }
+                if (isLoading && caregiver != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable(
+                                onClick = {},
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() }
+                            )
+                    )
                 }
             }
         }

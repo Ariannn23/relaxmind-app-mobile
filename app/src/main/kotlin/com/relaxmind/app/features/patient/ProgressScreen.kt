@@ -71,8 +71,11 @@ import com.relaxmind.app.ui.components.AchievementUnlockedDialog
 import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.LoadingIndicator
 import com.relaxmind.app.ui.components.RelaxBottomNav
-import com.relaxmind.app.ui.components.RelaxIcons
 import com.relaxmind.app.ui.components.ScreenHeader
+import com.relaxmind.app.ui.components.ProgressCalendarSkeleton
+import com.relaxmind.app.ui.components.ProgressChart
+import com.relaxmind.app.ui.components.ProgressEmptyState
+import com.relaxmind.app.ui.components.ErrorStateScreen
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.BorderSoft
 import com.relaxmind.app.ui.themes.LexendFontFamily
@@ -110,6 +113,7 @@ fun ProgressScreen(
     showBottomNav: Boolean = true
 ) {
     val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
     val streakData by viewModel.streak.collectAsState()
     val unlockedAchievements by viewModel.achievements.collectAsState()
     val allCheckIns by viewModel.allCheckIns.collectAsState()
@@ -166,8 +170,18 @@ fun ProgressScreen(
                 // Background gradient blobs
                 SoftGradientBackground(animateBlobs = true)
 
-                if (isLoading && allCheckIns.isEmpty() && streakData == null) {
-                    LoadingIndicator()
+                if (isLoading && allCheckIns.isEmpty() && streakData == null && error == null) {
+                    ProgressCalendarSkeleton(modifier = Modifier.align(Alignment.Center))
+                } else if (error != null && allCheckIns.isEmpty()) {
+                    ErrorStateScreen(
+                        message = error ?: "",
+                        onRetry = { viewModel.loadProgressData() }
+                    )
+                } else if (!isLoading && allCheckIns.isEmpty()) {
+                    ProgressEmptyState(
+                        patientName = null,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
                 } else {
                     var selectedDayInfo by remember { mutableStateOf<Pair<Int, Int>?>(null) }
                     Column(
@@ -186,7 +200,13 @@ fun ProgressScreen(
                             longestStreak = longestStreak
                         )
 
-                        // 3. Monthly Progress Card
+                        // 3. Visual Chart
+                        ProgressChart(
+                            checkIns = allCheckIns,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        // 4. Monthly Progress Card
                         MonthlyProgressCard(
                             year = selectedYear,
                             month = selectedMonth,

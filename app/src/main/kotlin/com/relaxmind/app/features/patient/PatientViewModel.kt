@@ -320,6 +320,9 @@ class PatientViewModel(
                 return@launch
             }
 
+            val currentPatient = _patient.value
+            val currentCaregiverId = currentPatient?.caregiverId
+
             val updateResult = firestoreRepository.updatePatient(
                 userId,
                 mapOf<String, Any?>(
@@ -328,6 +331,21 @@ class PatientViewModel(
                 )
             )
             if (updateResult.isSuccess) {
+                if (currentPatient != null && currentCaregiverId != null) {
+                    val alert = com.relaxmind.app.data.model.CaregiverAlert(
+                        caregiverId = currentCaregiverId,
+                        patientId = userId,
+                        patientName = "${currentPatient.name} ${currentPatient.lastName}".trim(),
+                        type = "UNLINK",
+                        title = "Acceso revocado",
+                        message = "El paciente ${currentPatient.name} ${currentPatient.lastName} ha revocado tu acceso.",
+                        severity = "warning",
+                        resolved = false,
+                        createdAtText = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
+                    )
+                    firestoreRepository.createAlert(alert)
+                }
+                
                 _patient.update { it?.copy(caregiverId = null, linkedCaregiverAt = null) }
                 _caregiver.value = null
                 onSuccess()
