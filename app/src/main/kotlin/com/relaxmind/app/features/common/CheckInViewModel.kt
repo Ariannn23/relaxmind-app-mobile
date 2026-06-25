@@ -104,7 +104,7 @@ class CheckInViewModel(
         _uiState.value = CheckInUiState.Idle
     }
 
-    fun submitCheckIn(isInitialTest: Boolean) {
+    fun submitCheckIn(isInitialTest: Boolean, isSkipped: Boolean = false) {
         val userId = authService.getCurrentUser()?.uid ?: run {
             _uiState.value = CheckInUiState.Error("No hay sesión activa.")
             return
@@ -125,7 +125,9 @@ class CheckInViewModel(
             }
             val noteText = _notes.value
 
-            val calculatedScore = if (isInitialTest) {
+            val calculatedScore = if (isSkipped) {
+                0
+            } else if (isInitialTest) {
                 val scoreAnswers = CheckInAnswers(
                     emotionalState = emotionalVal,
                     sleep = sleepVal,
@@ -144,7 +146,7 @@ class CheckInViewModel(
                     stress = stressVal
                 )
             }
-            val category = WellnessScoreCalculator.getCategory(calculatedScore)
+            val category = if (isSkipped) "Sin puntaje" else WellnessScoreCalculator.getCategory(calculatedScore)
             val dateStr = LocalDate.now().toString()
 
             val checkIn = CheckIn(

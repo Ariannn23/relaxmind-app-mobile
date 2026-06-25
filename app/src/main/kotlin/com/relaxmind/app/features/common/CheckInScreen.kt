@@ -175,7 +175,7 @@ fun CheckInScreen(
                 onBackClick = onNavigateBack,
                 actions = {
                     if (isInitialTest && currentStepIndex < totalSteps - 1) {
-                        TextButton(onClick = { viewModel.submitCheckIn(isInitialTest = true) }) {
+                        TextButton(onClick = { viewModel.submitCheckIn(isInitialTest = true, isSkipped = true) }) {
                             Text(
                                 text = "Omitir test",
                                 style = MaterialTheme.typography.labelLarge,
@@ -1242,17 +1242,26 @@ private fun AnimatedCheckInResultView(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = animatedScore.toString(),
-                        style = MaterialTheme.typography.displayLarge.copy(fontSize = 80.sp),
-                        fontWeight = FontWeight.ExtraBold,
-                        color = PatientGreen
-                    )
-                    Text(
-                        text = "/ 100",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.Gray
-                    )
+                    if (category == "Sin puntaje") {
+                        Text(
+                            text = "-",
+                            style = MaterialTheme.typography.displayLarge.copy(fontSize = 80.sp),
+                            fontWeight = FontWeight.ExtraBold,
+                            color = PatientGreen
+                        )
+                    } else {
+                        Text(
+                            text = animatedScore.toString(),
+                            style = MaterialTheme.typography.displayLarge.copy(fontSize = 80.sp),
+                            fontWeight = FontWeight.ExtraBold,
+                            color = PatientGreen
+                        )
+                        Text(
+                            text = "/ 100",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.Gray
+                        )
+                    }
                 }
             }
 
