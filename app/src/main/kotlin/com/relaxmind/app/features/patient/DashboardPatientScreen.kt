@@ -23,11 +23,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -36,7 +38,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -49,6 +56,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -85,8 +94,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.relaxmind.app.R
@@ -101,6 +113,8 @@ import com.relaxmind.app.ui.components.ErrorStateScreen
 import com.relaxmind.app.ui.components.LoadingIndicator
 import com.relaxmind.app.ui.components.RelaxCard
 import com.relaxmind.app.utils.SoundPlayerManager
+import com.relaxmind.app.data.model.UserAchievement
+import com.relaxmind.app.features.patient.AchievementUnlockedScreen
 import com.relaxmind.app.ui.themes.Outfit
 import com.relaxmind.app.ui.themes.Urbanist
 import com.relaxmind.app.ui.themes.BorderSoft
@@ -150,24 +164,24 @@ private fun patientDashboardColors(isDark: Boolean): PatientDashboardColors {
     return if (isDark) {
         PatientDashboardColors(
             isDark = true,
-            background = Color(0xFF061615),
+            background = com.relaxmind.app.ui.themes.BackgroundDark,
             backgroundBrush = Brush.verticalGradient(
-                listOf(Color(0xFF061615), Color(0xFF0A1F1D), Color(0xFF04100F))
+                listOf(com.relaxmind.app.ui.themes.BackgroundDark, Color(0xFF0F1116), Color(0xFF0B0D11))
             ),
-            card = Color(0xFF102C29),
-            cardSoft = Color(0xFF143731),
-            primary = Color(0xFF68D391),
-            primaryStrong = Color(0xFF1FBF8A),
-            textPrimary = Color(0xFFF4FBF7),
-            textSecondary = Color(0xFFB8C8C3),
-            textMuted = Color(0xFF7F9690),
-            border = Color(0xFF244B45),
-            notificationButton = Color.White.copy(alpha = 0.08f),
+            card = com.relaxmind.app.ui.themes.SurfaceDark,
+            cardSoft = Color(0xFF2B2F3D),
+            primary = com.relaxmind.app.ui.themes.PatientGreenLight,
+            primaryStrong = com.relaxmind.app.ui.themes.PatientGreen,
+            textPrimary = com.relaxmind.app.ui.themes.TextDarkPrimary,
+            textSecondary = com.relaxmind.app.ui.themes.TextDarkSecondary,
+            textMuted = Color(0xFF6B7280),
+            border = com.relaxmind.app.ui.themes.BorderDark,
+            notificationButton = Color.White.copy(alpha = 0.05f),
             wellbeingBrush = Brush.linearGradient(
-                listOf(Color(0xFF123B35), Color(0xFF0B2825), Color(0xFF102C29))
+                listOf(Color(0xFF1D202B), Color(0xFF1A1C25), com.relaxmind.app.ui.themes.SurfaceDark)
             ),
-            checkInCard = Color(0xFF321F24),
-            checkInBorder = Color(0xFF5A2B36),
+            checkInCard = Color(0xFF332026),
+            checkInBorder = Color(0xFF4A2B33),
             checkInAccent = Color(0xFFFF7A8A)
         )
     } else {
@@ -209,6 +223,7 @@ private fun lightQuickAccessShadow(isDark: Boolean): Color =
 fun DashboardPatientScreen(
     viewModel: PatientViewModel = viewModel(),
     onNavigateToCheckIn: () -> Unit,
+    onNavigateToInitialTest: () -> Unit = {},
     onNavigateToMeditate: () -> Unit,
     onNavigateToEditProfile: () -> Unit,
     onNavigateToLinkCaregiver: () -> Unit,
@@ -226,9 +241,28 @@ fun DashboardPatientScreen(
     val caregiver by viewModel.caregiver.collectAsState()
     val isDarkDashboard by ThemeState.darkMode.collectAsState()
     val dashboardColors = remember(isDarkDashboard) { patientDashboardColors(isDarkDashboard) }
+    val initialTestBannerState by viewModel.initialTestBannerState.collectAsState()
+    val isDismissed by viewModel.isInitialTestNotificationDismissed.collectAsState()
 
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.loadDashboardData()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    // Refresh the 24h countdown every minute while the dashboard is open
     LaunchedEffect(Unit) {
-        viewModel.loadDashboardData()
+        while (true) {
+            kotlinx.coroutines.delay(60_000L)
+            viewModel.refreshInitialTestBannerState()
+        }
     }
 
     // Wrap the screen inside Lexend typography theme
@@ -243,9 +277,15 @@ fun DashboardPatientScreen(
                 if (showBottomNav) {
                     RelaxBottomNav(
                         selectedRoute = "patient/dashboard",
-                        onNavigate = onNavigate,
+                        onNavigate = { route -> 
+                            if (route == "caregiver/patients") {
+                                onNavigateToEditProfile()
+                            } else {
+                                onNavigate(route)
+                            }
+                        },
                         role = AppRole.PATIENT,
-                        darkMode = dashboardColors.isDark
+                        darkMode = isDarkDashboard
                     )
                 }
             }
@@ -293,18 +333,24 @@ fun DashboardPatientScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
-                        // 1. Dashboard Header
+                        // 1. Header (User Info & Notifications)
                         DashboardHeader(
                             patientName = patient?.name ?: "Carlos",
                             avatarUrl = patient?.avatarUrl ?: "",
                             onAvatarClick = { onNavigate(Screen.PatientSettings.route) },
-                            hasNotifications = true // Visual notification bell badge as mockup
+                            initialTestBannerState = initialTestBannerState,
+                            isDismissed = isDismissed,
+                            onCompleteInitialTestClick = onNavigateToInitialTest,
+                            onDismissNotification = { viewModel.dismissInitialTestNotification() }
                         )
+                        
+
 
                         // 2. Main Wellbeing Today Card
                         WellbeingTodayCard(
                             score = todayCheckIn?.score,
-                            category = todayCheckIn?.category
+                            category = todayCheckIn?.category,
+                            isTestSkipped = initialTestBannerState != InitialTestBannerState.None
                         )
 
                         DailyCheckInStatusCard(
@@ -367,7 +413,8 @@ fun DashboardPatientScreen(
                         onSOSHoldTriggered = onNavigateToSOS,
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
-                            .padding(bottom = 16.dp, end = 20.dp)
+                            // 100.dp to avoid the bottom bar, 16.dp for normal margin
+                            .padding(bottom = 116.dp, end = 20.dp)
                     )
                 }
             }
@@ -384,9 +431,18 @@ private fun DashboardHeader(
     patientName: String,
     avatarUrl: String,
     onAvatarClick: () -> Unit,
-    hasNotifications: Boolean
+    initialTestBannerState: InitialTestBannerState = InitialTestBannerState.None,
+    isDismissed: Boolean = false,
+    onCompleteInitialTestClick: () -> Unit = {},
+    onDismissNotification: () -> Unit = {}
 ) {
     val colors = LocalPatientDashboardColors.current
+    val hasInitialTestNotification = !isDismissed && initialTestBannerState is InitialTestBannerState.SkippedWithin24h
+    var dummy1Visible by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
+    var dummy2Visible by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
+    val hasNotifications = hasInitialTestNotification || dummy1Visible || dummy2Visible
+    var notificationsExpanded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -429,10 +485,275 @@ private fun DashboardHeader(
         Spacer(modifier = Modifier.width(16.dp))
 
         // Notification Bell button
-        SoftNotificationButton(
-            hasNotifications = hasNotifications,
-            onClick = { /* TODO: open notifications */ }
-        )
+        Box {
+            SoftNotificationButton(
+                hasNotifications = hasNotifications,
+                onClick = { notificationsExpanded = !notificationsExpanded }
+            )
+            
+            if (notificationsExpanded) {
+                Popup(
+                    alignment = Alignment.TopEnd,
+                    offset = IntOffset(12, 140),
+                    onDismissRequest = { notificationsExpanded = false },
+                    properties = PopupProperties(focusable = true)
+                ) {
+                    ElevatedCard(
+                        modifier = Modifier
+                            .width(340.dp)
+                            .shadow(
+                                elevation = 16.dp, 
+                                shape = RoundedCornerShape(24.dp),
+                                ambientColor = if (colors.isDark) colors.primary.copy(alpha = 0.4f) else Color(0xFF8A88A6).copy(alpha = 0.5f),
+                                spotColor = if (colors.isDark) colors.primary.copy(alpha = 0.4f) else Color(0xFF8A88A6).copy(alpha = 0.5f)
+                            )
+                            .border(1.dp, if (colors.isDark) colors.primary.copy(alpha=0.3f) else Color(0xFFE2E8F0), RoundedCornerShape(24.dp)),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = androidx.compose.material3.CardDefaults.elevatedCardColors(
+                            containerColor = if (colors.isDark) Color(0xFF111827) else Color(0xFFF8FAFC)
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            if (hasNotifications) {
+                                Text(
+                                    text = "Notificaciones",
+                                    fontFamily = LexendFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = colors.textPrimary,
+                                    modifier = Modifier.padding(bottom = 10.dp)
+                                )
+                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    if (hasInitialTestNotification && initialTestBannerState is InitialTestBannerState.SkippedWithin24h) {
+                                        val state = initialTestBannerState as InitialTestBannerState.SkippedWithin24h
+                                        val timeText = if (state.hoursLeft > 0) "${state.hoursLeft}h ${state.minutesLeft}min" else "${state.minutesLeft} min"
+                                        DashboardNotificationItem(
+                                            title = "Test inicial pendiente",
+                                            subtitle = "Te quedan $timeText para completarlo",
+                                            icon = Icons.Filled.DateRange,
+                                            iconColorLight = Color(0xFFB91C1C), // Red 700
+                                            iconColorDark = Color(0xFFFCA5A5), // Red 300
+                                            bgColorLight = Color(0xFFFFF0F0), // Very soft red
+                                            bgColorDark = Color(0xFF3F1919),
+                                            fillColorLight = Color(0xFFFFD6D6), // Darker red fill
+                                            fillColorDark = Color(0xFF5C2323),
+                                            onDismiss = {
+                                                notificationsExpanded = false
+                                                onDismissNotification()
+                                            },
+                                            onClick = {
+                                                notificationsExpanded = false
+                                                onCompleteInitialTestClick()
+                                            }
+                                        )
+                                    }
+
+                                    if (dummy1Visible) {
+                                        DashboardNotificationItem(
+                                            title = "Nueva sesión recomendada",
+                                            subtitle = "Descubre una meditación para hoy",
+                                            icon = RelaxIcons.Meditation,
+                                            iconColorLight = Color(0xFF1D4ED8), // Blue 700
+                                            iconColorDark = Color(0xFF93C5FD), // Blue 300
+                                            bgColorLight = Color(0xFFEFF6FF), // Soft Blue
+                                            bgColorDark = Color(0xFF1E3A8A), // Blue 900
+                                            fillColorLight = Color(0xFFDBEAFE), // Darker Blue fill
+                                            fillColorDark = Color(0xFF1D4ED8), // Blue 700
+                                            onDismiss = { dummy1Visible = false },
+                                            onClick = { notificationsExpanded = false }
+                                        )
+                                    }
+
+                                    if (dummy2Visible) {
+                                        DashboardNotificationItem(
+                                            title = "Check-in diario",
+                                            subtitle = "No olvides registrar cómo te sientes",
+                                            icon = Icons.Filled.CheckCircle,
+                                            iconColorLight = Color(0xFF15803D), // Green 700
+                                            iconColorDark = Color(0xFF86EFAC), // Green 300
+                                            bgColorLight = Color(0xFFF0FDF4), // Soft Green
+                                            bgColorDark = Color(0xFF14532D), // Green 900
+                                            fillColorLight = Color(0xFFDCFCE7), // Darker Green fill
+                                            fillColorDark = Color(0xFF15803D), // Green 700
+                                            onDismiss = { dummy2Visible = false },
+                                            onClick = { notificationsExpanded = false }
+                                        )
+                                    }
+                                }
+                            } else {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.fillMaxWidth().padding(16.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.NotificationsOff,
+                                        contentDescription = null,
+                                        tint = colors.primary,
+                                        modifier = Modifier.size(42.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        text = "No tienes notificaciones",
+                                        fontFamily = LexendFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp,
+                                        color = colors.textPrimary,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Aquí aparecerán tus recordatorios y mensajes.",
+                                        fontFamily = LexendFontFamily,
+                                        fontWeight = FontWeight.Normal,
+                                        fontSize = 13.sp,
+                                        color = colors.textSecondary,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DashboardNotificationItem(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    iconColorLight: Color,
+    iconColorDark: Color,
+    bgColorLight: Color,
+    bgColorDark: Color,
+    fillColorLight: Color,
+    fillColorDark: Color,
+    onDismiss: () -> Unit,
+    onClick: () -> Unit
+) {
+    val colors = LocalPatientDashboardColors.current
+    var isPressed by remember { mutableStateOf(false) }
+    var showDelete by remember { mutableStateOf(false) }
+    val pressProgress by animateFloatAsState(
+        targetValue = if (isPressed || showDelete) 1f else 0f,
+        animationSpec = tween(if (isPressed) 800 else 300, easing = LinearEasing),
+        label = "fill"
+    )
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed && !showDelete) 0.96f else 1f,
+        animationSpec = tween(150, easing = LinearEasing),
+        label = "scale"
+    )
+
+    LaunchedEffect(pressProgress) {
+        if (pressProgress >= 1f && isPressed) {
+            showDelete = true
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .scale(scale)
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (colors.isDark) bgColorDark else bgColorLight)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        if (!showDelete) {
+                            isPressed = true
+                            tryAwaitRelease()
+                            isPressed = false
+                        }
+                    },
+                    onTap = {
+                        if (!showDelete) onClick()
+                    }
+                )
+            }
+    ) {
+        // Container for fill to ensure it takes max height
+        Box(modifier = Modifier.matchParentSize()) {
+            // Smooth Fill Background from left to right
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(pressProgress)
+                    .background(if (colors.isDark) fillColorDark else fillColorLight)
+            )
+        }
+        
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(if (colors.isDark) fillColorDark.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (colors.isDark) iconColorDark else iconColorLight,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = if (colors.isDark) iconColorDark else iconColorLight
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = if (showDelete) "Eliminar notificación" else if (pressProgress > 0f) "Mantén presionado para ocultar" else subtitle,
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 13.sp,
+                    color = if (colors.isDark) iconColorDark.copy(alpha = 0.8f) else iconColorLight.copy(alpha = 0.8f)
+                )
+            }
+            if (showDelete) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(if (colors.isDark) Color(0xFF991B1B) else Color(0xFFEF4444))
+                        .clickable { onDismiss() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Eliminar",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(if (colors.isDark) fillColorDark else Color.White.copy(alpha = 0.7f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = "Ir",
+                        tint = if (colors.isDark) iconColorDark else iconColorLight,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -519,9 +840,9 @@ private fun SoftNotificationButton(
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = RelaxIcons.Notifications,
+            imageVector = Icons.Rounded.Notifications,
             contentDescription = "Notificaciones",
-            tint = colors.textPrimary,
+            tint = colors.primary,
             modifier = Modifier.size(24.dp)
         )
         if (hasNotifications) {
@@ -529,7 +850,7 @@ private fun SoftNotificationButton(
                 modifier = Modifier
                     .size(8.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF4338A8)) // CaregiverIndigo purple dot
+                    .background(if (colors.isDark) Color(0xFF68D391) else PatientGreen)
                     .align(Alignment.TopEnd)
                     .offset(x = 1.dp, y = (-1).dp)
             )
@@ -543,20 +864,17 @@ private fun SoftNotificationButton(
 @Composable
 private fun WellbeingTodayCard(
     score: Int?,
-    category: String?
+    category: String?,
+    isTestSkipped: Boolean = false
 ) {
     val colors = LocalPatientDashboardColors.current
+    val palette = com.relaxmind.app.ui.themes.getWellnessPalette(score)
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(180.dp)
-            .shadow(
-                elevation = 16.dp,
-                shape = RoundedCornerShape(30.dp),
-                ambientColor = colors.primary.copy(alpha = if (colors.isDark) 0.14f else 0.25f),
-                spotColor = colors.primary.copy(alpha = if (colors.isDark) 0.14f else 0.25f)
-            ),
+            .height(180.dp),
         shape = RoundedCornerShape(30.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(
@@ -591,9 +909,9 @@ private fun WellbeingTodayCard(
                             center = androidx.compose.ui.geometry.Offset(px, py)
                         )
                     }
-                    // Yellow/cream soft center
+                    // Colored soft center
                     drawCircle(
-                        color = (if (colors.isDark) colors.primary else Color(0xFFFFFBEA)).copy(alpha = if (colors.isDark) alpha * 0.18f else alpha * 1.4f.coerceAtMost(1f)),
+                        color = (if (score != null) palette.primary else (if (colors.isDark) colors.primary else Color(0xFFFFFBEA))).copy(alpha = if (colors.isDark) alpha * 0.18f else alpha * 1.4f.coerceAtMost(1f)),
                         radius = centerRadius,
                         center = androidx.compose.ui.geometry.Offset(centerX, centerY)
                     )
@@ -675,7 +993,7 @@ private fun WellbeingTodayCard(
                             color = colors.textPrimary
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, tint = colors.primary, modifier = Modifier.size(16.dp))
+                        Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, tint = palette.primary, modifier = Modifier.size(16.dp))
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -694,6 +1012,7 @@ private fun WellbeingTodayCard(
                 CircularWellbeingProgress(
                     score = score,
                     category = category,
+                    isNoData = isTestSkipped && score == null,
                     modifier = Modifier.weight(0.9f)
                 )
             }
@@ -706,6 +1025,7 @@ private fun DailyCheckInStatusCard(
     completed: Boolean,
     score: Int?,
     category: String?,
+    isTestSkipped: Boolean = false,
     onStartClick: () -> Unit,
     onProgressClick: () -> Unit
 ) {
@@ -714,15 +1034,10 @@ private fun DailyCheckInStatusCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 8.dp,
-                shape = RoundedCornerShape(26.dp),
-                ambientColor = colors.checkInAccent.copy(alpha = if (colors.isDark) 0.18f else 0.14f),
-                spotColor = colors.checkInAccent.copy(alpha = if (colors.isDark) 0.18f else 0.16f)
-            )
             .border(1.dp, colors.checkInBorder, RoundedCornerShape(26.dp))
             .clickable(onClick = action),
         shape = RoundedCornerShape(26.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = colors.checkInCard)
     ) {
         Row(
@@ -749,7 +1064,7 @@ private fun DailyCheckInStatusCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = stringResource(id = R.string.dashboard_daily_checkin),
+                    text = if (isTestSkipped && !completed) "Test inicial pendiente" else stringResource(id = R.string.dashboard_daily_checkin),
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
@@ -759,6 +1074,8 @@ private fun DailyCheckInStatusCard(
                 Text(
                     text = if (completed) {
                         "Completado hoy${score?.let { " · $it/100" } ?: ""}${category?.let { " · $it" } ?: ""}"
+                    } else if (isTestSkipped) {
+                        "Completa tu test inicial para personalizar tu experiencia."
                     } else {
                         "Registra cómo te sientes para actualizar tu bienestar."
                     },
@@ -788,7 +1105,9 @@ private fun DailyCheckInStatusCard(
                     )
                 }
                 Text(
-                    text = if (completed) stringResource(id = R.string.dashboard_checkin_ready) else stringResource(id = R.string.dashboard_checkin_start),
+                    text = if (completed) stringResource(id = R.string.dashboard_checkin_ready) 
+                           else if (isTestSkipped) "Iniciar test inicial"
+                           else stringResource(id = R.string.dashboard_checkin_start),
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp,
@@ -803,11 +1122,14 @@ private fun DailyCheckInStatusCard(
 private fun CircularWellbeingProgress(
     score: Int?,
     category: String?,
+    isNoData: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val colors = LocalPatientDashboardColors.current
-    val displayScore = score ?: 74 // Default placeholder visual if null
-    val targetProgress = displayScore / 100f
+    val palette = com.relaxmind.app.ui.themes.getWellnessPalette(score)
+    // When test was skipped and no score exists yet, show 0 progress arc (empty)
+    val displayScore = if (isNoData) null else (score ?: 74)
+    val targetProgress = if (isNoData) 0f else ((displayScore ?: 74) / 100f)
     val animatedProgress by animateFloatAsState(
         targetValue = targetProgress,
         animationSpec = tween(1200, easing = FastOutSlowInEasing),
@@ -833,7 +1155,8 @@ private fun CircularWellbeingProgress(
 
                 // Translucent track circle background
                 drawArc(
-                    color = if (colors.isDark) colors.border else Color.White.copy(alpha = 0.6f),
+                    color = if (isNoData) Color(0xFFDDDDDD).copy(alpha = 0.5f)
+                            else palette.ringTrack.copy(alpha = if (colors.isDark) 0.3f else 1f),
                     startAngle = 0f,
                     sweepAngle = 360f,
                     useCenter = false,
@@ -842,47 +1165,171 @@ private fun CircularWellbeingProgress(
                     size = arcSize
                 )
 
-                // Filled green arc
-                drawArc(
-                    color = colors.primary,
-                    startAngle = -90f,
-                    sweepAngle = animatedProgress * 360f,
-                    useCenter = false,
-                    style = Stroke(width = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round),
-                    topLeft = topLeft,
-                    size = arcSize
-                )
+                // Filled colored arc (skip drawing if no data)
+                if (!isNoData) {
+                    drawArc(
+                        color = palette.primary,
+                        startAngle = -90f,
+                        sweepAngle = animatedProgress * 360f,
+                        useCenter = false,
+                        style = Stroke(width = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round),
+                        topLeft = topLeft,
+                        size = arcSize
+                    )
+                }
             }
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Row(verticalAlignment = Alignment.Bottom) {
+                if (isNoData) {
                     Text(
-                        text = displayScore.toString(),
+                        text = "—",
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 26.sp,
-                        color = colors.textPrimary
+                        fontSize = 28.sp,
+                        color = colors.textSecondary
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "/100",
+                        text = "Sin datos",
                         fontFamily = LexendFontFamily,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 11.sp,
+                        color = colors.textSecondary
+                    )
+                } else {
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            text = (displayScore ?: 74).toString(),
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 26.sp,
+                            color = if (score != null) palette.primary else colors.textPrimary
+                        )
+                        Text(
+                            text = "/100",
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 12.sp,
+                            color = colors.textSecondary,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = if (score != null) com.relaxmind.app.ui.themes.getWellnessStatusLabel(score) else "Bueno",
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.SemiBold,
                         fontSize = 12.sp,
-                        color = colors.textSecondary,
-                        modifier = Modifier.padding(bottom = 4.dp)
+                        color = if (score != null) palette.primary else colors.primary
                     )
                 }
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = if (score != null) (category ?: "Bueno") else "Bueno",
-                    fontFamily = LexendFontFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 12.sp,
-                    color = colors.primary
-                )
+            }
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// INITIAL TEST DEADLINE BANNER
+// -----------------------------------------------------------------------------
+@Composable
+private fun InitialTestDeadlineBanner(
+    state: InitialTestBannerState.SkippedWithin24h,
+    onCompleteClick: () -> Unit
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "banner-pulse")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "banner-alpha"
+    )
+
+    val timeText = when {
+        state.hoursLeft > 0 -> "${state.hoursLeft}h ${state.minutesLeft}min"
+        else -> "${state.minutesLeft} minutos"
+    }
+
+    val colors = LocalPatientDashboardColors.current
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(20.dp),
+                ambientColor = colors.primary.copy(alpha = 0.1f),
+                spotColor = colors.primary.copy(alpha = 0.1f)
+            ),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = if (colors.isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Clock icon circle
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(if (colors.isDark) Color(0xFF334155) else Color(0xFFE2E8F0)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Filled.DateRange,
+                        contentDescription = null,
+                        tint = colors.textPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "⏰ Tienes $timeText para tu test inicial",
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = colors.textPrimary,
+                        lineHeight = 18.sp
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Después solo podrás hacer check-ins.",
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 11.sp,
+                        color = colors.textSecondary
+                    )
+                }
+
+                // CTA button
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (colors.isDark) colors.primary else Color(0xFFE0F2FE))
+                        .clickable(onClick = onCompleteClick)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Completar",
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        color = if (colors.isDark) Color.White else colors.primary
+                    )
+                }
             }
         }
     }
@@ -1033,7 +1480,8 @@ private fun TodayGoalCard(
                 shape = RoundedCornerShape(26.dp),
                 ambientColor = colors.primary.copy(alpha = if (colors.isDark) 0.12f else 0.22f),
                 spotColor = colors.primary.copy(alpha = if (colors.isDark) 0.12f else 0.22f)
-            ),
+            )
+            .clickable(enabled = !completed, onClick = onStartClick),
         shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
@@ -1092,7 +1540,7 @@ private fun TodayGoalCard(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "4-7-8 · $duration min",
+                        text = "$duration min",
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Normal,
                         fontSize = 12.sp,
@@ -1107,7 +1555,6 @@ private fun TodayGoalCard(
                             if (completed) colors.cardSoft.copy(alpha = 0.65f) else colors.primaryStrong,
                             RoundedCornerShape(50)
                         )
-                        .clickable(enabled = !completed, onClick = onStartClick)
                         .padding(horizontal = 14.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(3.dp)
@@ -1126,6 +1573,13 @@ private fun TodayGoalCard(
                             tint = Color.White,
                             modifier = Modifier.size(12.dp)
                         )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Completado",
+                            tint = colors.textSecondary,
+                            modifier = Modifier.size(14.dp)
+                        )
                     }
                 }
             }
@@ -1143,14 +1597,9 @@ private fun NextReminderCard(
     Card(
         modifier = modifier
             .height(160.dp)
-            .shadow(
-                elevation = 10.dp,
-                shape = RoundedCornerShape(26.dp),
-                ambientColor = colors.primary.copy(alpha = if (colors.isDark) 0.12f else 0.2f),
-                spotColor = colors.primary.copy(alpha = if (colors.isDark) 0.12f else 0.2f)
-            )
             .clickable(onClick = onCardClick),
         shape = RoundedCornerShape(26.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -1339,17 +1788,20 @@ private fun QuickAccessSection(
                     Column {
                         Text(
                             text = stringResource(id = R.string.dashboard_relax_sounds),
-                            fontFamily = Outfit,
-                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
                             color = colors.textPrimary
                         )
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "Música de fondo para calmarte",
-                            fontFamily = Urbanist,
+                            fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Normal,
-                            fontSize = 13.sp,
-                            color = colors.textSecondary
+                            fontSize = 12.sp,
+                            color = colors.textSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -1385,16 +1837,17 @@ private fun QuickAccessSection(
                     Column {
                         Text(
                             text = stringResource(id = R.string.dashboard_support_library),
-                            fontFamily = Outfit,
-                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
                             color = colors.textPrimary
                         )
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "Artículos para entender y manejar tu bienestar",
-                            fontFamily = Urbanist,
+                            fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Normal,
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             color = colors.textSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -1484,14 +1937,9 @@ private fun QuickAccessCard(
     Card(
         modifier = modifier
             .height(140.dp)
-            .shadow(
-                elevation = 6.dp,
-                shape = RoundedCornerShape(26.dp),
-                ambientColor = lightQuickAccessShadow(colors.isDark),
-                spotColor = lightQuickAccessShadow(colors.isDark)
-            )
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(26.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = if (colors.isDark) colors.card else backgroundColor)
     ) {
         Column(
@@ -1548,14 +1996,9 @@ private fun DiaryCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 6.dp,
-                shape = RoundedCornerShape(26.dp),
-                ambientColor = lightQuickAccessShadow(colors.isDark),
-                spotColor = lightQuickAccessShadow(colors.isDark)
-            )
             .clickable(onClick = onDiaryClick),
         shape = RoundedCornerShape(26.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = if (colors.isDark) darkQuickAccessColor("diary") else Color(0xFFFFF3E7))
     ) {
         Row(
@@ -1778,14 +2221,9 @@ private fun CaregiverCard(
 
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 6.dp,
-                shape = RoundedCornerShape(26.dp),
-                ambientColor = lightQuickAccessShadow(colors.isDark),
-                spotColor = lightQuickAccessShadow(colors.isDark)
-            ),
+            .fillMaxWidth(),
         shape = RoundedCornerShape(26.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = if (colors.isDark) darkQuickAccessColor("caregiver") else Color(0xFFF3E8FF))
     ) {
         if (caregiverId == null) {
@@ -1959,14 +2397,9 @@ private fun NearbyHealthCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 6.dp,
-                shape = RoundedCornerShape(26.dp),
-                ambientColor = lightQuickAccessShadow(colors.isDark),
-                spotColor = lightQuickAccessShadow(colors.isDark)
-            )
             .clickable(onClick = onNearbyClick),
         shape = RoundedCornerShape(26.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = if (colors.isDark) darkQuickAccessColor("health") else Color(0xFFF6FCE5))
     ) {
         Row(
@@ -2072,7 +2505,7 @@ private fun SOSFloatingButton(
     )
 
     Box(
-        modifier = modifier,
+        modifier = modifier.size(76.dp),
         contentAlignment = Alignment.Center
     ) {
         // Outer pulsing ring
@@ -2154,9 +2587,11 @@ private fun SOSFloatingButton(
         if (progress > 0f) {
             CircularProgressIndicator(
                 progress = { progress },
-                modifier = Modifier.size(76.dp),
-                color = Color.White,
-                strokeWidth = 4.dp
+                modifier = Modifier.requiredSize(92.dp), // requiredSize ensures it draws outside without resizing the parent Box
+                color = Color(0xFFFF5722), // Deep Orange / more red than amber
+                trackColor = Color(0xFFC53030).copy(alpha = 0.3f), // Soft dark red background track
+                strokeWidth = 6.dp,
+                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
             )
         }
     }
@@ -2173,14 +2608,9 @@ private fun LumiCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 6.dp,
-                shape = RoundedCornerShape(26.dp),
-                ambientColor = lightQuickAccessShadow(colors.isDark),
-                spotColor = lightQuickAccessShadow(colors.isDark)
-            )
             .clickable(onClick = onLumiClick),
         shape = RoundedCornerShape(26.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = if (colors.isDark) darkQuickAccessColor("lumi") else Color(0xFFE0F2FE))
     ) {
         Row(

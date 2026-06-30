@@ -62,6 +62,7 @@ import com.relaxmind.app.ui.components.RelaxButton
 import com.relaxmind.app.ui.components.RelaxTopBar
 import com.relaxmind.app.ui.components.SettingsSkeleton
 import com.relaxmind.app.ui.components.ErrorStateScreen
+import com.relaxmind.app.ui.components.ScreenHeader
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.*
 
@@ -88,18 +89,23 @@ fun SettingsPatientScreen(
         viewModel.loadDashboardData()
     }
 
+    // App theme state
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val bgColor = if (isDark) com.relaxmind.app.ui.themes.BackgroundDark else Color.White
+
     MaterialTheme(
         colorScheme = MaterialTheme.colorScheme,
         typography = LexendTypography
     ) {
         Scaffold(
-            containerColor = Color.White,
+            containerColor = bgColor,
             bottomBar = {
                 if (showBottomNav) {
                     RelaxBottomNav(
                         selectedRoute = "patient/settings",
                         onNavigate = onNavigate,
-                        role = AppRole.PATIENT
+                        role = AppRole.PATIENT,
+                        darkMode = isDark
                     )
                 }
             }
@@ -110,7 +116,9 @@ fun SettingsPatientScreen(
                     .padding(innerPadding)
             ) {
                 // Background decoration
-                SoftGradientBackground(animateBlobs = true)
+                if (!isDark) {
+                    SoftGradientBackground(animateBlobs = true)
+                }
 
                 if (isLoading && patient == null && error == null) {
                     SettingsSkeleton(modifier = Modifier.align(Alignment.Center))
@@ -124,15 +132,15 @@ fun SettingsPatientScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 24.dp, vertical = 20.dp),
+                            .padding(start = 24.dp, end = 24.dp, bottom = 20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
                     // 1. Header
-                    SettingsHeader(
-                        onBackClick = { onNavigate("patient/dashboard") },
-                        onNotificationClick = { /* No-op for now */ },
-                        hasNotifications = true
+                    ScreenHeader(
+                        title = "Ajustes",
+                        subtitle = "Configura tu cuenta y preferencias",
+                        horizontalPadding = 0.dp
                     )
 
                     patient?.let { currPatient ->
@@ -169,6 +177,8 @@ fun SettingsPatientScreen(
                                     onToggle = { viewModel.updateNotificationsEnabled(it) }
                                 )
 
+                                val context = androidx.compose.ui.platform.LocalContext.current
+                                
                                 if (currPatient.notificationsEnabled) {
                                     SettingsDivider()
                                     // Recordatorio check-in
@@ -176,13 +186,44 @@ fun SettingsPatientScreen(
                                         label = "Recordatorio de check-in",
                                         icon = Icons.Filled.AccessTime,
                                         checked = currPatient.checkInReminderEnabled,
-                                        onToggle = { viewModel.updateCheckInReminderEnabled(it) }
+                                        onToggle = { 
+                                            viewModel.updateCheckInReminderEnabled(it) 
+                                            if (it) {
+                                                com.relaxmind.app.utils.ReminderManager.scheduleReminder(context, currPatient.checkInReminderTime)
+                                            } else {
+                                                com.relaxmind.app.utils.ReminderManager.cancelReminder(context)
+                                            }
+                                        }
                                     )
+                                    
+                                    if (currPatient.checkInReminderEnabled) {
+                                        val timeParts = currPatient.checkInReminderTime.split(":")
+                                        val initHour = timeParts.getOrNull(0)?.toIntOrNull() ?: 20
+                                        val initMin = timeParts.getOrNull(1)?.toIntOrNull() ?: 0
+                                        
+                                        SettingsClickableRow(
+                                            label = "Hora del recordatorio",
+                                            value = currPatient.checkInReminderTime,
+                                            icon = Icons.Filled.AccessTime,
+                                            onClick = {
+                                                android.app.TimePickerDialog(
+                                                    context,
+                                                    { _, hour, minute ->
+                                                        val timeStr = String.format(java.util.Locale.getDefault(), "%02d:%02d", hour, minute)
+                                                        viewModel.updateCheckInReminderTime(timeStr)
+                                                        com.relaxmind.app.utils.ReminderManager.scheduleReminder(context, timeStr)
+                                                    },
+                                                    initHour,
+                                                    initMin,
+                                                    true // is24HourView
+                                                ).show()
+                                            }
+                                        )
+                                    }
                                 }
                                 SettingsDivider()
 
                                 // Biometría
-                                val context = androidx.compose.ui.platform.LocalContext.current
                                 SettingsToggleRow(
                                     label = "Inicio con biometría",
                                     icon = Icons.Filled.Fingerprint,
@@ -255,12 +296,13 @@ fun SettingsPatientScreen(
                             modifier = Modifier.size(130.dp)
                         )
                         Spacer(modifier = Modifier.height(4.dp))
+                        val versionColor = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
                         Text(
                             text = "Versión 1.0.0",
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Normal,
                             fontSize = 12.sp,
-                            color = TextSecondary
+                            color = versionColor
                         )
                     }
                     }
@@ -384,75 +426,6 @@ fun RelaxSwitch(
 }
 
 @Composable
-fun SettingsHeader(
-    onBackClick: () -> Unit,
-    onNotificationClick: () -> Unit,
-    hasNotifications: Boolean = true,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(56.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        // Back Button
-        com.relaxmind.app.ui.components.RelaxBackButton(
-            onClick = onBackClick,
-            modifier = Modifier.align(Alignment.CenterStart),
-            role = com.relaxmind.app.ui.components.AppRole.PATIENT
-        )
-
-        // Title
-        Text(
-            text = "Ajustes",
-            fontFamily = LexendFontFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 20.sp,
-            color = TextPrimary,
-            textAlign = TextAlign.Center
-        )
-
-        // Notification Bell
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .size(50.dp)
-                .shadow(
-                    elevation = 4.dp,
-                    shape = CircleShape,
-                    ambientColor = Color(0xFF8A88A6).copy(alpha = 0.2f),
-                    spotColor = Color(0xFF8A88A6).copy(alpha = 0.2f)
-                )
-                .background(Color.White, CircleShape)
-                .clickable(
-                    onClick = onNotificationClick,
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() }
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = RelaxIcons.Notifications,
-                contentDescription = "Notificaciones",
-                tint = TextPrimary,
-                modifier = Modifier.size(24.dp)
-            )
-            if (hasNotifications) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(PatientGreenLight)
-                        .align(Alignment.TopEnd)
-                        .offset(x = (-12).dp, y = 12.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
 fun SettingsProfileCard(
     userName: String,
     email: String,
@@ -460,14 +433,22 @@ fun SettingsProfileCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val cardColor = if (isDark) com.relaxmind.app.ui.themes.SurfaceDark else Color.White
+    val shadowColor = if (isDark) Color(0xFF68D391).copy(alpha = 0.05f) else androidx.compose.ui.graphics.DefaultShadowColor
+    val textColorPrimary = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary
+    val textColorSecondary = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .shadow(
                 elevation = 12.dp,
-                shape = RoundedCornerShape(28.dp)
+                shape = RoundedCornerShape(28.dp),
+                ambientColor = shadowColor,
+                spotColor = shadowColor
             )
-            .background(Color.White, RoundedCornerShape(28.dp))
+            .background(cardColor, RoundedCornerShape(28.dp))
             .clickable(onClick = onClick)
             .padding(24.dp)
     ) {
@@ -484,7 +465,7 @@ fun SettingsProfileCard(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
-                    color = TextPrimary
+                    color = textColorPrimary
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -492,7 +473,7 @@ fun SettingsProfileCard(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Normal,
                     fontSize = 14.sp,
-                    color = TextSecondary
+                    color = textColorSecondary
                 )
             }
             
@@ -533,12 +514,14 @@ private fun PatientAvatarLarge(avatarUrl: String) {
 
 @Composable
 fun SettingsSectionTitle(title: String) {
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val textColorSecondary = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
     Text(
         text = title.uppercase(),
         fontFamily = LexendFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 12.sp,
-        color = TextSecondary,
+        color = textColorSecondary,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 8.dp)
@@ -550,16 +533,20 @@ fun SettingsGroupCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val cardColor = if (isDark) com.relaxmind.app.ui.themes.SurfaceDark else Color.White
+    val shadowColor = if (isDark) Color(0xFF68D391).copy(alpha = 0.05f) else Color(0xFF8A88A6).copy(alpha = 0.12f)
+
     Column(
         modifier = modifier
             .fillMaxWidth()
             .shadow(
                 elevation = 6.dp,
                 shape = RoundedCornerShape(28.dp),
-                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.12f),
-                spotColor = Color(0xFF8A88A6).copy(alpha = 0.12f)
+                ambientColor = shadowColor,
+                spotColor = shadowColor
             )
-            .background(Color.White, RoundedCornerShape(28.dp))
+            .background(cardColor, RoundedCornerShape(28.dp))
             .padding(vertical = 8.dp)
     ) {
         content()
@@ -574,6 +561,8 @@ fun SettingsToggleRow(
     onToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val textColorPrimary = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -605,7 +594,7 @@ fun SettingsToggleRow(
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Medium,
                 fontSize = 15.sp,
-                color = TextPrimary
+                color = textColorPrimary
             )
         }
         
@@ -617,6 +606,66 @@ fun SettingsToggleRow(
 }
 
 @Composable
+fun SettingsClickableRow(
+    label: String,
+    value: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val textColorPrimary = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary
+    val textColorSecondary = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MintPill),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = PatientGreen,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(
+                    text = label,
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 15.sp,
+                    color = textColorPrimary
+                )
+                if (value.isNotEmpty()) {
+                    Text(
+                        text = value,
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 13.sp,
+                        color = textColorSecondary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun SettingsNavigationRow(
     label: String,
     icon: ImageVector,
@@ -624,6 +673,9 @@ fun SettingsNavigationRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val textColorPrimary = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary
+    val textColorSecondary = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -656,7 +708,7 @@ fun SettingsNavigationRow(
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Medium,
                 fontSize = 15.sp,
-                color = TextPrimary
+                color = textColorPrimary
             )
         }
         
@@ -667,7 +719,7 @@ fun SettingsNavigationRow(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Normal,
                     fontSize = 14.sp,
-                    color = TextSecondary,
+                    color = textColorSecondary,
                     modifier = Modifier.padding(end = 8.dp)
                 )
             }

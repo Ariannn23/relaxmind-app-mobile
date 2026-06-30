@@ -77,7 +77,7 @@ class RelaxMindMessagingService : FirebaseMessagingService() {
                     notify((alertId ?: "sos").hashCode(), notification)
                 }
             }
-            "low_score", "wellness" -> {
+            "low_score", "wellness", "missed_checkin" -> {
                 val intent = Intent(this, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     putExtra("action", "open_patient_detail")

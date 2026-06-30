@@ -15,11 +15,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -65,7 +67,7 @@ private const val DEFAULT_AVATAR_URL = "relaxmind://avatar/default"
 @Composable
 fun AvatarSetupScreen(
     viewModel: AuthViewModel = viewModel(),
-    onNavigateBack: () -> Unit,
+    onNavigateBack: () -> Unit, // Not needed in UI, but kept for compatibility
     onContinue: (String?) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -108,7 +110,46 @@ fun AvatarSetupScreen(
     }
 
     Scaffold(
-        topBar = { RelaxTopBar(title = "", onBackClick = onNavigateBack) }
+        containerColor = Color.White,
+        topBar = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 24.dp, vertical = 24.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = com.relaxmind.app.R.drawable.icono_plano2),
+                    contentDescription = "RelaxMind Logo",
+                    modifier = Modifier
+                        .height(48.dp)
+                        .align(Alignment.Center),
+                    contentScale = ContentScale.Fit
+                )
+                
+                if (userRole == "patient") {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .background(
+                                color = PatientGreen.copy(alpha = 0.10f),
+                                shape = RoundedCornerShape(999.dp)
+                            )
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "Paso 1 de 2",
+                            fontFamily = com.relaxmind.app.ui.themes.LexendFontFamily,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = PatientGreen,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+            }
+        }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -122,33 +163,17 @@ fun AvatarSetupScreen(
                     .padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.Start
             ) {
-                Spacer(modifier = Modifier.height(34.dp))
-                if (userRole == "patient") {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.End)
-                            .background(
-                                color = PatientGreen.copy(alpha = 0.10f),
-                                shape = RoundedCornerShape(999.dp)
-                            )
-                            .padding(horizontal = 14.dp, vertical = 7.dp)
-                    ) {
-                        Text(
-                            text = "Paso 1 de 2",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = PatientGreen
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
+                Spacer(modifier = Modifier.height(24.dp))
                 Text(
                     text = "Elige tu avatar",
-                    style = MaterialTheme.typography.headlineLarge
+                    fontFamily = com.relaxmind.app.ui.themes.LexendFontFamily,
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Puedes cambiarlo después en ajustes",
+                    fontFamily = com.relaxmind.app.ui.themes.LexendFontFamily,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f)
                 )
@@ -195,6 +220,8 @@ fun AvatarSetupScreen(
                 ) {
                     Text(
                         text = "Omitir",
+                        fontFamily = com.relaxmind.app.ui.themes.LexendFontFamily,
+                        fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.labelLarge,
                         color = PatientGreen
                     )

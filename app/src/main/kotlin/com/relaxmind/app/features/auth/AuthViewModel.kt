@@ -27,7 +27,8 @@ data class AuthUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val emailError: String? = null,
-    val success: Boolean = false
+    val success: Boolean = false,
+    val isNewUser: Boolean = false
 )
 
 // ---------------------------------------------------------------------------
@@ -224,7 +225,7 @@ class AuthViewModel(
             }
 
             _userRole.value = role
-            _uiState.update { it.copy(isLoading = false, success = true) }
+            _uiState.update { it.copy(isLoading = false, success = true, isNewUser = true) }
         }
     }
 
@@ -271,7 +272,23 @@ class AuthViewModel(
             }
 
             _userRole.value = roleResult.getOrNull()
+            roleResult.getOrNull()?.let { role ->
+                fetchAndSaveFcmToken(userId, role)
+            }
             _uiState.update { it.copy(isLoading = false, success = true) }
+        }
+    }
+
+    private fun fetchAndSaveFcmToken(userId: String, role: String) {
+        com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val token = task.result
+                if (!token.isNullOrBlank()) {
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                        firestoreRepository.updateFcmToken(userId, role, token)
+                    }
+                }
+            }
         }
     }
 

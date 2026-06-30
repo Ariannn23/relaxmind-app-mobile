@@ -27,7 +27,7 @@ object AchievementManager {
                 type = catalogItem.type,
                 title = catalogItem.title,
                 description = catalogItem.condition,
-                iconUrl = catalogItem.defaultIconUrl,
+                iconUrl = "",
                 unlockedAt = LocalDate.now().toString()
             )
             firestoreRepository.unlockAchievement(userAch)

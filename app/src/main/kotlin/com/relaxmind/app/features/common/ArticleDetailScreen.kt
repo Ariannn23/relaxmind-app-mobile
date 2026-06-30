@@ -10,6 +10,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -181,15 +183,15 @@ fun ArticleDetailScreen(
                         HorizontalDivider(color = BorderSoft, thickness = 1.dp)
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Article Body Text (Simple Markdown support)
-                        val formattedBody = parseMarkdownToAnnotatedString(currentArticle.content, themeColor)
-                        Text(
-                            text = formattedBody,
-                            fontFamily = Urbanist,
-                            fontSize = 15.sp,
-                            color = TextPrimary,
-                            lineHeight = 24.sp
-                        )
+                        // Article Body Text with expandable sections
+                        val sections = parseArticleSections(currentArticle.content)
+                        sections.forEachIndexed { index, section ->
+                            ExpandableSection(
+                                section = section,
+                                themeColor = themeColor,
+                                isExpandedInitially = index == 0 // Expand the first one by default
+                            )
+                        }
 
                         Spacer(modifier = Modifier.height(30.dp))
                         HorizontalDivider(color = BorderSoft, thickness = 1.dp)
@@ -291,6 +293,89 @@ fun AnnotatedString.Builder.parseBoldText(text: String, primaryColor: Color) {
             }
         } else {
             append(part)
+        }
+    }
+}
+
+data class ArticleSection(val title: String, val content: String)
+
+fun parseArticleSections(content: String): List<ArticleSection> {
+    if (!content.contains("## ")) {
+        return listOf(ArticleSection("", content))
+    }
+    val sections = mutableListOf<ArticleSection>()
+    val lines = content.split("\n")
+    var currentTitle = ""
+    var currentContent = StringBuilder()
+
+    for (line in lines) {
+        if (line.trim().startsWith("## ")) {
+            if (currentTitle.isNotEmpty() || currentContent.isNotBlank()) {
+                sections.add(ArticleSection(currentTitle, currentContent.toString().trim()))
+            }
+            currentTitle = line.trim().removePrefix("## ").trim()
+            currentContent = StringBuilder()
+        } else {
+            currentContent.append(line).append("\n")
+        }
+    }
+    if (currentTitle.isNotEmpty() || currentContent.isNotBlank()) {
+        sections.add(ArticleSection(currentTitle, currentContent.toString().trim()))
+    }
+    return sections
+}
+
+@Composable
+fun ExpandableSection(
+    section: ArticleSection,
+    themeColor: Color,
+    isExpandedInitially: Boolean = false
+) {
+    var isExpanded by remember { mutableStateOf(isExpandedInitially) }
+    
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp))
+            .clickable { isExpanded = !isExpanded },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = section.title,
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = TextPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (isExpanded) "Colapsar" else "Expandir",
+                    tint = themeColor
+                )
+            }
+            
+            if (isExpanded && section.content.isNotBlank()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                val formattedBody = parseMarkdownToAnnotatedString(section.content, themeColor)
+                Text(
+                    text = formattedBody,
+                    fontFamily = Urbanist,
+                    fontSize = 15.sp,
+                    color = TextPrimary,
+                    lineHeight = 24.sp
+                )
+            }
         }
     }
 }

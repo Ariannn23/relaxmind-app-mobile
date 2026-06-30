@@ -410,10 +410,8 @@ fun EditProfileCaregiverScreen(
                                 leadingIcon = { EditProfileIcon(RelaxIcons.Phone) },
                                 isError = phoneError != null,
                                 errorMessage = phoneError,
-                                keyboardType = KeyboardType.Number
+                                        keyboardType = KeyboardType.Number
                             )
-
-
                         }
                     }
 
@@ -425,7 +423,8 @@ fun EditProfileCaregiverScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp)
                     ) {
-                        Button(
+                        com.relaxmind.app.ui.components.RelaxButton(
+                            text = "Guardar cambios",
                             onClick = {
                                 viewModel.updateProfile(
                                     name = name.trim(),
@@ -434,36 +433,18 @@ fun EditProfileCaregiverScreen(
                                     sex = sex,
                                     phone = phone,
                                     avatarUrl = selectedAvatarUrl,
-                                    onSuccess = { toastState.showSuccess("Perfil guardado correctamente") },
+                                    onSuccess = {
+                                        toastState.showSuccess("Perfil guardado correctamente")
+                                        onNavigateBack()
+                                    },
                                     onError = { toastState.showError(it) }
                                 )
                             },
                             enabled = isFormValid && !isLoading,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(54.dp),
-                            shape = RoundedCornerShape(18.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = CaregiverIndigo,
-                                disabledContainerColor = CaregiverIndigo.copy(alpha = 0.38f)
-                            )
-                        ) {
-                            if (isLoading) {
-                                CircularProgressIndicator(
-                                    color = Color.White,
-                                    strokeWidth = 2.dp,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            } else {
-                                Text(
-                                    text = "Guardar cambios",
-                                    fontFamily = LexendFontFamily,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 16.sp,
-                                    color = Color.White
-                                )
-                            }
-                        }
+                            isLoading = isLoading,
+                            role = com.relaxmind.app.ui.components.AppRole.CAREGIVER,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))

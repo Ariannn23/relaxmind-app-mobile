@@ -32,9 +32,9 @@ private val DarkColorScheme = darkColorScheme(
     tertiary = SOSCoral,
     onTertiary = Color.White,
     background = BackgroundDark,
-    onBackground = Color(0xFFF5F7FA),
+    onBackground = TextDarkPrimary,
     surface = SurfaceDark,
-    onSurface = Color(0xFFF5F7FA),
+    onSurface = TextDarkPrimary,
     error = SOSCoral,
     onError = Color.White
 )

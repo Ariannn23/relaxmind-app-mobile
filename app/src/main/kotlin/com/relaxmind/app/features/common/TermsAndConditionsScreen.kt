@@ -62,30 +62,9 @@ fun TermsAndConditionsScreen(
                             .height(56.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(50.dp)
-                                .shadow(
-                                    elevation = 4.dp,
-                                    shape = CircleShape,
-                                    ambientColor = Color(0xFF8A88A6).copy(alpha = 0.2f),
-                                    spotColor = Color(0xFF8A88A6).copy(alpha = 0.2f)
-                                )
-                                .background(Color.White, CircleShape)
-                                .clickable(
-                                    onClick = onNavigateBack,
-                                    indication = null,
-                                    interactionSource = remember { MutableInteractionSource() }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = RelaxIcons.ArrowBack,
-                                contentDescription = stringResource(id = R.string.dialog_cancel),
-                                tint = themeColor,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
+                        com.relaxmind.app.ui.components.RelaxBackButton(
+                            onClick = onNavigateBack
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))

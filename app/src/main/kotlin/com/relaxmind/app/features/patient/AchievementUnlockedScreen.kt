@@ -1,5 +1,7 @@
 package com.relaxmind.app.features.patient
 
+import androidx.compose.foundation.Image
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,9 +21,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import coil.compose.AsyncImage
+import nl.dionsegijn.konfetti.compose.KonfettiView
+import nl.dionsegijn.konfetti.core.Party
+import nl.dionsegijn.konfetti.core.Position
+import nl.dionsegijn.konfetti.core.emitter.Emitter
+import java.util.concurrent.TimeUnit
 import com.relaxmind.app.data.model.UserAchievement
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.LexendFontFamily
@@ -29,6 +36,18 @@ import com.relaxmind.app.ui.themes.PatientGreen
 import com.relaxmind.app.ui.themes.PatientGreenLight
 import com.relaxmind.app.ui.themes.TextPrimary
 import com.relaxmind.app.ui.themes.TextSecondary
+import com.relaxmind.app.R
+
+private fun getAchievementColor(key: String): Color {
+    return when (key) {
+        "first_checkin", "streak_3", "streak_7", "streak_14", "streak_30" -> Color(0xFFF9A471) // Naranja
+        "first_meditation", "meditations_10" -> Color(0xFF71C9F9) // Azul
+        "first_diary", "diary_7" -> Color(0xFF9B51E0) // Morado
+        "score_80", "score_100" -> Color(0xFFF9D671) // Amarillo/Dorado
+        "lumi_first" -> Color(0xFF68D391) // Verde
+        else -> PatientGreen
+    }
+}
 
 @Composable
 fun AchievementUnlockedScreen(
@@ -36,6 +55,10 @@ fun AchievementUnlockedScreen(
     onContinue: () -> Unit,
     onNavigateToLibrary: () -> Unit = onContinue
 ) {
+    val achColor = getAchievementColor(achievement.achievementKey)
+    val catalogItem = AchievementCatalog.getByKey(achievement.achievementKey)
+    val iconResId = catalogItem?.iconResId ?: R.drawable.logro_primeros_pasos
+
     Dialog(
         onDismissRequest = onContinue,
         properties = DialogProperties(
@@ -50,6 +73,22 @@ fun AchievementUnlockedScreen(
                 .background(Color.White)
         ) {
             SoftGradientBackground(animateBlobs = true)
+            
+            // Confetti Animation
+            KonfettiView(
+                modifier = Modifier.fillMaxSize(),
+                parties = listOf(
+                    Party(
+                        speed = 10f,
+                        maxSpeed = 50f,
+                        damping = 0.9f,
+                        spread = 360,
+                        colors = listOf(0x68D391, 0xF9D671, 0xF9A471, 0x71C9F9, 0xFF6B6B, 0x9B51E0),
+                        emitter = Emitter(duration = 3, TimeUnit.SECONDS).perSecond(200),
+                        position = Position.Relative(0.5, 0.2)
+                    )
+                )
+            )
 
             Column(
                 modifier = Modifier
@@ -84,21 +123,20 @@ fun AchievementUnlockedScreen(
                 Box(
                     modifier = Modifier
                         .size(180.dp)
-                        .shadow(24.dp, shape = RoundedCornerShape(40.dp), spotColor = PatientGreen)
+                        .shadow(24.dp, shape = RoundedCornerShape(40.dp), spotColor = achColor)
                         .background(Color.White, RoundedCornerShape(40.dp))
                         .padding(8.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .background(PatientGreenLight.copy(alpha = 0.3f), RoundedCornerShape(32.dp)),
+                            .fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        AsyncImage(
-                            model = achievement.iconUrl,
+                        Image(
+                            painter = painterResource(id = iconResId),
                             contentDescription = "Achievement Icon",
-                            modifier = Modifier.size(100.dp),
+                            modifier = Modifier.size(140.dp),
                             contentScale = ContentScale.Fit
                         )
                     }
@@ -123,7 +161,7 @@ fun AchievementUnlockedScreen(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 32.sp,
-                    color = PatientGreen,
+                    color = achColor,
                     textAlign = TextAlign.Center
                 )
                 
@@ -138,49 +176,58 @@ fun AchievementUnlockedScreen(
                     textAlign = TextAlign.Center
                 )
                 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 
                 // Info rows
                 Column(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    AchievementInfoRow("Nuevo logro añadido a tu biblioteca")
-                    AchievementInfoRow("Sigue avanzando en tu progreso")
+                    AchievementInfoRow("Nuevo logro añadido a tu biblioteca", achColor)
+                    AchievementInfoRow("Sigue avanzando en tu progreso", achColor)
                 }
                 
-                Spacer(modifier = Modifier.weight(1f))
-                
-                Button(
-                    onClick = onNavigateToLibrary,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PatientGreen),
-                    shape = RoundedCornerShape(16.dp)
+                Spacer(modifier = Modifier.height(32.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text(
-                        text = "Ver mis logros",
-                        fontFamily = LexendFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp,
-                        color = Color.White
-                    )
+                    Button(
+                        onClick = onContinue,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = achColor.copy(alpha = 0.15f)),
+                        shape = RoundedCornerShape(100),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                    ) {
+                        Text(
+                            text = "Continuar",
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = achColor
+                        )
+                    }
+                    
+                    Button(
+                        onClick = onNavigateToLibrary,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp)
+                            .shadow(16.dp, RoundedCornerShape(100), spotColor = achColor),
+                        colors = ButtonDefaults.buttonColors(containerColor = achColor),
+                        shape = RoundedCornerShape(100)
+                    ) {
+                        Text(
+                            text = "Ver logros",
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = Color.White
+                        )
+                    }
                 }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Text(
-                    text = "Continuar",
-                    fontFamily = LexendFontFamily,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 16.sp,
-                    color = PatientGreen,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onContinue() }
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                )
                 
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -189,7 +236,7 @@ fun AchievementUnlockedScreen(
 }
 
 @Composable
-fun AchievementInfoRow(text: String) {
+fun AchievementInfoRow(text: String, achColor: Color) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -200,13 +247,13 @@ fun AchievementInfoRow(text: String) {
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .background(PatientGreenLight.copy(alpha = 0.2f), RoundedCornerShape(10.dp)),
+                .background(achColor.copy(alpha = 0.15f), RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.CheckCircle,
                 contentDescription = null,
-                tint = PatientGreen,
+                tint = achColor,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -220,13 +267,6 @@ fun AchievementInfoRow(text: String) {
             fontSize = 14.sp,
             color = TextPrimary,
             modifier = Modifier.weight(1f)
-        )
-        
-        Icon(
-            imageVector = Icons.Default.CheckCircle,
-            contentDescription = null,
-            tint = PatientGreen,
-            modifier = Modifier.size(20.dp)
         )
     }
 }

@@ -37,8 +37,12 @@ class LumiChatViewModel(
 
     fun initSession(providedSessionId: String? = null) {
         if (providedSessionId != null) {
-            loadSessionMessages(providedSessionId)
+            if (_uiState.value.sessionId != providedSessionId) {
+                loadSessionMessages(providedSessionId)
+            }
         } else {
+            if (_uiState.value.sessionId != null) return // Session already initialized
+            
             viewModelScope.launch {
                 val patientId = authService.getCurrentUser()?.uid ?: return@launch
                 val sessionResult = firestoreRepository.getActiveLumiSession(patientId)

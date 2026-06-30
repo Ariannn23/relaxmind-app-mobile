@@ -40,6 +40,22 @@ import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.tasks.await
 import com.google.firebase.storage.FirebaseStorage
 
+/** Estado del banner para el test inicial omitido. */
+sealed class InitialTestBannerState {
+    /** El usuario completó el test o nunca lo omitió → no mostrar nada. */
+    object None : InitialTestBannerState()
+    /** Omitió el test y quedan horas dentro de la ventana de 24h. */
+    data class SkippedWithin24h(val hoursLeft: Long, val minutesLeft: Long) : InitialTestBannerState()
+    /** Las 24h ya pasaron → solo puede hacer check-ins diarios. */
+    object Expired : InitialTestBannerState()
+}
+
+private const val INITIAL_TEST_DEADLINE_MS = 24L * 60 * 60 * 1000 // 24 horas en ms
+
+object MeditationProgressStore {
+    val progressMap = mutableMapOf<String, Int>()
+}
+
 class PatientViewModel(
     private val authService: FirebaseAuthService = FirebaseAuthService(),
     private val firestoreRepository: FirestoreRepository = FirestoreRepository()
@@ -78,6 +94,12 @@ class PatientViewModel(
     private val _allCheckIns = MutableStateFlow<List<CheckIn>>(emptyList())
     val allCheckIns = _allCheckIns.asStateFlow()
 
+    private val _initialTestBannerState = MutableStateFlow<InitialTestBannerState>(InitialTestBannerState.None)
+    val initialTestBannerState = _initialTestBannerState.asStateFlow()
+
+    private val _isInitialTestNotificationDismissed = MutableStateFlow(false)
+    val isInitialTestNotificationDismissed = _isInitialTestNotificationDismissed.asStateFlow()
+
     private val _meditationExercises = MutableStateFlow<List<MeditationExercise>>(emptyList())
     val meditationExercises = _meditationExercises.asStateFlow()
 
@@ -98,6 +120,19 @@ class PatientViewModel(
 
     private val _monthlyAppointments = MutableStateFlow<List<Appointment>>(emptyList())
     val monthlyAppointments = _monthlyAppointments.asStateFlow()
+
+    // Progress tracking for meditation exercises
+    fun saveExerciseProgress(exerciseId: String, elapsedSeconds: Int) {
+        MeditationProgressStore.progressMap[exerciseId] = elapsedSeconds
+    }
+
+    fun getExerciseProgress(exerciseId: String): Int {
+        return MeditationProgressStore.progressMap[exerciseId] ?: 0
+    }
+
+    fun clearExerciseProgress(exerciseId: String) {
+        MeditationProgressStore.progressMap.remove(exerciseId)
+    }
 
     private val _achievementUnlockedEvent = MutableSharedFlow<UserAchievement>()
     val achievementUnlockedEvent = _achievementUnlockedEvent.asSharedFlow()
@@ -135,11 +170,15 @@ class PatientViewModel(
                 com.relaxmind.app.ui.themes.ThemeState.language.value = it.language
             }
 
+            // Compute initial test banner state
+            _initialTestBannerState.value = computeInitialTestBannerState(patientData)
+
             if (patientData == null) {
                 _error.value = "Los datos del paciente no existen."
                 _isLoading.value = false
                 return@launch
             }
+
 
             val todayDate = LocalDate.now().toString()
 
@@ -255,6 +294,10 @@ class PatientViewModel(
 
     fun updateCheckInReminderEnabled(enabled: Boolean) {
         updatePatientField("checkInReminderEnabled", enabled) { it.copy(checkInReminderEnabled = enabled) }
+    }
+
+    fun updateCheckInReminderTime(time: String) {
+        updatePatientField("checkInReminderTime", time) { it.copy(checkInReminderTime = time) }
     }
 
     fun updateBiometricEnabled(enabled: Boolean) {
@@ -439,7 +482,7 @@ class PatientViewModel(
                 title = "Respiración 4-7-8",
                 description = "Un ejercicio clásico de respiración profunda para relajar el sistema nervioso.",
                 type = "respiracion",
-                durationMinutes = 5,
+                durationMinutes = 1,
                 lottieAnimationUrl = "",
                 order = 1
             ),
@@ -448,7 +491,7 @@ class PatientViewModel(
                 title = "Respiración de caja",
                 description = "Técnica utilizada por profesionales para recuperar la calma y enfoque.",
                 type = "respiracion",
-                durationMinutes = 4,
+                durationMinutes = 1,
                 lottieAnimationUrl = "",
                 order = 2
             ),
@@ -457,7 +500,7 @@ class PatientViewModel(
                 title = "Escaneo corporal",
                 description = "Recorre mentalmente tu cuerpo para liberar la tensión física acumulada.",
                 type = "relajacion",
-                durationMinutes = 10,
+                durationMinutes = 1,
                 lottieAnimationUrl = "",
                 order = 3
             ),
@@ -466,7 +509,7 @@ class PatientViewModel(
                 title = "Meditación de gratitud",
                 description = "Enfoca tu mente en el aprecio y agradecimiento del momento presente.",
                 type = "mindfulness",
-                durationMinutes = 7,
+                durationMinutes = 1,
                 lottieAnimationUrl = "",
                 order = 4
             ),
@@ -475,7 +518,7 @@ class PatientViewModel(
                 title = "Respiración diafragmática",
                 description = "Respiración abdominal profunda para inducir una respuesta rápida de relajación.",
                 type = "respiracion",
-                durationMinutes = 6,
+                durationMinutes = 1,
                 lottieAnimationUrl = "",
                 order = 5
             )
@@ -483,24 +526,23 @@ class PatientViewModel(
     }
 
     private suspend fun checkAndSeedExercises(): List<MeditationExercise> {
-        val result = firestoreRepository.getMeditationExercises()
-        var exercises = result.getOrDefault(emptyList())
-        if (exercises.isEmpty()) {
-            val defaults = getDefaultExercises()
-            for (exercise in defaults) {
-                firestoreRepository.createMeditationExercise(exercise)
-            }
-            exercises = defaults
+        // Force update DB with defaults so they all have 1 min duration
+        val defaults = getDefaultExercises()
+        for (exercise in defaults) {
+            firestoreRepository.createMeditationExercise(exercise)
         }
-        return exercises
+        return defaults
     }
 
     fun loadMeditationExercises() {
         viewModelScope.launch {
-            _isLoading.value = true
-            val exercises = checkAndSeedExercises()
-            _meditationExercises.value = exercises
-            _isLoading.value = false
+            val result = firestoreRepository.getMeditationExercises()
+            if (result.isSuccess) {
+                // Force update DB with defaults so they all have 1 min duration
+                val defaults = getDefaultExercises()
+                defaults.forEach { firestoreRepository.createMeditationExercise(it) }
+                _meditationExercises.value = defaults.sortedBy { it.order }
+            }
         }
     }
 
@@ -522,8 +564,12 @@ class PatientViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             
-            // 1. Check if matches today's daily goal
-            val isGoal = _dailyGoal.value?.let { goal ->
+            // 1. Fetch today's goal directly from Firestore to ensure we have the latest
+            val todayDate = java.time.LocalDate.now().toString()
+            val dailyGoalResult = firestoreRepository.getDailyGoal(userId, todayDate)
+            val dailyGoal = dailyGoalResult.getOrNull()
+
+            val isGoal = dailyGoal?.let { goal ->
                 goal.exerciseId == exerciseId && !goal.completed
             } ?: false
 
@@ -540,12 +586,13 @@ class PatientViewModel(
             val saveResult = firestoreRepository.createCompletedMeditation(completedMeditation)
             if (saveResult.isSuccess) {
                 // 3. Update daily goal if matches
-                if (isGoal) {
-                    _dailyGoal.value?.let { goal ->
-                        firestoreRepository.updateDailyGoalCompletion(goal.id, true)
-                        _dailyGoal.value = goal.copy(completed = true)
-                    }
+                if (isGoal && dailyGoal != null) {
+                    firestoreRepository.updateDailyGoalCompletion(dailyGoal.id, true)
+                    _dailyGoal.update { it?.copy(completed = true) ?: dailyGoal.copy(completed = true) }
                 }
+
+                // Clear exercise progress upon completion
+                clearExerciseProgress(exerciseId)
 
                 // 4. Verify achievements
                 val completionsResult = firestoreRepository.getCompletedMeditations(userId)
@@ -573,6 +620,7 @@ class PatientViewModel(
                     }
                 }
 
+                clearExerciseProgress(exerciseId)
                 _meditationCompleteSuccess.emit(Pair(exerciseId, 50))
             }
             _isLoading.value = false
@@ -921,5 +969,39 @@ class PatientViewModel(
 
     fun clearError() {
         _error.value = null
+    }
+
+    /** Recalcula y devuelve el estado del banner del test inicial. */
+    fun computeInitialTestBannerState(patient: com.relaxmind.app.data.model.Patient?): InitialTestBannerState {
+        val skippedAt = patient?.initialTestSkippedAt ?: return InitialTestBannerState.None
+        
+        // El plazo es hasta la medianoche del día en que se omitió
+        val midnight = java.util.Calendar.getInstance().apply {
+            timeInMillis = skippedAt
+            set(java.util.Calendar.HOUR_OF_DAY, 23)
+            set(java.util.Calendar.MINUTE, 59)
+            set(java.util.Calendar.SECOND, 59)
+            set(java.util.Calendar.MILLISECOND, 999)
+        }.timeInMillis
+        
+        val remaining = midnight - System.currentTimeMillis()
+        
+        return if (remaining > 0) {
+            InitialTestBannerState.SkippedWithin24h(
+                hoursLeft = remaining / 3_600_000L,
+                minutesLeft = (remaining % 3_600_000L) / 60_000L
+            )
+        } else {
+            InitialTestBannerState.Expired
+        }
+    }
+
+    /** Refresca el estado del banner (llamar periódicamente si la pantalla está abierta). */
+    fun refreshInitialTestBannerState() {
+        _initialTestBannerState.value = computeInitialTestBannerState(_patient.value)
+    }
+
+    fun dismissInitialTestNotification() {
+        _isInitialTestNotificationDismissed.value = true
     }
 }

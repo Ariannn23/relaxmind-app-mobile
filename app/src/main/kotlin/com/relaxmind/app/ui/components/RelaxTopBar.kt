@@ -13,6 +13,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.text.font.FontWeight
@@ -30,6 +32,7 @@ import com.relaxmind.app.ui.themes.TextSecondary
 fun RelaxTopBar(
     title: String,
     onBackClick: (() -> Unit)? = null,
+    role: com.relaxmind.app.ui.components.AppRole? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     CenterAlignedTopAppBar(
@@ -46,7 +49,7 @@ fun RelaxTopBar(
         navigationIcon = {
             if (onBackClick != null) {
                 Box(modifier = Modifier.padding(start = 8.dp)) {
-                    com.relaxmind.app.ui.components.RelaxBackButton(onClick = onBackClick)
+                    com.relaxmind.app.ui.components.RelaxBackButton(onClick = onBackClick, role = role)
                 }
             }
         },
@@ -77,6 +80,9 @@ fun ScreenHeader(
     modifier: Modifier = Modifier,
     horizontalPadding: Dp = 24.dp
 ) {
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val textColorPrimary = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary
+    val textColorSecondary = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -87,7 +93,7 @@ fun ScreenHeader(
             fontFamily = LexendFontFamily,
             fontWeight = FontWeight.Bold,
             fontSize = 32.sp,
-            color = TextPrimary
+            color = textColorPrimary
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
@@ -95,7 +101,7 @@ fun ScreenHeader(
             fontFamily = LexendFontFamily,
             fontWeight = FontWeight.Normal,
             fontSize = 13.sp,
-            color = TextSecondary
+            color = textColorSecondary
         )
     }
 }

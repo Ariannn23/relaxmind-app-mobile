@@ -58,6 +58,7 @@ import com.relaxmind.app.ui.components.RelaxIcons
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.components.getAvatarDrawableRes
 import com.relaxmind.app.ui.components.SettingsSkeleton
+import com.relaxmind.app.ui.components.ScreenHeader
 import com.relaxmind.app.ui.components.ErrorStateScreen
 import com.relaxmind.app.ui.themes.*
 
@@ -121,15 +122,15 @@ fun SettingsCaregiverScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 24.dp, vertical = 20.dp),
+                            .padding(start = 24.dp, end = 24.dp, bottom = 20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
                     // 1. Header
-                    CaregiverSettingsHeader(
-                        onBackClick = { onNavigate("caregiver/dashboard") },
-                        onNotificationClick = { /* No-op for now */ },
-                        hasNotifications = true
+                    com.relaxmind.app.ui.components.ScreenHeader(
+                        title = "Ajustes",
+                        subtitle = "Configura tu cuenta y notificaciones",
+                        horizontalPadding = 0.dp
                     )
 
                     caregiver?.let { currCaregiver ->

@@ -119,7 +119,7 @@ object WellnessScoreCalculator {
         return when {
             score == null -> ScoreGray
             score <= 20 -> ScoreRed
-            score <= 30 -> ScoreOrange
+            score <= 40 -> ScoreOrange
             score <= 60 -> ScoreYellow
             score <= 80 -> ScoreGreenLight
             else -> ScoreGreenDark

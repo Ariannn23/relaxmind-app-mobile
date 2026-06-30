@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -72,6 +73,7 @@ sealed class Screen(val route: String) {
     data object BiometricLock : Screen("biometric-lock")
 
     data object PatientDashboard : Screen("patient/dashboard")
+    data object PatientNotifications : Screen("patient/notifications")
     data object CheckIn : Screen("patient/check-in")
     data object InitialTest : Screen("patient/initial-test")
     data object Meditate : Screen("patient/meditate")
@@ -203,13 +205,17 @@ fun AppNavGraph(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
         bottomBar = {
-            if (bottomNavRole != null && selectedBottomRoute != null) {
-                RelaxBottomNav(
-                    selectedRoute = selectedBottomRoute,
-                    onNavigate = { route -> navigateBottomTab(route) },
-                    role = bottomNavRole,
-                    darkMode = darkMode && selectedBottomRoute == Screen.PatientDashboard.route
+            if (bottomNavRole == AppRole.PATIENT) {
+                com.relaxmind.app.ui.components.PatientBottomNavigationBar(
+                    navController = navController,
+                    darkMode = darkMode
+                )
+            } else if (bottomNavRole == AppRole.CAREGIVER) {
+                com.relaxmind.app.ui.components.CaregiverBottomNavigationBar(
+                    navController = navController,
+                    darkMode = darkMode
                 )
             }
         }
@@ -217,7 +223,7 @@ fun AppNavGraph(
         NavHost(
             navController = navController,
             startDestination = startDestination,
-            modifier = Modifier.padding(shellPadding)
+            modifier = Modifier // Removed shellPadding so screens draw behind the navbar
         ) {
         composable(Screen.BiometricLock.route) {
             com.relaxmind.app.features.auth.BiometricLockScreen(
@@ -257,6 +263,11 @@ fun AppNavGraph(
                     navController.navigate(Screen.CaregiverDashboard.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
+                },
+                onNavigateToOnboarding = {
+                    navController.navigate(Screen.AvatarSetup.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
                 }
             )
         }
@@ -269,12 +280,17 @@ fun AppNavGraph(
                     }
                 },
                 onNavigateToPatientDashboard = {
-                    navController.navigate(Screen.AvatarSetup.route) {
+                    navController.navigate(Screen.PatientDashboard.route) {
                         popUpTo(Screen.Register.route) { inclusive = true }
                     }
                 },
                 onNavigateToCaregiverDashboard = {
                     navController.navigate(Screen.CaregiverDashboard.route) {
+                        popUpTo(Screen.Register.route) { inclusive = true }
+                    }
+                },
+                onNavigateToOnboarding = {
+                    navController.navigate(Screen.AvatarSetup.route) {
                         popUpTo(Screen.Register.route) { inclusive = true }
                     }
                 }
@@ -327,10 +343,24 @@ fun AppNavGraph(
             )
         }
 
+        composable(Screen.PatientNotifications.route) {
+            com.relaxmind.app.features.patient.PatientNotificationsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToInitialTest = { navController.navigate(Screen.InitialTest.route) }
+            )
+        }
+
         composable(Screen.PatientDashboard.route) {
             DashboardPatientScreen(
                 onNavigateToCheckIn = { navController.navigate(Screen.CheckIn.route) },
-                onNavigateToMeditate = { navController.navigate(Screen.Meditate.route) },
+                onNavigateToInitialTest = { navController.navigate(Screen.InitialTest.route) },
+                onNavigateToMeditate = { 
+                    navController.navigate(Screen.Meditate.route) {
+                        popUpTo(Screen.PatientDashboard.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
                 onNavigateToEditProfile = { navController.navigate(Screen.EditProfile.route) },
                 onNavigateToLinkCaregiver = { navController.navigate(Screen.LinkCaregiver.route) },
                 onNavigateToSOS = { navController.navigate(Screen.SOSPatient.route) },
@@ -352,6 +382,13 @@ fun AppNavGraph(
                     navController.navigate(Screen.PatientDashboard.route) {
                         popUpTo(Screen.CheckIn.route) { inclusive = true }
                     }
+                },
+                onNavigateToProgress = {
+                    navController.navigate(Screen.Progress.route) {
+                        popUpTo(Screen.PatientDashboard.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 }
             )
         }
@@ -363,17 +400,20 @@ fun AppNavGraph(
                     navController.navigate(Screen.PatientDashboard.route) {
                         popUpTo(Screen.InitialTest.route) { inclusive = true }
                     }
+                },
+                onNavigateToProgress = {
+                    navController.navigate(Screen.Progress.route) {
+                        popUpTo(Screen.PatientDashboard.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 }
             )
         }
         composable(Screen.Meditate.route) {
             MeditateScreen(
                 onNavigate = { route ->
-                    navController.navigate(route) {
-                        popUpTo(Screen.PatientDashboard.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+                    navController.navigate(route)
                 },
                 showBottomNav = false
             )

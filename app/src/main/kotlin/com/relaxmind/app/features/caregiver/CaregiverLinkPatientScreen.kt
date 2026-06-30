@@ -195,12 +195,11 @@ fun CaregiverLinkPatientScreen(
                                     textAlign = TextAlign.Center
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
-                                Button(
+                                com.relaxmind.app.ui.components.RelaxButton(
+                                    text = "Permitir cámara",
                                     onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
-                                    colors = ButtonDefaults.buttonColors(containerColor = CaregiverIndigo)
-                                ) {
-                                    Text(text = "Permitir cámara", fontFamily = LexendFontFamily)
-                                }
+                                    role = com.relaxmind.app.ui.components.AppRole.CAREGIVER
+                                )
                             }
                         }
                     }
@@ -304,29 +303,16 @@ fun CaregiverLinkPatientScreen(
                             }
 
                             // Verify code button
-                            Button(
+                            com.relaxmind.app.ui.components.RelaxButton(
+                                text = "Verificar código",
                                 onClick = {
                                     viewModel.verifyBindingCode(manualCode, onSuccess = {})
                                 },
                                 enabled = manualCode.length == 6 && !isLinking,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = CaregiverIndigo,
-                                    disabledContainerColor = Color(0xFFE6E8EF),
-                                    contentColor = Color.White,
-                                    disabledContentColor = TextSecondary.copy(alpha = 0.5f)
-                                ),
-                                shape = RoundedCornerShape(50),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(54.dp)
-                            ) {
-                                Text(
-                                    text = "Verificar código",
-                                    fontFamily = LexendFontFamily,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 15.sp
-                                )
-                            }
+                                isLoading = isLinking,
+                                role = com.relaxmind.app.ui.components.AppRole.CAREGIVER,
+                                modifier = Modifier.fillMaxWidth()
+                            )
 
                             // Security Info Card
                             Surface(
@@ -438,23 +424,15 @@ fun CaregiverLinkPatientScreen(
                                     textAlign = TextAlign.Center
                                 )
 
-                                Button(
+                                com.relaxmind.app.ui.components.RelaxButton(
+                                    text = "Ver paciente",
                                     onClick = {
                                         showSuccessModal = false
                                         onLinked()
                                     },
-                                    colors = ButtonDefaults.buttonColors(containerColor = CaregiverIndigo),
-                                    shape = RoundedCornerShape(50),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(48.dp)
-                                ) {
-                                    Text(
-                                        text = "Ver paciente",
-                                        fontFamily = LexendFontFamily,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
+                                    role = com.relaxmind.app.ui.components.AppRole.CAREGIVER,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
                             }
                         }
                     }

@@ -44,9 +44,15 @@ class SOSAlertViewModel(
                 }
             },
             onError = { error ->
+                android.util.Log.e("SOSAlertViewModel", "Error al escuchar la alerta $alertId", error)
+                val msg = if (error.message?.contains("PERMISSION_DENIED") == true) {
+                    "No tienes permisos para ver esta alerta o la alerta no existe."
+                } else {
+                    error.message ?: "Error desconocido"
+                }
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = error.message ?: "Error desconocido"
+                    error = msg
                 )
             }
         )

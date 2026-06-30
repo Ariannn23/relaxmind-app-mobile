@@ -28,7 +28,10 @@ val Outfit = FontFamily(
 )
 
 val Urbanist = FontFamily(
-    GoogleFontResource(googleFont = UrbanistFont, fontProvider = GoogleFontsProvider, weight = FontWeight.Normal)
+    GoogleFontResource(googleFont = UrbanistFont, fontProvider = GoogleFontsProvider, weight = FontWeight.Normal),
+    GoogleFontResource(googleFont = UrbanistFont, fontProvider = GoogleFontsProvider, weight = FontWeight.Medium),
+    GoogleFontResource(googleFont = UrbanistFont, fontProvider = GoogleFontsProvider, weight = FontWeight.SemiBold),
+    GoogleFontResource(googleFont = UrbanistFont, fontProvider = GoogleFontsProvider, weight = FontWeight.Bold)
 )
 
 private val Montserrat = FontFamily(
@@ -107,73 +110,73 @@ val LexendTypography = Typography(
 // Material 3 typography tuned for RelaxMind screens and reusable components.
 val RelaxMindTypography = Typography(
     displayLarge = TextStyle(
-        fontFamily = Outfit,
+        fontFamily = LexendFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 57.sp,
         lineHeight = 64.sp
     ),
     displayMedium = TextStyle(
-        fontFamily = Outfit,
+        fontFamily = LexendFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 45.sp,
         lineHeight = 52.sp
     ),
     displaySmall = TextStyle(
-        fontFamily = Outfit,
+        fontFamily = LexendFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 36.sp,
         lineHeight = 44.sp
     ),
     headlineLarge = TextStyle(
-        fontFamily = Outfit,
+        fontFamily = LexendFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 32.sp,
         lineHeight = 40.sp
     ),
     headlineMedium = TextStyle(
-        fontFamily = Outfit,
+        fontFamily = LexendFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 28.sp,
         lineHeight = 36.sp
     ),
     headlineSmall = TextStyle(
-        fontFamily = Outfit,
+        fontFamily = LexendFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 24.sp,
         lineHeight = 32.sp
     ),
     bodyLarge = TextStyle(
-        fontFamily = Urbanist,
+        fontFamily = LexendFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp
     ),
     bodyMedium = TextStyle(
-        fontFamily = Urbanist,
+        fontFamily = LexendFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp
     ),
     bodySmall = TextStyle(
-        fontFamily = Urbanist,
+        fontFamily = LexendFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
         lineHeight = 16.sp
     ),
     labelLarge = TextStyle(
-        fontFamily = Montserrat,
+        fontFamily = LexendFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 14.sp,
         lineHeight = 20.sp
     ),
     labelMedium = TextStyle(
-        fontFamily = Montserrat,
+        fontFamily = LexendFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 12.sp,
         lineHeight = 16.sp
     ),
     labelSmall = TextStyle(
-        fontFamily = Montserrat,
+        fontFamily = LexendFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 11.sp,
         lineHeight = 16.sp

@@ -318,23 +318,11 @@ private fun AlertsHeader(onBackClick: () -> Unit) {
             .padding(top = 20.dp, bottom = 16.dp, start = 12.dp, end = 24.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onBackClick
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Volver",
-                tint = TextPrimary,
-                modifier = Modifier.size(30.dp)
-            )
-        }
+        com.relaxmind.app.ui.components.RelaxBackButton(
+            onClick = onBackClick,
+            role = com.relaxmind.app.ui.components.AppRole.CAREGIVER,
+            modifier = Modifier.padding(start = 8.dp)
+        )
         Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = stringResource(id = R.string.alerts_history_title),

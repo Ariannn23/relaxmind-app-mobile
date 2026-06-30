@@ -739,36 +739,30 @@ private fun PatientCard(
 ) {
     val patient = summary.patient
     val score = summary.latestScore
-    val borderColor = when {
-        score == null -> if (colors.isDark) Color(0xFF636174) else Color(0xFFCBD5E0)
-        score < 40 -> if (colors.isDark) Color(0xFFFF6B5F) else AlertRed
-        score < 70 -> if (colors.isDark) Color(0xFFF6B94B) else AlertOrange
-        else -> if (colors.isDark) Color(0xFF7BE0A5) else ScoreGreen
+    val palette = com.relaxmind.app.ui.themes.getWellnessPalette(score)
+    val statusLabel = com.relaxmind.app.ui.themes.getWellnessStatusLabel(score)
+
+    val borderColor = if (score == null) {
+        if (colors.isDark) Color(0xFF636174) else Color(0xFFCBD5E0)
+    } else palette.primary
+
+    val chipBg = if (score == null) {
+        if (colors.isDark) Color(0xFF24263A) else Color(0xFFF0F0F0)
+    } else palette.softBackground
+
+    val chipText = if (score == null) {
+        "Sin datos"
+    } else {
+        "$statusLabel $score/100"
     }
-    val chipBg = when {
-        score == null -> if (colors.isDark) Color(0xFF24263A) else Color(0xFFF0F0F0)
-        score < 40 -> if (colors.isDark) Color(0xFF3B1D24) else ScoreRedSoft
-        score < 70 -> if (colors.isDark) Color(0xFF3A2A12) else ScoreOrangeSoft
-        else -> if (colors.isDark) Color(0xFF123829) else ScoreGreenSoft
-    }
-    val chipText = when {
-        score == null -> "Sin datos"
-        score < 40 -> "Bajo $score/100"
-        score < 70 -> "Moderado $score/100"
-        else -> "Bueno $score/100"
-    }
-    val chipColor = when {
-        score == null -> if (colors.isDark) Color(0xFFB7B5C8) else TextSecondary
-        score < 40 -> if (colors.isDark) Color(0xFFFF6B5F) else AlertRed
-        score < 70 -> if (colors.isDark) Color(0xFFF6B94B) else AlertOrange
-        else -> if (colors.isDark) Color(0xFF7BE0A5) else ScoreGreen
-    }
-    val chipBorderColor = when {
-        score == null -> if (colors.isDark) Color(0xFF4A4D63) else Color.Transparent
-        score < 40 -> if (colors.isDark) Color(0xFF7C2E39) else Color.Transparent
-        score < 70 -> if (colors.isDark) Color(0xFF8A650D) else Color.Transparent
-        else -> if (colors.isDark) Color(0xFF2C7A55) else Color.Transparent
-    }
+
+    val chipColor = if (score == null) {
+        if (colors.isDark) Color(0xFFB7B5C8) else colors.textSecondary
+    } else palette.primary
+
+    val chipBorderColor = if (score == null) {
+        if (colors.isDark) Color(0xFF4A4D63) else Color.Transparent
+    } else palette.ringTrack
 
     Column(
         modifier = modifier

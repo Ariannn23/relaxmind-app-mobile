@@ -120,26 +120,7 @@ fun CreateAppointmentScreen(
                         .padding(horizontal = 24.dp, vertical = 20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .shadow(
-                                elevation = 4.dp,
-                                shape = CircleShape,
-                                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.15f),
-                                spotColor = Color(0xFF8A88A6).copy(alpha = 0.15f)
-                            )
-                            .background(Color.White, CircleShape)
-                            .clickable(onClick = onNavigateBack),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                            contentDescription = "Volver",
-                            tint = PatientGreen,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+                    com.relaxmind.app.ui.components.RelaxBackButton(onClick = onNavigateBack)
 
                     Spacer(modifier = Modifier.width(16.dp))
 
@@ -524,7 +505,9 @@ fun CreateAppointmentScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // GUARDAR EVENTO BUTTON (Pill-shaped green with calendar icon)
-                    Button(
+                    // GUARDAR EVENTO BUTTON
+                    com.relaxmind.app.ui.components.RelaxButton(
+                        text = "Guardar evento",
                         onClick = {
                             if (title.isBlank()) {
                                 isTitleError = true
@@ -532,7 +515,7 @@ fun CreateAppointmentScreen(
                                 viewModel.createAppointment(
                                     title = title,
                                     type = selectedType,
-                                    category = "", // Category is completely removed as requested
+                                    category = "",
                                     date = selectedDate.toString(),
                                     time = selectedTime.toString(),
                                     reminderMinutes = reminderTimeMinutes,
@@ -553,37 +536,9 @@ fun CreateAppointmentScreen(
                                 )
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = PatientGreen),
-                        shape = RoundedCornerShape(24.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                            .shadow(
-                                elevation = 6.dp,
-                                shape = RoundedCornerShape(24.dp),
-                                ambientColor = PatientGreen.copy(alpha = 0.25f),
-                                spotColor = PatientGreen.copy(alpha = 0.25f)
-                            )
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CalendarToday,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Text(
-                                text = "Guardar evento",
-                                fontFamily = LexendFontFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 15.sp,
-                                color = Color.White
-                            )
-                        }
-                    }
+                        icon = Icons.Default.CalendarToday,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     
                     Spacer(modifier = Modifier.height(30.dp))
                 }

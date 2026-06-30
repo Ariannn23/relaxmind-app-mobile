@@ -112,10 +112,13 @@ class AppointmentReminderWorker(
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        val largeIcon = android.graphics.BitmapFactory.decodeResource(context.resources, com.relaxmind.app.R.drawable.recodatorio)
         val notification = NotificationCompat.Builder(context, NotificationUtils.CHANNEL_REMINDERS)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setSmallIcon(com.relaxmind.app.R.drawable.recodatorio)
+            .setLargeIcon(largeIcon)
             .setContentTitle(title)
-            .setContentText(message)
+            .setContentText("Tienes una cita programada. Toca para ver los detalles.")
+            .setStyle(NotificationCompat.BigTextStyle().bigText("Tienes una cita programada. Toca para ver los detalles."))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)

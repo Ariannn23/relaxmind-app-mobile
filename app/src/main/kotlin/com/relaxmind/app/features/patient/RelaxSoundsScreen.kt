@@ -1,9 +1,11 @@
 package com.relaxmind.app.features.patient
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -22,11 +24,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import com.relaxmind.app.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.relaxmind.app.R
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.*
 import com.relaxmind.app.utils.SoundPlayerManager
@@ -35,17 +39,20 @@ data class SoundItem(
     val id: String,
     val name: String,
     val resId: Int,
-    val bgGradientColors: List<Color>,
-    val emoji: String
+    val imageResId: Int
 )
 
 val SoundCatalog = listOf(
-    SoundItem("rain", "Lluvia", R.raw.sound_rain, listOf(Color(0xFFE0F2FE), Color(0xFF38BDF8)), "🌧️"),
-    SoundItem("ocean", "Olas del Mar", R.raw.sound_ocean_waves, listOf(Color(0xFFE0F2FE), Color(0xFF06B6D4)), "🌊"),
-    SoundItem("forest", "Bosque", R.raw.sound_forest, listOf(Color(0xFFDCFCE7), Color(0xFF22C55E)), "🌲"),
-    SoundItem("white_noise", "Ruido Blanco", R.raw.sound_white_noise, listOf(Color(0xFFF1F5F9), Color(0xFF94A3B8)), "💨"),
-    SoundItem("fireplace", "Chimenea", R.raw.sound_fireplace, listOf(Color(0xFFFFEDD5), Color(0xFFF97316)), "🔥"),
-    SoundItem("wind", "Viento", R.raw.sound_wind, listOf(Color(0xFFF3E8FF), Color(0xFFA855F7)), "🍃")
+    SoundItem("1", "Viento", R.raw.wind_chimes_sound, R.drawable.wind_chimes),
+    SoundItem("2", "Olas", R.raw.waves_sound, R.drawable.waves),
+    SoundItem("3", "Cascada", R.raw.waterfall_sound, R.drawable.waterfall),
+    SoundItem("4", "Cuenco", R.raw.tibetian_bowl_sound, R.drawable.tibetian_bowl),
+    SoundItem("5", "Lluvia", R.raw.rain_sound, R.drawable.rain),
+    SoundItem("6", "Piano", R.raw.piano_sound, R.drawable.piano),
+    SoundItem("7", "Noche", R.raw.night_sound, R.drawable.night),
+    SoundItem("8", "Arpa", R.raw.harp_sound, R.drawable.harpa),
+    SoundItem("9", "Bosque", R.raw.forest_sound, R.drawable.forest),
+    SoundItem("10", "Fuego", R.raw.fireplace_sound, R.drawable.firaplace)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -117,13 +124,22 @@ fun RelaxSoundsScreen(
                         val isPlaying = activeSoundIds.contains(item.id)
                         
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            border = if (isPlaying) BorderStroke(2.dp, PatientGreen) else BorderStroke(1.dp, BorderSoft),
-                            elevation = CardDefaults.cardElevation(defaultElevation = if (isPlaying) 6.dp else 2.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                             shape = RoundedCornerShape(24.dp),
                             modifier = Modifier
                                 .aspectRatio(1f)
-                                .clickable {
+                                .shadow(if (isPlaying) 8.dp else 4.dp, RoundedCornerShape(24.dp))
+                                .border(
+                                    width = if (isPlaying) 3.dp else 0.dp,
+                                    color = if (isPlaying) PatientGreen else Color.Transparent,
+                                    shape = RoundedCornerShape(24.dp)
+                                )
+                                .clip(RoundedCornerShape(24.dp))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
                                     if (isPlaying) {
                                         SoundPlayerManager.stop(item.id)
                                     } else {
@@ -131,36 +147,38 @@ fun RelaxSoundsScreen(
                                     }
                                 }
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Brush.verticalGradient(item.bgGradientColors))
-                                    .padding(12.dp)
-                            ) {
-                                // Emoji / Icon representation of the element
-                                Text(
-                                    text = item.emoji,
-                                    fontSize = 42.sp,
-                                    modifier = Modifier.align(Alignment.Center)
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                // Image background
+                                Image(
+                                    painter = painterResource(id = item.imageResId),
+                                    contentDescription = item.name,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
                                 )
 
-                                // Play / Pause overlay indicator
+
+
+                                // Play / Pause / Repeat overlay indicator
                                 Box(
                                     modifier = Modifier
-                                        .size(36.dp)
+                                        .size(40.dp)
                                         .align(Alignment.TopEnd)
-                                        .background(Color.White.copy(alpha = 0.8f), CircleShape),
+                                        .padding(8.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (isPlaying) {
-                                        // Equalizer bars dummy animation represented by an equalizer emoji or small indicator
-                                        Text(text = "⏸️", fontSize = 14.sp)
+                                        Icon(
+                                            painter = painterResource(id = android.R.drawable.ic_media_pause),
+                                            contentDescription = "Pausar",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(24.dp)
+                                        )
                                     } else {
                                         Icon(
                                             imageVector = Icons.Default.PlayArrow,
                                             contentDescription = "Reproducir",
-                                            tint = TextPrimary,
-                                            modifier = Modifier.size(16.dp)
+                                            tint = Color.White,
+                                            modifier = Modifier.size(28.dp)
                                         )
                                     }
                                 }
@@ -170,12 +188,11 @@ fun RelaxSoundsScreen(
                                     text = item.name,
                                     fontFamily = LexendFontFamily,
                                     fontWeight = FontWeight.SemiBold,
-                                    fontSize = 14.sp,
-                                    color = TextPrimary,
+                                    fontSize = 15.sp,
+                                    color = Color.White,
                                     modifier = Modifier
                                         .align(Alignment.BottomCenter)
-                                        .background(Color.White.copy(alpha = 0.85f), RoundedCornerShape(12.dp))
-                                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                                        .padding(bottom = 12.dp)
                                 )
                             }
                         }
@@ -239,12 +256,12 @@ fun RelaxSoundsScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = "${soundItem.emoji} ${soundItem.name}",
+                                            text = soundItem.name,
                                             fontFamily = LexendFontFamily,
                                             fontWeight = FontWeight.Medium,
                                             fontSize = 13.sp,
                                             color = TextPrimary,
-                                            modifier = Modifier.width(90.dp)
+                                            modifier = Modifier.width(70.dp)
                                         )
 
                                         Slider(
@@ -263,15 +280,24 @@ fun RelaxSoundsScreen(
 
                                         Spacer(modifier = Modifier.width(8.dp))
 
-                                        IconButton(
-                                            onClick = { SoundPlayerManager.stop(soundId) },
-                                            modifier = Modifier.size(28.dp)
+                                        // Stop button
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .clickable(
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                    indication = null
+                                                ) {
+                                                    SoundPlayerManager.stop(soundId)
+                                                },
+                                            contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Close,
                                                 contentDescription = "Detener",
-                                                tint = TextSecondary,
-                                                modifier = Modifier.size(16.dp)
+                                                tint = Color(0xFFD32F2F),
+                                                modifier = Modifier.size(28.dp)
                                             )
                                         }
                                     }

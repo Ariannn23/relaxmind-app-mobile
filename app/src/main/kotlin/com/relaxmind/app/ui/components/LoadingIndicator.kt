@@ -1,4 +1,4 @@
-﻿package com.relaxmind.app.ui.components
+package com.relaxmind.app.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -67,11 +67,7 @@ fun RelaxLoadingScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(LoadingBackground, LoadingSoftMint, LoadingBackground)
-                )
-            ),
+            .background(LoadingSoftMint),
         contentAlignment = Alignment.Center
     ) {
         RelaxLoadingContent(
@@ -122,7 +118,7 @@ fun RelaxLoadingContent(
     showProgressBar: Boolean = true,
     compact: Boolean = false
 ) {
-    val characterSize = if (compact) 70.dp else 100.dp
+    val characterSize = if (compact) 120.dp else 240.dp
     val progressWidth = if (compact) 188.dp else 260.dp
 
     Column(
@@ -137,7 +133,8 @@ fun RelaxLoadingContent(
         Text(
             text = message,
             fontFamily = LexendFontFamily,
-            fontSize = if (compact) 18.sp else 26.sp,
+            fontSize = if (compact) 16.sp else 20.sp,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
             color = PatientGreen,
             style = MaterialTheme.typography.titleLarge
         )
@@ -189,17 +186,13 @@ fun RelaxLoadingCharacter(
         modifier = modifier.size(size + 32.dp),
         contentAlignment = Alignment.Center
     ) {
+        // Floor shadow
         Box(
             modifier = Modifier
-                .size(size * 0.92f)
-                .shadow(
-                    elevation = 18.dp,
-                    shape = CircleShape,
-                    ambientColor = PatientGreenLight.copy(alpha = 0.18f),
-                    spotColor = PatientGreenLight.copy(alpha = 0.18f)
-                )
+                .size(width = size * 0.8f, height = size * 0.2f)
+                .offset(y = (size * 0.45f))
                 .clip(CircleShape)
-                .background(LoadingTrack.copy(alpha = 0.36f))
+                .background(PatientGreenLight.copy(alpha = 0.25f))
         )
 
         Image(
@@ -219,93 +212,18 @@ fun RelaxProgressBar(
     modifier: Modifier = Modifier,
     width: Dp = 260.dp
 ) {
-    val transition = rememberInfiniteTransition(label = "relax-loading-progress")
-    
-    // Progress width animation
-    val progress by transition.animateFloat(
-        initialValue = 0.25f,
-        targetValue = 0.85f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "loading-progress"
-    )
-
-    // Shimmer/highlight shift animation for 3D gloss effect
-    val shimmerOffset by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1000f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1500, easing = androidx.compose.animation.core.LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "progress-shimmer"
-    )
-
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
     ) {
-        // Main container with 3D inset styling
-        Box(
+        androidx.compose.material3.LinearProgressIndicator(
             modifier = Modifier
                 .width(width)
-                .height(14.dp)
-                .shadow(
-                    elevation = 6.dp,
-                    shape = RoundedCornerShape(7.dp),
-                    clip = false,
-                    ambientColor = Color(0xFF1B4332).copy(alpha = 0.3f),
-                    spotColor = Color(0xFF1B4332).copy(alpha = 0.3f)
-                )
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(Color(0xFFE5F6EE), Color(0xFFC7EBD8))
-                    ),
-                    shape = RoundedCornerShape(7.dp)
-                )
-                .border(
-                    width = 1.dp,
-                    color = Color(0xFFCBE7DB),
-                    shape = RoundedCornerShape(7.dp)
-                )
-        ) {
-            // Active progress bar
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(progress)
-                    .clip(RoundedCornerShape(7.dp))
-                    .background(
-                        // Vertical glossy gradient for 3D cylinder illusion
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                Color(0xFFE2F9EB), // Bright highlight top
-                                PatientGreenLight, // Midtone
-                                Color(0xFF0F6E56)  // Shadow bottom
-                            )
-                        )
-                    )
-            ) {
-                // Moving glossy shimmer overlay
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color.White.copy(alpha = 0.0f),
-                                    Color.White.copy(alpha = 0.55f),
-                                    Color.White.copy(alpha = 0.0f)
-                                ),
-                                start = androidx.compose.ui.geometry.Offset(shimmerOffset - 200f, 0f),
-                                end = androidx.compose.ui.geometry.Offset(shimmerOffset, 100f)
-                            )
-                        )
-                )
-            }
-        }
+                .height(10.dp)
+                .clip(RoundedCornerShape(5.dp)),
+            color = PatientGreen,
+            trackColor = LoadingTrack
+        )
     }
 }
 

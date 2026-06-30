@@ -104,7 +104,20 @@ class CheckInViewModel(
         _uiState.value = CheckInUiState.Idle
     }
 
-    fun submitCheckIn(isInitialTest: Boolean, isSkipped: Boolean = false) {
+    fun omitInitialTest(onSuccess: () -> Unit) {
+        val userId = authService.getCurrentUser()?.uid ?: return
+        viewModelScope.launch {
+            _uiState.value = CheckInUiState.Loading
+            firestoreRepository.updatePatient(userId, mapOf(
+                "onboardingCompleted" to true,
+                "initialTestSkippedAt" to java.time.Instant.now().toEpochMilli()
+            ))
+            _uiState.value = CheckInUiState.Idle
+            onSuccess()
+        }
+    }
+
+    fun submitCheckIn(isInitialTest: Boolean) {
         val userId = authService.getCurrentUser()?.uid ?: run {
             _uiState.value = CheckInUiState.Error("No hay sesión activa.")
             return
@@ -125,9 +138,7 @@ class CheckInViewModel(
             }
             val noteText = _notes.value
 
-            val calculatedScore = if (isSkipped) {
-                0
-            } else if (isInitialTest) {
+            val calculatedScore = if (isInitialTest) {
                 val scoreAnswers = CheckInAnswers(
                     emotionalState = emotionalVal,
                     sleep = sleepVal,
@@ -146,7 +157,7 @@ class CheckInViewModel(
                     stress = stressVal
                 )
             }
-            val category = if (isSkipped) "Sin puntaje" else WellnessScoreCalculator.getCategory(calculatedScore)
+            val category = WellnessScoreCalculator.getCategory(calculatedScore)
             val dateStr = LocalDate.now().toString()
 
             val checkIn = CheckIn(
@@ -240,19 +251,35 @@ class CheckInViewModel(
         val patientName = "${patient.name} ${patient.lastName}".trim().ifBlank { "Paciente" }
         val createdAtText = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()).format(Date())
 
-        firestoreRepository.createAlert(
+        val alertId = "low_checkin_${patientId}_$dateStr"
+        val alertResult = firestoreRepository.createAlert(
             CaregiverAlert(
-                id = "low_checkin_${patientId}_$dateStr",
+                id = alertId,
                 caregiverId = caregiverId,
                 patientId = patientId,
                 patientName = patientName,
                 type = "low_checkin",
                 title = "Check-in bajo",
-                message = "$patientName registrÃ³ $score/100 ($category) en su check-in diario.",
+                message = "$patientName registró $score/100 ($category) en su check-in diario.",
                 severity = "warning",
                 resolved = false,
                 createdAtText = createdAtText
             )
         )
+
+        if (alertResult.isSuccess) {
+            val notificationApi = com.relaxmind.app.data.remote.NotificationApiService()
+            val pushResult = notificationApi.sendWellnessAlert(
+                patientId = patientId,
+                caregiverId = caregiverId,
+                alertId = alertId,
+                patientName = patientName,
+                score = score,
+                category = category
+            )
+            if (pushResult.isFailure) {
+                android.util.Log.e("CheckInViewModel", "No se pudo enviar la notificación push del check-in bajo", pushResult.exceptionOrNull())
+            }
+        }
     }
 }

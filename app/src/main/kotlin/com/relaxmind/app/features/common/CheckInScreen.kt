@@ -31,6 +31,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.activity.compose.BackHandler
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -101,12 +103,14 @@ private enum class StepType {
     NOTES
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun CheckInScreen(
-    isInitialTest: Boolean,
     viewModel: CheckInViewModel = viewModel(),
+    isInitialTest: Boolean = false,
     onNavigateBack: () -> Unit,
-    onFinished: () -> Unit
+    onFinished: () -> Unit,
+    onNavigateToProgress: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val emotionalState by viewModel.emotionalState.collectAsState()
@@ -145,6 +149,14 @@ fun CheckInScreen(
     val totalSteps = steps.size
     val progress = (currentStepIndex + 1).toFloat() / totalSteps.toFloat()
 
+    var showExitDialog by remember { mutableStateOf(false) }
+    var exitAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    BackHandler {
+        exitAction = onNavigateBack
+        showExitDialog = true
+    }
+
     // Handle VM errors
     LaunchedEffect(uiState) {
         if (uiState is CheckInUiState.Error) {
@@ -152,38 +164,67 @@ fun CheckInScreen(
         }
     }
 
-    // Reset ViewModel state when screen is opened
-    LaunchedEffect(Unit) {
-        viewModel.clearState()
-    }
+    // State is maintained if we navigate away and come back (e.g., from Achievement Library)
+
 
     // If final success, show animated result screen
     if (uiState is CheckInUiState.Success) {
         val successState = uiState as CheckInUiState.Success
-        AnimatedCheckInResultView(
-            score = successState.score,
-            category = successState.category,
-            onDismiss = onFinished
-        )
+        if (isInitialTest) {
+            InitialTestResultScreen(
+                score = successState.score,
+                onDismiss = onFinished,
+                onNavigateToProgress = onNavigateToProgress
+            )
+        } else {
+            DailyCheckInResultScreen(
+                score = successState.score,
+                onDismiss = onFinished,
+                onNavigateToProgress = onNavigateToProgress
+            )
+        }
         return
     }
 
     Scaffold(
         topBar = {
-            RelaxTopBar(
-                title = "RelaxMind",
-                onBackClick = onNavigateBack,
+            androidx.compose.material3.CenterAlignedTopAppBar(
+                title = {
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(id = com.relaxmind.app.R.drawable.icono_plano2),
+                        contentDescription = "RelaxMind Logo",
+                        modifier = Modifier.height(48.dp),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                    )
+                },
+                navigationIcon = {
+                    com.relaxmind.app.ui.components.RelaxBackButton(
+                        onClick = {
+                            exitAction = onNavigateBack
+                            showExitDialog = true
+                        },
+                        role = com.relaxmind.app.ui.components.AppRole.PATIENT
+                    )
+                },
                 actions = {
                     if (isInitialTest && currentStepIndex < totalSteps - 1) {
-                        TextButton(onClick = { viewModel.submitCheckIn(isInitialTest = true, isSkipped = true) }) {
+                        TextButton(onClick = {
+                            exitAction = { viewModel.omitInitialTest { onFinished() } }
+                            showExitDialog = true
+                        }) {
                             Text(
                                 text = "Omitir test",
+                                fontFamily = com.relaxmind.app.ui.themes.LexendFontFamily,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                                 style = MaterialTheme.typography.labelLarge,
                                 color = PatientGreen
                             )
                         }
                     }
-                }
+                },
+                colors = androidx.compose.material3.TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent
+                )
             )
         }
     ) { innerPadding ->
@@ -330,15 +371,16 @@ fun CheckInScreen(
                 ) {
                     // Back button
                     if (currentStepIndex > 0) {
-                        TextButton(onClick = { currentStepIndex-- }) {
-                            Text(
-                                text = "Anterior",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = PatientGreen
-                            )
-                        }
+                        RelaxButton(
+                            text = "Anterior",
+                            onClick = { currentStepIndex-- },
+                            variant = ButtonVariant.OUTLINE,
+                            role = AppRole.PATIENT,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
                     } else {
-                        Spacer(modifier = Modifier.width(80.dp)) // Placeholder
+                        Spacer(modifier = Modifier.weight(1f))
                     }
 
                     // Next / Finish button
@@ -371,6 +413,43 @@ fun CheckInScreen(
             }
 
             RelaxToastHost(state = toastState)
+
+            if (showExitDialog) {
+                AlertDialog(
+                    onDismissRequest = { showExitDialog = false },
+                    title = {
+                        Text(
+                            text = "¿Deseas salir?",
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = "Tienes un test en progreso. Si decides salir ahora, no se guardará tu progreso.",
+                            fontFamily = LexendFontFamily,
+                            color = Color.DarkGray
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showExitDialog = false
+                                exitAction?.invoke()
+                            }
+                        ) {
+                            Text("Salir", fontFamily = LexendFontFamily, color = SOSCoral)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showExitDialog = false }) {
+                            Text("Continuar", fontFamily = LexendFontFamily, color = PatientGreen)
+                        }
+                    },
+                    containerColor = Color.White
+                )
+            }
         }
     }
 }
@@ -410,11 +489,11 @@ private fun EmotionalStepView(
     onSelect: (Int) -> Unit
 ) {
     val options = listOf(
-        MoodCardOption(1, "Muy mal", "Necesito apoyo hoy"),
-        MoodCardOption(2, "Mal", "Ha sido un dia pesado"),
-        MoodCardOption(3, "Bien", "Estoy estable"),
-        MoodCardOption(4, "Muy bien", "Me siento con calma"),
-        MoodCardOption(5, "Excelente", "Me siento pleno")
+        MoodCardOption(1, "Muy mal", "Necesito apoyo hoy", com.relaxmind.app.R.drawable.animo_1),
+        MoodCardOption(2, "Mal", "Ha sido un dia pesado", com.relaxmind.app.R.drawable.animo_2),
+        MoodCardOption(3, "Bien", "Estoy estable", com.relaxmind.app.R.drawable.animo_3),
+        MoodCardOption(4, "Muy bien", "Me siento con calma", com.relaxmind.app.R.drawable.animo_4),
+        MoodCardOption(5, "Excelente", "Me siento pleno", com.relaxmind.app.R.drawable.animo_5)
     )
     Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
         CheckInStepTitle(
@@ -441,11 +520,11 @@ private fun SleepStepView(
     onSelect: (Int) -> Unit
 ) {
     val options = listOf(
-        MoodCardOption(1, "Pésimo", "Casi no pude descansar"),
-        MoodCardOption(2, "Mal", "Dormí poco o interrumpido"),
-        MoodCardOption(3, "Regular", "Descansé lo justo"),
-        MoodCardOption(4, "Bien", "Dormí de forma reparadora"),
-        MoodCardOption(5, "Excelente", "Desperté con energía")
+        MoodCardOption(1, "Pésimo", "Casi no pude descansar", com.relaxmind.app.R.drawable.sueno_1),
+        MoodCardOption(2, "Mal", "Dormí poco o interrumpido", com.relaxmind.app.R.drawable.sueno_2),
+        MoodCardOption(3, "Regular", "Descansé lo justo", com.relaxmind.app.R.drawable.sueno_3),
+        MoodCardOption(4, "Bien", "Dormí de forma reparadora", com.relaxmind.app.R.drawable.sueno_4),
+        MoodCardOption(5, "Excelente", "Desperté con energía", com.relaxmind.app.R.drawable.sueno_5)
     )
     Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
         CheckInStepTitle(
@@ -469,11 +548,11 @@ private fun DailyEmotionalStepView(
     onSelect: (Int) -> Unit
 ) {
     val options = listOf(
-        MoodCardOption(1, "Muy mal", "Necesito apoyo hoy"),
-        MoodCardOption(2, "Mal", "Ha sido un dia pesado"),
-        MoodCardOption(3, "Bien", "Estoy estable"),
-        MoodCardOption(4, "Muy bien", "Me siento con calma"),
-        MoodCardOption(5, "Excelente", "Me siento pleno")
+        MoodCardOption(1, "Muy mal", "Necesito apoyo hoy", com.relaxmind.app.R.drawable.animo_1),
+        MoodCardOption(2, "Mal", "Ha sido un dia pesado", com.relaxmind.app.R.drawable.animo_2),
+        MoodCardOption(3, "Bien", "Estoy estable", com.relaxmind.app.R.drawable.animo_3),
+        MoodCardOption(4, "Muy bien", "Me siento con calma", com.relaxmind.app.R.drawable.animo_4),
+        MoodCardOption(5, "Excelente", "Me siento pleno", com.relaxmind.app.R.drawable.animo_5)
     )
     Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
         CheckInStepTitle(
@@ -491,7 +570,7 @@ private fun DailyEmotionalStepView(
     }
 }
 
-private data class MoodCardOption(val value: Int, val text: String, val helper: String)
+private data class MoodCardOption(val value: Int, val text: String, val helper: String, val imageRes: Int)
 
 @Composable
 private fun MoodSelectionCard(
@@ -533,21 +612,11 @@ private fun MoodSelectionCard(
                 modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(CircleShape)
-                        .background(if (isSelected) PatientGreen else PatientGreen.copy(alpha = 0.10f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = option.value.toString(),
-                        fontFamily = LexendFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = if (isSelected) Color.White else PatientGreen
-                    )
-                }
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(id = option.imageRes),
+                    contentDescription = option.text,
+                    modifier = Modifier.size(52.dp)
+                )
                 Spacer(modifier = Modifier.width(14.dp))
                 Column {
                     Text(
@@ -594,20 +663,12 @@ private fun EnergyStepView(
             title = "¿Cuánta energía sientes hoy?",
             subtitle = "Desliza para indicar tu nivel del 1 al 10."
         )
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
-        // Dynamic Battery Indicator
+        // Dynamic Image Indicator
         EnergyBatteryIndicator(level = value)
 
-        Spacer(modifier = Modifier.height(28.dp))
-        Text(
-            text = value.toString(),
-            fontFamily = LexendFontFamily,
-            fontWeight = FontWeight.ExtraBold,
-            fontSize = 72.sp,
-            color = PatientGreen
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
         val gradientColors = listOf(
             SOSCoral,
@@ -666,38 +727,30 @@ private fun EnergyStepView(
 
 @Composable
 private fun EnergyBatteryIndicator(level: Int) {
-    // Battery visual representation
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
+    val energyImageRes = when (level) {
+        1, 2 -> com.relaxmind.app.R.drawable.energia_1
+        3, 4 -> com.relaxmind.app.R.drawable.energia_2
+        5, 6 -> com.relaxmind.app.R.drawable.energia_3
+        7, 8 -> com.relaxmind.app.R.drawable.energia_4
+        else -> com.relaxmind.app.R.drawable.energia_5
+    }
+
+    Box(
         modifier = Modifier
-            .width(100.dp)
-            .height(200.dp)
-            .shadow(10.dp, RoundedCornerShape(26.dp), ambientColor = PatientGreen.copy(alpha = 0.12f), spotColor = PatientGreen.copy(alpha = 0.10f))
-            .background(Color.White, RoundedCornerShape(26.dp))
-            .border(1.dp, BorderSoft, RoundedCornerShape(26.dp))
-            .padding(8.dp)
+            .fillMaxWidth()
+            .height(200.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Bottom
-        ) {
-            val filledPercentage = level / 10f
-            val batteryColor = when {
-                level <= 3 -> SOSCoral
-                level <= 6 -> Color(0xFFECC94B)
-                else -> PatientGreen
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(filledPercentage)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(batteryColor)
+        androidx.compose.animation.Crossfade(
+            targetState = energyImageRes,
+            animationSpec = androidx.compose.animation.core.tween(durationMillis = 300),
+            label = "energy-crossfade"
+        ) { resId ->
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(id = resId),
+                contentDescription = "Nivel de energía",
+                modifier = Modifier.size(180.dp)
             )
-            if (filledPercentage < 1f) {
-                Spacer(modifier = Modifier.weight(1f - filledPercentage))
-            }
         }
     }
 }
@@ -717,25 +770,12 @@ private fun StressStepView(
             title = "¿Cuánto estrés sientes?",
             subtitle = "Marca la intensidad de tu estrés actual."
         )
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
-        // Stress visual representation
+        // Stress dynamic image representation
         StressIndicatorView(level = value)
 
-        Spacer(modifier = Modifier.height(28.dp))
-        val stressColor = when {
-            value <= 3 -> PatientGreen
-            value <= 6 -> Color(0xFFECC94B)
-            else -> SOSCoral
-        }
-        Text(
-            text = value.toString(),
-            fontFamily = LexendFontFamily,
-            fontWeight = FontWeight.ExtraBold,
-            fontSize = 72.sp,
-            color = stressColor
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
         val gradientColors = listOf(
             PatientGreen,
@@ -758,6 +798,11 @@ private fun StressStepView(
                     .clip(RoundedCornerShape(4.dp))
                     .background(Brush.horizontalGradient(colors = gradientColors))
             )
+            val stressColor = when {
+                value <= 3 -> PatientGreen
+                value <= 6 -> Color(0xFFECC94B)
+                else -> SOSCoral
+            }
             Slider(
                 value = value.toFloat(),
                 onValueChange = {
@@ -794,35 +839,31 @@ private fun StressStepView(
 
 @Composable
 private fun StressIndicatorView(level: Int) {
-    // A simple visual Gauge for Stress
+    val stressImageRes = when (level) {
+        1, 2 -> com.relaxmind.app.R.drawable.estres_5
+        3, 4 -> com.relaxmind.app.R.drawable.estres_4
+        5, 6 -> com.relaxmind.app.R.drawable.estres_3
+        7, 8 -> com.relaxmind.app.R.drawable.estres_2
+        else -> com.relaxmind.app.R.drawable.estres_1
+    }
+
     Box(
-        modifier = Modifier.size(160.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp),
         contentAlignment = Alignment.Center
     ) {
-        val stressColor = when {
-            level <= 3 -> PatientGreen
-            level <= 6 -> Color(0xFFECC94B)
-            else -> SOSCoral
+        androidx.compose.animation.Crossfade(
+            targetState = stressImageRes,
+            animationSpec = androidx.compose.animation.core.tween(durationMillis = 300),
+            label = "stress-crossfade"
+        ) { resId ->
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(id = resId),
+                contentDescription = "Nivel de estrés",
+                modifier = Modifier.size(180.dp)
+            )
         }
-        Box(
-            modifier = Modifier
-                .size(150.dp)
-                .clip(CircleShape)
-                .background(stressColor.copy(alpha = 0.15f))
-        )
-        val label = when {
-            level <= 3 -> "Calma"
-            level <= 6 -> "Tensión"
-            level <= 8 -> "Alerta"
-            else -> "Pausa"
-        }
-        Text(
-            text = label,
-            fontFamily = LexendFontFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 22.sp,
-            color = stressColor
-        )
     }
 }
 
@@ -845,6 +886,7 @@ private fun HabitsStepView(
     Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
         Text(
             text = "¿Con qué frecuencia...?",
+            fontFamily = com.relaxmind.app.ui.themes.LexendFontFamily,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
@@ -853,42 +895,53 @@ private fun HabitsStepView(
         questions.forEachIndexed { qIdx, question ->
             Text(
                 text = question,
+                fontFamily = com.relaxmind.app.ui.themes.LexendFontFamily,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(vertical = 8.dp)
             )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            
+            val chunkedOptions = options.chunked(2)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                options.forEachIndexed { oIdx, label ->
-                    val isSelected = answers[qIdx] == oIdx + 1
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(if (isSelected) PatientGreen else Color.White)
-                            .border(
-                                width = 1.dp,
-                                color = if (isSelected) PatientGreen else Color(0xFFCBD5E0),
-                                shape = RoundedCornerShape(20.dp)
-                            )
-                            .clickable { onAnswerSelected(qIdx, oIdx + 1) }
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        contentAlignment = Alignment.Center
+                chunkedOptions.forEach { rowOptions ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                        )
+                        rowOptions.forEach { label ->
+                            val oIdx = options.indexOf(label)
+                            val isSelected = answers[qIdx] == oIdx + 1
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(if (isSelected) PatientGreen else Color(0xFFF3F4F6))
+                                    .border(
+                                        width = if (isSelected) 0.dp else 1.dp,
+                                        color = if (isSelected) Color.Transparent else Color(0xFFE5E7EB),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .clickable { onAnswerSelected(qIdx, oIdx + 1) }
+                                    .padding(vertical = 12.dp, horizontal = 4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = label,
+                                    fontFamily = com.relaxmind.app.ui.themes.LexendFontFamily,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+                        }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }
@@ -909,11 +962,13 @@ private fun BinaryStepView(
     Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
         Text(
             text = "¿En el último tiempo...?",
+            fontFamily = com.relaxmind.app.ui.themes.LexendFontFamily,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
         Text(
             text = "Desliza la tarjeta a la derecha para SÍ o a la izquierda para NO",
+            fontFamily = com.relaxmind.app.ui.themes.LexendFontFamily,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f)
         )
@@ -998,6 +1053,7 @@ private fun SwipeQuestionCard(
         ) {
             Text(
                 text = questionText,
+                fontFamily = com.relaxmind.app.ui.themes.LexendFontFamily,
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 8.dp)
@@ -1036,6 +1092,7 @@ private fun SwipeQuestionCard(
                 }
                 Text(
                     text = indicatorText,
+                    fontFamily = com.relaxmind.app.ui.themes.LexendFontFamily,
                     style = MaterialTheme.typography.labelLarge,
                     color = indicatorColor,
                     fontWeight = FontWeight.Bold
@@ -1056,6 +1113,7 @@ private fun NotesStepView(
     Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
         Text(
             text = "¿Algo más que quieras compartir?",
+            fontFamily = com.relaxmind.app.ui.themes.LexendFontFamily,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
@@ -1166,149 +1224,3 @@ private fun CheckInResultView(
         }
     }
 }
-
-@Composable
-private fun AnimatedCheckInResultView(
-    score: Int,
-    category: String,
-    onDismiss: () -> Unit
-) {
-    val haptic = LocalHapticFeedback.current
-    var showCategory by remember { mutableStateOf(false) }
-    val animatedScore by animateIntAsState(
-        targetValue = score,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "checkin-score-counter"
-    )
-    val categoryAlpha by animateFloatAsState(
-        targetValue = if (showCategory) 1f else 0f,
-        animationSpec = androidx.compose.animation.core.tween(durationMillis = 420),
-        label = "checkin-category-alpha"
-    )
-    val composition by rememberLottieComposition(
-        LottieCompositionSpec.JsonString(if (score >= 50) CheckInCelebrationLottieJson else CheckInCalmLottieJson)
-    )
-    val lottieProgress by animateLottieCompositionAsState(
-        composition = composition,
-        iterations = 1,
-        restartOnPlay = true
-    )
-
-    LaunchedEffect(score) {
-        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-        kotlinx.coroutines.delay(520)
-        showCategory = true
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            LottieAnimation(
-                composition = composition,
-                progress = { lottieProgress },
-                modifier = Modifier.size(116.dp)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "¡Check-in completado!",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.ExtraBold,
-                color = PatientGreen
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "Tu nivel de bienestar de hoy",
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.Gray
-            )
-            Spacer(modifier = Modifier.height(34.dp))
-
-            Box(
-                modifier = Modifier
-                    .size(200.dp)
-                    .border(6.dp, PatientGreen.copy(alpha = 0.12f), CircleShape)
-                    .border(12.dp, PatientGreen, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (category == "Sin puntaje") {
-                        Text(
-                            text = "-",
-                            style = MaterialTheme.typography.displayLarge.copy(fontSize = 80.sp),
-                            fontWeight = FontWeight.ExtraBold,
-                            color = PatientGreen
-                        )
-                    } else {
-                        Text(
-                            text = animatedScore.toString(),
-                            style = MaterialTheme.typography.displayLarge.copy(fontSize = 80.sp),
-                            fontWeight = FontWeight.ExtraBold,
-                            color = PatientGreen
-                        )
-                        Text(
-                            text = "/ 100",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = Color.Gray
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(34.dp))
-            Text(
-                text = "Estado: $category",
-                modifier = Modifier.alpha(categoryAlpha),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = PatientGreen
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "¡Buen trabajo tomándote un momento para ti hoy!",
-                modifier = Modifier.alpha(categoryAlpha),
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(64.dp))
-            RelaxButton(
-                text = "Ver mi dashboard",
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth(),
-                variant = ButtonVariant.PRIMARY,
-                role = AppRole.PATIENT
-            )
-        }
-    }
-}
-
-private const val CheckInCelebrationLottieJson = """
-{
-  "v":"5.7.4","fr":30,"ip":0,"op":60,"w":220,"h":220,"nm":"check-celebration","ddd":0,"assets":[],
-  "layers":[
-    {"ddd":0,"ind":1,"ty":4,"nm":"circle","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[110,110,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":0,"s":[30,30,100]},{"t":28,"s":[112,112,100]},{"t":60,"s":[100,100,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[118,118]}},{"ty":"fl","c":{"a":0,"k":[0.407,0.827,0.568,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":60,"st":0,"bm":0},
-    {"ddd":0,"ind":2,"ty":4,"nm":"check","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[110,114,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":10,"s":[20,20,100]},{"t":34,"s":[110,110,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"sh","ks":{"a":0,"k":{"i":[[0,0],[0,0],[0,0]],"o":[[0,0],[0,0],[0,0]],"v":[[-34,-2],[-10,24],[38,-30]],"c":false}}},{"ty":"st","c":{"a":0,"k":[1,1,1,1]},"o":{"a":0,"k":100},"w":{"a":0,"k":12},"lc":2,"lj":2},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":60,"st":0,"bm":0}
-  ]
-}
-"""
-
-private const val CheckInCalmLottieJson = """
-{
-  "v":"5.7.4","fr":30,"ip":0,"op":60,"w":220,"h":220,"nm":"calm-check","ddd":0,"assets":[],
-  "layers":[
-    {"ddd":0,"ind":1,"ty":4,"nm":"soft-circle","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[110,110,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":0,"s":[76,76,100]},{"t":30,"s":[104,104,100]},{"t":60,"s":[96,96,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[124,124]}},{"ty":"fl","c":{"a":0,"k":[0.949,0.824,0.263,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":60,"st":0,"bm":0},
-    {"ddd":0,"ind":2,"ty":4,"nm":"breath-check","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[110,112,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":10,"s":[55,55,100]},{"t":42,"s":[100,100,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"sh","ks":{"a":0,"k":{"i":[[0,0],[0,0],[0,0]],"o":[[0,0],[0,0],[0,0]],"v":[[-34,-2],[-10,24],[38,-30]],"c":false}}},{"ty":"st","c":{"a":0,"k":[1,1,1,1]},"o":{"a":0,"k":100},"w":{"a":0,"k":12},"lc":2,"lj":2},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":60,"st":0,"bm":0}
-  ]
-}
-"""

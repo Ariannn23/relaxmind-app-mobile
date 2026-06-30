@@ -414,7 +414,8 @@ fun EditProfileScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp)
                     ) {
-                        Button(
+                        com.relaxmind.app.ui.components.RelaxButton(
+                            text = "Guardar cambios",
                             onClick = {
                                 viewModel.updateProfile(
                                     name = name.trim(),
@@ -424,36 +425,18 @@ fun EditProfileScreen(
                                     phone = phone,
                                     condition = condition.trim(),
                                     avatarUrl = selectedAvatarUrl,
-                                    onSuccess = { toastState.showSuccess("Perfil guardado correctamente") },
+                                    onSuccess = {
+                                        toastState.showSuccess("Perfil guardado correctamente")
+                                        onNavigateBack()
+                                    },
                                     onError = { toastState.showError(it) }
                                 )
                             },
                             enabled = isFormValid && !isLoading,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(54.dp),
-                            shape = RoundedCornerShape(18.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = PatientGreen,
-                                disabledContainerColor = PatientGreen.copy(alpha = 0.38f)
-                            )
-                        ) {
-                            if (isLoading) {
-                                CircularProgressIndicator(
-                                    color = Color.White,
-                                    strokeWidth = 2.dp,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            } else {
-                                Text(
-                                    text = "Guardar cambios",
-                                    fontFamily = LexendFontFamily,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 16.sp,
-                                    color = Color.White
-                                )
-                            }
-                        }
+                            isLoading = isLoading,
+                            role = com.relaxmind.app.ui.components.AppRole.PATIENT,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))

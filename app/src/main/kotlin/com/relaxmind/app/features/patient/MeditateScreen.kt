@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -71,7 +72,6 @@ import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.ScreenHeader
 import com.relaxmind.app.ui.components.MeditateSkeleton
 import com.relaxmind.app.ui.components.ErrorStateScreen
-import com.relaxmind.app.ui.components.LoadingIndicator
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.LexendFontFamily
 import com.relaxmind.app.ui.themes.LexendTypography
@@ -377,7 +377,7 @@ fun DiaphragmaticIcon(modifier: Modifier = Modifier) {
         drawPath(
             path = leafPath,
             brush = Brush.verticalGradient(
-                colors = listOf(Color(0xFF68D391), Color(0xFF0F6E56))
+                colors = listOf(Color(0xFFFBBF24), Color(0xFFB45309))
             )
         )
         
@@ -694,18 +694,18 @@ fun MeditationExerciseIcon(
 }
 
 // Helper to resolve specific background details and category overrides
-private fun getExerciseDisplayConfig(exercise: MeditationExercise): Triple<Color, String, Int> {
+private fun getExerciseDisplayConfig(exercise: MeditationExercise, isDark: Boolean = false): Triple<Color, String, Int> {
     return when (exercise.id) {
-        "resp_478" -> Triple(Color(0xFFE6F7F0), "Respiración", 8)
-        "resp_caja" -> Triple(Color(0xFFEBF8FF), "Respiración", 10)
-        "body_scan" -> Triple(Color(0xFFF1EDFF), "Mindfulness", 15)
-        "gratitud" -> Triple(Color(0xFFE6FFFA), "Mindfulness", 12)
-        "resp_diafragmatica" -> Triple(Color(0xFFE6F9F2), "Relajación", 6)
+        "resp_478" -> Triple(if (isDark) Color(0xFF132A24) else Color(0xFFE6F7F0), "Respiración", exercise.durationMinutes)
+        "resp_caja" -> Triple(if (isDark) Color(0xFF132333) else Color(0xFFEBF8FF), "Respiración", exercise.durationMinutes)
+        "body_scan" -> Triple(if (isDark) Color(0xFF1F1B38) else Color(0xFFF1EDFF), "Mindfulness", exercise.durationMinutes)
+        "gratitud" -> Triple(if (isDark) Color(0xFF11302A) else Color(0xFFE6FFFA), "Mindfulness", exercise.durationMinutes)
+        "resp_diafragmatica" -> Triple(if (isDark) Color(0xFF451A03) else Color(0xFFFFFBEB), "Relajación", exercise.durationMinutes)
         else -> {
             val bg = when (exercise.type) {
-                "respiracion" -> Color(0xFFE6F7F0)
-                "mindfulness" -> Color(0xFFF1EDFF)
-                else -> Color(0xFFE6F9F2)
+                "respiracion" -> if (isDark) Color(0xFF132A24) else Color(0xFFE6F7F0)
+                "mindfulness" -> if (isDark) Color(0xFF1F1B38) else Color(0xFFF1EDFF)
+                else -> if (isDark) Color(0xFF133026) else Color(0xFFE6F9F2)
             }
             val cat = when (exercise.type) {
                 "respiracion" -> "Respiración"
@@ -736,16 +736,22 @@ fun MeditateHeader(
 @Composable
 fun GoalBannerCard(
     goalTitle: String,
+    isCompleted: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
+    val isPressedState by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1.0f,
-        animationSpec = tween(durationMillis = 100),
+        targetValue = if (isPressedState && !isCompleted) 0.98f else 1.0f,
+        animationSpec = tween(durationMillis = 150),
         label = "banner-scale"
     )
+
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val cardColor = if (isDark) Color(0xFF1E2F2C) else SoftMint
+    val titleColor = if (isDark) Color(0xFF68D391).copy(alpha = 0.8f) else PatientGreen.copy(alpha = 0.8f)
+    val textColor = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary
 
     Card(
         modifier = modifier
@@ -765,10 +771,11 @@ fun GoalBannerCard(
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
+                enabled = !isCompleted,
                 onClick = onClick
             ),
         shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = SoftMint)
+        colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Row(
             modifier = Modifier
@@ -792,7 +799,7 @@ fun GoalBannerCard(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Medium,
                     fontSize = 14.sp,
-                    color = PatientGreen.copy(alpha = 0.8f)
+                    color = titleColor
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
@@ -800,16 +807,25 @@ fun GoalBannerCard(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
-                    color = TextPrimary
+                    color = textColor
                 )
             }
             
             Spacer(modifier = Modifier.width(10.dp))
             
-            // Wind decoration right
-            WindLeafIcon(
-                modifier = Modifier.size(44.dp)
-            )
+            // Wind decoration right or CheckCircle if completed
+            if (isCompleted) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = "Completado",
+                    tint = PatientGreen,
+                    modifier = Modifier.size(40.dp)
+                )
+            } else {
+                WindLeafIcon(
+                    modifier = Modifier.size(44.dp)
+                )
+            }
         }
     }
 }
@@ -818,10 +834,12 @@ fun GoalBannerCard(
 fun MeditationExerciseCard(
     exercise: MeditationExercise,
     isMetaDeHoy: Boolean,
+    isCompleted: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val (bgColor, categoryLabel, displayDuration) = getExerciseDisplayConfig(exercise)
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val (bgColor, categoryLabel, displayDuration) = getExerciseDisplayConfig(exercise, isDark)
     
     val interactionSource = remember { MutableInteractionSource() }
     val isPressedState by interactionSource.collectIsPressedAsState()
@@ -830,29 +848,33 @@ fun MeditationExerciseCard(
         animationSpec = tween(durationMillis = 100),
         label = "card-scale"
     )
+    val cardColor = if (isDark) com.relaxmind.app.ui.themes.SurfaceDark else Color.White
+    val borderColor = if (isDark) com.relaxmind.app.ui.themes.BorderDark else Color(0xFFE2F3EB)
+    val shadowColor = if (isDark) Color(0xFF68D391).copy(alpha = 0.05f) else Color(0xFF8FA89B).copy(alpha = 0.15f)
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .scale(scale)
             .shadow(
-                elevation = 8.dp,
+                elevation = 14.dp,
                 shape = RoundedCornerShape(24.dp),
-                ambientColor = Color(0xFF8FA89B).copy(alpha = 0.15f),
-                spotColor = Color(0xFF8FA89B).copy(alpha = 0.15f)
+                ambientColor = shadowColor,
+                spotColor = shadowColor
             )
             .border(
                 width = 1.2.dp,
-                color = Color(0xFFE2F3EB),
+                color = borderColor,
                 shape = RoundedCornerShape(24.dp)
             )
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
+                enabled = !isCompleted,
                 onClick = onClick
             ),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Row(
             modifier = Modifier
@@ -890,7 +912,7 @@ fun MeditationExerciseCard(
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
-                        color = TextPrimary,
+                        color = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary,
                         modifier = Modifier.weight(1f)
                     )
                     
@@ -899,7 +921,7 @@ fun MeditationExerciseCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFFE6F7F0))
+                                .background(if (isDark) Color(0xFF132A23) else Color(0xFFE6F7F0))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
@@ -907,7 +929,7 @@ fun MeditationExerciseCard(
                                 fontFamily = LexendFontFamily,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 9.sp,
-                                color = PatientGreen
+                                color = if (isDark) Color(0xFF68D391) else PatientGreen
                             )
                         }
                     }
@@ -921,7 +943,7 @@ fun MeditationExerciseCard(
                     CategoryIcon(
                         type = categoryLabel,
                         modifier = Modifier.size(14.dp),
-                        tint = TextSecondary
+                        tint = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
@@ -929,12 +951,12 @@ fun MeditationExerciseCard(
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Normal,
                         fontSize = 12.sp,
-                        color = TextSecondary
+                        color = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     ClockIcon(
                         modifier = Modifier.size(13.dp),
-                        tint = TextSecondary
+                        tint = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
@@ -942,7 +964,7 @@ fun MeditationExerciseCard(
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Normal,
                         fontSize = 12.sp,
-                        color = TextSecondary
+                        color = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
                     )
                 }
             }
@@ -950,12 +972,21 @@ fun MeditationExerciseCard(
             Spacer(modifier = Modifier.width(10.dp))
             
             // Right Arrow
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Comenzar ejercicio",
-                tint = PatientGreenLight,
-                modifier = Modifier.size(24.dp)
-            )
+            if (isCompleted) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = "Completado",
+                    tint = PatientGreen,
+                    modifier = Modifier.size(24.dp)
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = "Comenzar ejercicio",
+                    tint = PatientGreenLight,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
     }
 }
@@ -976,10 +1007,23 @@ fun MeditateScreen(
     val dailyGoal by viewModel.dailyGoal.collectAsState()
     val dailyGoalExercise by viewModel.dailyGoalExercise.collectAsState()
 
-    LaunchedEffect(Unit) {
-        viewModel.loadDashboardData()
-        viewModel.loadMeditationExercises()
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.loadDashboardData()
+                viewModel.loadMeditationExercises()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
+
+    // App theme state
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val bgColor = if (isDark) com.relaxmind.app.ui.themes.BackgroundDark else Color.White
 
     // Apply Lexend Theme globally inside the screen
     MaterialTheme(
@@ -987,13 +1031,14 @@ fun MeditateScreen(
         typography = LexendTypography
     ) {
         Scaffold(
-            containerColor = Color.White,
+            containerColor = bgColor,
             bottomBar = {
                 if (showBottomNav) {
                     RelaxBottomNav(
                         selectedRoute = "patient/meditate",
                         onNavigate = onNavigate,
-                        role = AppRole.PATIENT
+                        role = AppRole.PATIENT,
+                        darkMode = isDark
                     )
                 }
             }
@@ -1004,7 +1049,9 @@ fun MeditateScreen(
                     .padding(innerPadding)
             ) {
                 // Soft background gradient spots
-                SoftGradientBackground(animateBlobs = true)
+                if (!isDark) {
+                    SoftGradientBackground(animateBlobs = true)
+                }
 
                 if (isLoading && exercises.isEmpty() && error == null) {
                     MeditateSkeleton(modifier = Modifier.align(Alignment.Center))
@@ -1030,15 +1077,19 @@ fun MeditateScreen(
                         
                         item { Spacer(modifier = Modifier.height(4.dp)) }
 
-                        // Daily Goal Banner Card if active and not completed
-                        val showDailyGoal = dailyGoalExercise != null && dailyGoal?.completed != true
+                        // Daily Goal Banner Card
+                        val showDailyGoal = dailyGoalExercise != null
                         if (showDailyGoal) {
                             item {
                                 dailyGoalExercise?.let { exercise ->
+                                    val isGoalCompleted = dailyGoal?.completed == true
                                     GoalBannerCard(
                                         goalTitle = exercise.title,
+                                        isCompleted = isGoalCompleted,
                                         onClick = {
-                                            onNavigate(Screen.MeditationDetail.createRoute(exercise.id))
+                                            if (!isGoalCompleted) {
+                                                onNavigate(Screen.MeditationDetail.createRoute(exercise.id))
+                                            }
                                         }
                                     )
                                 }
@@ -1052,7 +1103,7 @@ fun MeditateScreen(
 
                         // Vertical Exercises Catalog List
                         items(exercises) { exercise ->
-                            val isMetaDeHoy = dailyGoalExercise?.id == exercise.id || exercise.id == "resp_478"
+                            val isMetaDeHoy = dailyGoalExercise?.id == exercise.id
                             
                             // Visual slide animation on load
                             AnimatedVisibility(
@@ -1066,6 +1117,7 @@ fun MeditateScreen(
                                 MeditationExerciseCard(
                                     exercise = exercise,
                                     isMetaDeHoy = isMetaDeHoy,
+                                    isCompleted = isMetaDeHoy && dailyGoal?.completed == true,
                                     onClick = {
                                         onNavigate(Screen.MeditationDetail.createRoute(exercise.id))
                                     }

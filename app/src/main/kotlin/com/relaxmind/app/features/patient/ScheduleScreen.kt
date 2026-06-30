@@ -112,15 +112,20 @@ fun ScheduleScreen(
     }
 
     val tabs = listOf(stringResource(id = R.string.schedule_week), stringResource(id = R.string.schedule_calendar))
+    
+    // App theme state
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val bgColor = if (isDark) com.relaxmind.app.ui.themes.BackgroundDark else Color.Transparent
 
     Scaffold(
-        containerColor = Color.Transparent,
+        containerColor = bgColor,
         bottomBar = {
                 if (showBottomNav) {
                     RelaxBottomNav(
                         selectedRoute = "patient/schedule",
                         onNavigate = onNavigate,
-                        role = AppRole.PATIENT
+                        role = AppRole.PATIENT,
+                        darkMode = isDark
                     )
                 }
             }
@@ -130,7 +135,9 @@ fun ScheduleScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            SoftGradientBackground(animateBlobs = true)
+            if (!isDark) {
+                SoftGradientBackground(animateBlobs = true)
+            }
 
             if (isLoading && selectedDateAppointments.isEmpty() && monthlyAppointments.isEmpty() && error == null) {
                 ScheduleSkeleton(modifier = Modifier.align(Alignment.Center))
@@ -157,7 +164,7 @@ fun ScheduleScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp, vertical = 8.dp)
-                        .background(Color(0xFFE6E8EF).copy(alpha = 0.5f), RoundedCornerShape(18.dp))
+                        .background(if (isDark) com.relaxmind.app.ui.themes.SurfaceDark else Color(0xFFE6E8EF).copy(alpha = 0.5f), RoundedCornerShape(18.dp))
                         .padding(4.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
@@ -168,7 +175,7 @@ fun ScheduleScreen(
                                 .weight(1f)
                                 .height(38.dp)
                                 .clip(RoundedCornerShape(14.dp))
-                                .background(if (isSelected) Color.White else Color.Transparent)
+                                .background(if (isSelected) (if (isDark) Color(0xFF313543) else Color.White) else Color.Transparent)
                                 .clickable { selectedTabIndex = index },
                             contentAlignment = Alignment.Center
                         ) {
@@ -177,7 +184,7 @@ fun ScheduleScreen(
                                 fontFamily = LexendFontFamily,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                 fontSize = 13.sp,
-                                color = if (isSelected) PatientGreen else TextSecondary
+                                color = if (isSelected) (if (isDark) PatientGreenLight else PatientGreen) else (if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary)
                             )
                         }
                     }
@@ -227,7 +234,7 @@ fun ScheduleScreen(
             ModalBottomSheet(
                 onDismissRequest = { showBottomSheet = false },
                 sheetState = bottomSheetState,
-                containerColor = Color.White,
+                containerColor = if (isDark) com.relaxmind.app.ui.themes.SurfaceDark else Color.White,
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
             ) {
                 Column(
@@ -239,12 +246,15 @@ fun ScheduleScreen(
                     val dayName = bottomSheetDate.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("es")).replaceFirstChar { it.uppercase() }
                     val dateFormatted = "${dayName}, ${bottomSheetDate.dayOfMonth} de ${bottomSheetDate.month.getDisplayName(TextStyle.FULL, Locale("es"))}"
 
+                    val textColorPrimary = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary
+                    val textColorSecondary = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
+
                     Text(
                         text = dateFormatted,
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
-                        color = TextPrimary,
+                        color = textColorPrimary,
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -267,7 +277,7 @@ fun ScheduleScreen(
                                 Text(
                                     text = "Sin eventos ni entradas de diario",
                                     fontFamily = LexendFontFamily,
-                                    color = TextSecondary,
+                                    color = textColorSecondary,
                                     fontSize = 14.sp
                                 )
                             }
@@ -279,7 +289,7 @@ fun ScheduleScreen(
                                 fontFamily = LexendFontFamily,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp,
-                                color = TextPrimary,
+                                color = textColorPrimary,
                                 modifier = Modifier.padding(bottom = 12.dp)
                             )
                             Column(
@@ -306,7 +316,7 @@ fun ScheduleScreen(
                                 fontFamily = LexendFontFamily,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp,
-                                color = TextPrimary,
+                                color = textColorPrimary,
                                 modifier = Modifier.padding(bottom = 12.dp)
                             )
                             DiaryEntryCard(diaryEntry = dayDiary)
@@ -324,6 +334,9 @@ private fun ScheduleHeader(
     selectedTabIndex: Int,
     onAddClick: () -> Unit
 ) {
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val textColorPrimary = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary
+    val textColorSecondary = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -340,7 +353,7 @@ private fun ScheduleHeader(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 32.sp,
-                    color = TextPrimary
+                    color = textColorPrimary
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -351,7 +364,7 @@ private fun ScheduleHeader(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Normal,
                     fontSize = 13.sp,
-                    color = TextSecondary
+                    color = textColorSecondary
                 )
             }
             
@@ -416,17 +429,22 @@ private fun WeeklyView(
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         // Week days selector card
+        val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+        val cardColor = if (isDark) com.relaxmind.app.ui.themes.SurfaceDark else Color.White
+        val textColorPrimary = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary
+        val textColorSecondary = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
                     elevation = 6.dp,
                     shape = RoundedCornerShape(26.dp),
-                    ambientColor = Color(0xFF8A88A6).copy(alpha = 0.15f),
-                    spotColor = Color(0xFF8A88A6).copy(alpha = 0.15f)
+                    ambientColor = if (isDark) Color(0xFF68D391).copy(alpha = 0.05f) else Color(0xFF8A88A6).copy(alpha = 0.15f),
+                    spotColor = if (isDark) Color(0xFF68D391).copy(alpha = 0.05f) else Color(0xFF8A88A6).copy(alpha = 0.15f)
                 ),
             shape = RoundedCornerShape(26.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            colors = CardDefaults.cardColors(containerColor = cardColor)
         ) {
             Row(
                 modifier = Modifier
@@ -455,7 +473,7 @@ private fun WeeklyView(
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Medium,
                             fontSize = 12.sp,
-                            color = if (isSelected) TextPrimary else TextSecondary
+                            color = if (isSelected) textColorPrimary else textColorSecondary
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Box(
@@ -477,7 +495,7 @@ private fun WeeklyView(
                                 fontFamily = LexendFontFamily,
                                 fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
                                 fontSize = 14.sp,
-                                color = if (isSelected) Color.White else TextPrimary
+                                color = if (isSelected) Color.White else textColorPrimary
                             )
                         }
                         Spacer(modifier = Modifier.height(4.dp))
@@ -513,7 +531,7 @@ private fun WeeklyView(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .background(SoftMint, CircleShape),
+                    .background(if (isDark) Color(0xFF132A23) else SoftMint, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -530,7 +548,7 @@ private fun WeeklyView(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
-                    color = TextPrimary
+                    color = textColorPrimary
                 )
                 Text(
                     text = if (appointments.isEmpty()) stringResource(id = R.string.schedule_no_events) else stringResource(id = R.string.schedule_events_count, appointments.size),
@@ -568,7 +586,7 @@ private fun WeeklyView(
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
-                            color = TextPrimary,
+                            color = textColorPrimary,
                             modifier = Modifier.padding(bottom = 4.dp)
                         )
                     }
@@ -583,17 +601,18 @@ private fun WeeklyView(
 
 @Composable
 private fun EmptyEventsPlaceholder() {
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(
                 elevation = 2.dp,
                 shape = RoundedCornerShape(26.dp),
-                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.05f),
-                spotColor = Color(0xFF8A88A6).copy(alpha = 0.05f)
+                ambientColor = if (isDark) Color(0xFF68D391).copy(alpha = 0.05f) else Color(0xFF8A88A6).copy(alpha = 0.05f),
+                spotColor = if (isDark) Color(0xFF68D391).copy(alpha = 0.05f) else Color(0xFF8A88A6).copy(alpha = 0.05f)
             ),
         shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = if (isDark) com.relaxmind.app.ui.themes.SurfaceDark else Color.White)
     ) {
         Column(
             modifier = Modifier
@@ -643,7 +662,7 @@ private fun EmptyEventsPlaceholder() {
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
-                color = TextPrimary,
+                color = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary,
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(2.dp))
@@ -652,7 +671,7 @@ private fun EmptyEventsPlaceholder() {
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Medium,
                 fontSize = 12.sp,
-                color = TextSecondary,
+                color = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary,
                 textAlign = TextAlign.Center
             )
         }
@@ -690,17 +709,22 @@ private fun MonthlyViewSimple(
             .padding(horizontal = 24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
+        val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+        val textColorPrimary = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary
+        val textColorSecondary = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
+        val cardColor = if (isDark) com.relaxmind.app.ui.themes.SurfaceDark else Color.White
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
                     elevation = 6.dp,
                     shape = RoundedCornerShape(26.dp),
-                    ambientColor = Color(0xFF8A88A6).copy(alpha = 0.15f),
-                    spotColor = Color(0xFF8A88A6).copy(alpha = 0.15f)
+                    ambientColor = if (isDark) Color(0xFF68D391).copy(alpha = 0.05f) else Color(0xFF8A88A6).copy(alpha = 0.15f),
+                    spotColor = if (isDark) Color(0xFF68D391).copy(alpha = 0.05f) else Color(0xFF8A88A6).copy(alpha = 0.15f)
                 ),
             shape = RoundedCornerShape(26.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            colors = CardDefaults.cardColors(containerColor = cardColor)
         ) {
             Column(
                 modifier = Modifier
@@ -726,7 +750,7 @@ private fun MonthlyViewSimple(
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
-                        color = TextPrimary
+                        color = textColorPrimary
                     )
                     IconButton(onClick = { onMonthChange(currentMonth.plusMonths(1)) }) {
                         Icon(
@@ -752,7 +776,7 @@ private fun MonthlyViewSimple(
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp,
-                            color = TextSecondary,
+                            color = textColorSecondary,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.weight(1f)
                         )
@@ -780,14 +804,13 @@ private fun MonthlyViewSimple(
                             val dayAppointments = appointmentsByDay[dayNumber] ?: emptyList()
                             val hasDiary = diaryHasEntryByDay[dayNumber] == true
                             val isCellToday = today.year == year && today.monthValue == month && today.dayOfMonth == dayNumber
+                            val cellBg = if (isCellToday) PatientGreen else if (isDark) Color(0xFF2C3236) else Color(0xFFF7FAFC)
 
                             Box(
                                 modifier = Modifier
                                     .aspectRatio(1f)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(
-                                        color = if (isCellToday) PatientGreen else Color(0xFFF7FAFC)
-                                    )
+                                    .background(color = cellBg)
                                     .clickable { onDayClick(dayNumber) },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -801,7 +824,7 @@ private fun MonthlyViewSimple(
                                         fontFamily = LexendFontFamily,
                                         fontWeight = if (isCellToday) FontWeight.Bold else FontWeight.Medium,
                                         fontSize = 14.sp,
-                                        color = if (isCellToday) Color.White else TextPrimary
+                                        color = if (isCellToday) Color.White else textColorPrimary
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     // Dots row
@@ -862,17 +885,22 @@ private fun MonthlyView(
             .padding(horizontal = 24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
+        val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+        val textColorPrimary = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary
+        val textColorSecondary = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
+        val cardColor = if (isDark) com.relaxmind.app.ui.themes.SurfaceDark else Color.White
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
                     elevation = 6.dp,
                     shape = RoundedCornerShape(26.dp),
-                    ambientColor = Color(0xFF8A88A6).copy(alpha = 0.15f),
-                    spotColor = Color(0xFF8A88A6).copy(alpha = 0.15f)
+                    ambientColor = if (isDark) Color(0xFF68D391).copy(alpha = 0.05f) else Color(0xFF8A88A6).copy(alpha = 0.15f),
+                    spotColor = if (isDark) Color(0xFF68D391).copy(alpha = 0.05f) else Color(0xFF8A88A6).copy(alpha = 0.15f)
                 ),
             shape = RoundedCornerShape(26.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            colors = CardDefaults.cardColors(containerColor = cardColor)
         ) {
             Column(
                 modifier = Modifier
@@ -898,7 +926,7 @@ private fun MonthlyView(
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
-                        color = TextPrimary
+                        color = textColorPrimary
                     )
                     IconButton(onClick = { onMonthChange(currentMonth.plusMonths(1)) }) {
                         Icon(
@@ -924,7 +952,7 @@ private fun MonthlyView(
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp,
-                            color = TextSecondary,
+                            color = textColorSecondary,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.weight(1f)
                         )
@@ -952,14 +980,13 @@ private fun MonthlyView(
                             val dayAppointments = appointmentsByDay[dayNumber] ?: emptyList()
                             val hasDiary = diaryHasEntryByDay[dayNumber] == true
                             val isCellToday = today.year == year && today.monthValue == month && today.dayOfMonth == dayNumber
+                            val cellBg = if (isCellToday) PatientGreen else if (isDark) Color(0xFF2C3236) else Color(0xFFF7FAFC)
 
                             Box(
                                 modifier = Modifier
                                     .aspectRatio(1f)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(
-                                        color = if (isCellToday) PatientGreen else Color(0xFFF7FAFC)
-                                    )
+                                    .background(color = cellBg)
                                     .clickable { onDayClick(dayNumber) },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -973,7 +1000,7 @@ private fun MonthlyView(
                                         fontFamily = LexendFontFamily,
                                         fontWeight = if (isCellToday) FontWeight.Bold else FontWeight.Medium,
                                         fontSize = 14.sp,
-                                        color = if (isCellToday) Color.White else TextPrimary
+                                        color = if (isCellToday) Color.White else textColorPrimary
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     // Dots row
@@ -1005,6 +1032,7 @@ private fun MonthlyView(
 
 @Composable
 private fun CalendarInfoAndLegend() {
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1019,7 +1047,7 @@ private fun CalendarInfoAndLegend() {
             Box(
                 modifier = Modifier
                     .size(24.dp)
-                    .background(SoftMint, CircleShape),
+                    .background(if (isDark) Color(0xFF132A23) else SoftMint, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -1035,7 +1063,7 @@ private fun CalendarInfoAndLegend() {
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Medium,
                 fontSize = 12.sp,
-                color = TextSecondary
+                color = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
             )
         }
 
@@ -1046,11 +1074,11 @@ private fun CalendarInfoAndLegend() {
                 .shadow(
                     elevation = 2.dp,
                     shape = RoundedCornerShape(16.dp),
-                    ambientColor = Color(0xFF8A88A6).copy(alpha = 0.05f),
-                    spotColor = Color(0xFF8A88A6).copy(alpha = 0.05f)
+                    ambientColor = Color(0xFF68D391).copy(alpha = 0.05f),
+                    spotColor = Color(0xFF68D391).copy(alpha = 0.05f)
                 ),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            colors = CardDefaults.cardColors(containerColor = if (isDark) com.relaxmind.app.ui.themes.SurfaceDark else Color.White)
         ) {
             Row(
                 modifier = Modifier
@@ -1070,6 +1098,7 @@ private fun CalendarInfoAndLegend() {
 
 @Composable
 private fun LegendItem(color: Color, text: String) {
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -1084,7 +1113,7 @@ private fun LegendItem(color: Color, text: String) {
             fontFamily = LexendFontFamily,
             fontWeight = FontWeight.Medium,
             fontSize = 11.sp,
-            color = TextSecondary
+            color = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
         )
     }
 }
@@ -1118,6 +1147,17 @@ private fun AppointmentItem(
         else -> ReminderOrange
     }
 
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val textColorPrimary = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary
+    val cardBg = if (isDark) com.relaxmind.app.ui.themes.SurfaceDark else Color.White
+    val badgeBgColorFinal = if (isDark) {
+        when (appointment.type) {
+            "cita" -> Color(0xFF132A23)
+            "medicacion" -> Color(0xFF0D1F2D)
+            else -> Color(0xFF2A1F0D)
+        }
+    } else badgeBgColor
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1125,10 +1165,10 @@ private fun AppointmentItem(
             .shadow(
                 elevation = 4.dp,
                 shape = RoundedCornerShape(20.dp),
-                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.1f),
-                spotColor = Color(0xFF8A88A6).copy(alpha = 0.1f)
+                ambientColor = if (isDark) dotColor.copy(alpha = 0.1f) else Color(0xFF8A88A6).copy(alpha = 0.1f),
+                spotColor = if (isDark) dotColor.copy(alpha = 0.1f) else Color(0xFF8A88A6).copy(alpha = 0.1f)
             )
-            .background(Color.White, RoundedCornerShape(20.dp))
+            .background(cardBg, RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
     ) {
         // Left border indicator box
@@ -1159,7 +1199,7 @@ private fun AppointmentItem(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
-                    color = if (appointment.completed) Color.LightGray else TextPrimary
+                    color = if (appointment.completed) Color.LightGray else textColorPrimary
                 )
                 Spacer(modifier = Modifier.width(14.dp))
                 // Colored dot indicator
@@ -1175,7 +1215,7 @@ private fun AppointmentItem(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Medium,
                     fontSize = 14.sp,
-                    color = if (appointment.completed) Color.Gray else TextPrimary,
+                    color = if (appointment.completed) Color.Gray else textColorPrimary,
                     textDecoration = if (appointment.completed) TextDecoration.LineThrough else TextDecoration.None,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -1189,7 +1229,7 @@ private fun AppointmentItem(
             Row(
                 modifier = Modifier
                     .background(
-                        color = if (appointment.completed) Color(0xFFF2F4F8) else badgeBgColor,
+                        color = if (appointment.completed) (if (isDark) Color(0xFF1E222B) else Color(0xFFF2F4F8)) else badgeBgColorFinal,
                         shape = RoundedCornerShape(12.dp)
                     )
                     .padding(horizontal = 10.dp, vertical = 6.dp),
@@ -1233,17 +1273,20 @@ private fun DiaryEntryCard(
     modifier: Modifier = Modifier
 ) {
     val emotionInitial = diaryEntry.emotion.firstOrNull()?.uppercase() ?: "D"
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val cardColor = if (isDark) com.relaxmind.app.ui.themes.SurfaceDark else Color.White
+
     Card(
         modifier = modifier
             .fillMaxWidth()
             .shadow(
                 elevation = 4.dp,
                 shape = RoundedCornerShape(26.dp),
-                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.1f),
-                spotColor = Color(0xFF8A88A6).copy(alpha = 0.1f)
+                ambientColor = if (isDark) DiaryPurple.copy(alpha = 0.08f) else Color(0xFF8A88A6).copy(alpha = 0.1f),
+                spotColor = if (isDark) DiaryPurple.copy(alpha = 0.08f) else Color(0xFF8A88A6).copy(alpha = 0.1f)
             ),
         shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Column(
             modifier = Modifier
@@ -1281,13 +1324,13 @@ private fun DiaryEntryCard(
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
-                            color = TextPrimary
+                            color = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary
                         )
                         Text(
                             text = "Sintiéndome ${diaryEntry.emotion.lowercase()}",
                             fontFamily = LexendFontFamily,
                             fontSize = 12.sp,
-                            color = TextSecondary
+                            color = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
                         )
                     }
                 }
@@ -1295,7 +1338,7 @@ private fun DiaryEntryCard(
                 // Category Tag
                 Box(
                     modifier = Modifier
-                        .background(SoftMint, RoundedCornerShape(10.dp))
+                        .background(if (isDark) Color(0xFF132A23) else SoftMint, RoundedCornerShape(10.dp))
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
                     Text(
@@ -1314,7 +1357,7 @@ private fun DiaryEntryCard(
                     text = diaryEntry.notes,
                     fontFamily = LexendFontFamily,
                     fontSize = 14.sp,
-                    color = TextPrimary,
+                    color = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary,
                     lineHeight = 20.sp
                 )
             }

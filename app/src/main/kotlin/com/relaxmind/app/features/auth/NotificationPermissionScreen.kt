@@ -4,6 +4,12 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -101,11 +107,53 @@ fun NotificationPermissionScreen(
             backgroundColor = Color.White,
             indicatorColor = PatientGreen
         )
-        return
     }
 
     Scaffold(
-        topBar = { RelaxTopBar(title = "", onBackClick = onNavigateBack) }
+        topBar = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 24.dp, vertical = 24.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                // To keep the logo centered and "Paso 2 de 2" on the right, we use weights
+                Box(modifier = Modifier.weight(1f))
+                
+                Image(
+                    painter = painterResource(id = com.relaxmind.app.R.drawable.icono_plano2),
+                    contentDescription = "RelaxMind Logo",
+                    modifier = Modifier.height(48.dp),
+                    contentScale = ContentScale.Fit
+                )
+                
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    if (userRole == "patient") {
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    color = PatientGreen.copy(alpha = 0.10f),
+                                    shape = RoundedCornerShape(999.dp)
+                                )
+                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = "Paso 2 de 2",
+                                fontFamily = com.relaxmind.app.ui.themes.LexendFontFamily,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = PatientGreen
+                            )
+                        }
+                    }
+                }
+            }
+        }
     ) { innerPadding ->
         Box(
             modifier = Modifier

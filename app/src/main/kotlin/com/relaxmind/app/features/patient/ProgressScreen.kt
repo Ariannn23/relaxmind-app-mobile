@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,9 +28,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.ArrowForward
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -58,11 +64,15 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.relaxmind.app.R
 import com.relaxmind.app.data.model.CheckIn
@@ -145,18 +155,23 @@ fun ProgressScreen(
         }
     }
 
+    // App theme state
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val bgColor = if (isDark) com.relaxmind.app.ui.themes.BackgroundDark else Color.White
+
     MaterialTheme(
         colorScheme = MaterialTheme.colorScheme,
         typography = LexendTypography
     ) {
         Scaffold(
-            containerColor = Color.White,
+            containerColor = bgColor,
             bottomBar = {
                 if (showBottomNav) {
                     RelaxBottomNav(
                         selectedRoute = "patient/progress",
                         onNavigate = onNavigate,
-                        role = AppRole.PATIENT
+                        role = AppRole.PATIENT,
+                        darkMode = isDark
                     )
                 }
             }
@@ -167,7 +182,9 @@ fun ProgressScreen(
                     .padding(innerPadding)
             ) {
                 // Background gradient blobs
-                SoftGradientBackground(animateBlobs = true)
+                if (!isDark) {
+                    SoftGradientBackground(animateBlobs = true)
+                }
 
                 if (isLoading && allCheckIns.isEmpty() && streakData == null && error == null) {
                     ProgressCalendarSkeleton(modifier = Modifier.align(Alignment.Center))
@@ -213,7 +230,7 @@ fun ProgressScreen(
 
                         // 4. Achievements Section
                         AchievementsSection(
-                            unlockedCount = unlockedAchievements.size,
+                            unlockedCount = unlockedAchievements.map { it.achievementKey }.toSet().size,
                             totalCount = AchievementCatalog.items.size,
                             onNavigateToLibrary = { onNavigate("patient/achievement_library") }
                         )
@@ -231,22 +248,68 @@ fun ProgressScreen(
                     if (selectedDayInfo != null) {
                         val (day, score) = selectedDayInfo!!
                         val category = WellnessScoreCalculator.getCategory(score)
-                        AlertDialog(
-                            onDismissRequest = { selectedDayInfo = null },
-                            title = { Text("Registro del día $day", fontFamily = LexendFontFamily) },
-                            text = {
-                                Text(
-                                    text = "Puntaje: $score / 100\nCategoría: $category",
-                                    fontFamily = LexendFontFamily,
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                            },
-                            confirmButton = {
-                                TextButton(onClick = { selectedDayInfo = null }) {
-                                    Text("Cerrar", fontFamily = LexendFontFamily, color = PatientGreen)
+                        
+                        // Deeper pastel colors for background
+                        val (bgColor, imageRes, btnColor) = when {
+                            score <= 20 -> Triple(Color(0xFFFFCDD2), R.drawable.animo_1, Color(0xFFD32F2F))
+                            score <= 40 -> Triple(Color(0xFFFFE0B2), R.drawable.animo_2, Color(0xFFF57C00))
+                            score <= 60 -> Triple(Color(0xFFFFF9C4), R.drawable.animo_3, Color(0xFFFBC02D))
+                            score <= 80 -> Triple(Color(0xFFC8E6C9), R.drawable.animo_4, Color(0xFF388E3C))
+                            else -> Triple(Color(0xFFA5D6A7), R.drawable.animo_5, Color(0xFF2E7D32))
+                        }
+
+                        Dialog(onDismissRequest = { selectedDayInfo = null }) {
+                            Card(
+                                shape = RoundedCornerShape(32.dp),
+                                colors = CardDefaults.cardColors(containerColor = bgColor),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                                    .shadow(16.dp, RoundedCornerShape(32.dp), spotColor = btnColor)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(24.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "Registro del día $day", 
+                                        fontFamily = LexendFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 20.sp,
+                                        color = TextPrimary
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Image(
+                                        painter = painterResource(id = imageRes),
+                                        contentDescription = "Estado de ánimo",
+                                        modifier = Modifier.size(110.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        text = "Puntaje: $score / 100",
+                                        fontFamily = LexendFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 18.sp,
+                                        color = btnColor
+                                    )
+                                    Text(
+                                        text = "Categoría: $category",
+                                        fontFamily = LexendFontFamily,
+                                        fontSize = 15.sp,
+                                        color = TextSecondary
+                                    )
+                                    Spacer(modifier = Modifier.height(28.dp))
+                                    Button(
+                                        onClick = { selectedDayInfo = null },
+                                        colors = ButtonDefaults.buttonColors(containerColor = btnColor),
+                                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                                        shape = RoundedCornerShape(100) // Pill shape
+                                    ) {
+                                        Text("Entendido", fontFamily = LexendFontFamily, color = Color.White, fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             }
-                        )
+                        }
                     }
 
                 }
@@ -283,6 +346,25 @@ private fun StreakCard(
         label = "streak-scale"
     )
 
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val gradientColors = if (isDark) {
+        listOf(Color(0xFF2C1910), Color(0xFF431D0B))
+    } else {
+        listOf(Color(0xFFFFF7ED), Color(0xFFFFEDD5))
+    }
+    val borderColor = if (isDark) Color(0xFFEA580C).copy(alpha = 0.3f) else Color(0xFFFFEDD5)
+    val shadowColor = if (isDark) Color(0xFFEA580C).copy(alpha = 0.05f) else Color(0xFFF97316).copy(alpha = 0.15f)
+
+    val (llamaDrawableId, llamaBgColor) = when {
+        currentStreak >= 30 -> Pair(R.drawable.llama_7, Color(0xFFE8F5E9)) // Green background
+        currentStreak >= 21 -> Pair(R.drawable.llama_6, Color(0xFFFFEBEE)) // Pink/Red background
+        currentStreak >= 14 -> Pair(R.drawable.llama_5, Color(0xFFFFF3E0)) // Orange/Red background
+        currentStreak >= 7 -> Pair(R.drawable.llama_4, Color(0xFFFFF8E1)) // Yellow/Orange background
+        currentStreak >= 5 -> Pair(R.drawable.llama_3, Color(0xFFFFFDE7)) // Yellow background
+        currentStreak >= 3 -> Pair(R.drawable.llama_2, Color(0xFFFFFDE7)) // Pale yellow background
+        else -> Pair(R.drawable.llama_1, Color(0xFFF5F5F5)) // Light gray background
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -290,13 +372,13 @@ private fun StreakCard(
             .shadow(
                 elevation = 12.dp,
                 shape = RoundedCornerShape(28.dp),
-                ambientColor = Color(0xFFF97316).copy(alpha = 0.15f),
-                spotColor = Color(0xFFF97316).copy(alpha = 0.15f)
+                ambientColor = shadowColor,
+                spotColor = shadowColor
             )
-            .border(1.2.dp, Color(0xFFFFEDD5), RoundedCornerShape(28.dp))
+            .border(1.2.dp, borderColor, RoundedCornerShape(28.dp))
             .background(
                 brush = Brush.linearGradient(
-                    colors = listOf(Color(0xFFFFF7ED), Color(0xFFFFEDD5)),
+                    colors = gradientColors,
                     start = androidx.compose.ui.geometry.Offset.Zero,
                     end = androidx.compose.ui.geometry.Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
                 ),
@@ -355,10 +437,15 @@ private fun StreakCard(
                 modifier = Modifier
                     .size(80.dp)
                     .clip(CircleShape)
-                    .background(Color.White),
+                    .background(if (isDark) Color(0xFF351F14) else llamaBgColor),
                 contentAlignment = Alignment.Center
             ) {
-                FlameIcon(modifier = Modifier.size(46.dp))
+                Image(
+                    painter = painterResource(id = llamaDrawableId),
+                    contentDescription = "Racha: Llama $currentStreak",
+                    modifier = Modifier.size(56.dp),
+                    contentScale = ContentScale.Fit
+                )
             }
 
             Spacer(modifier = Modifier.width(24.dp))
@@ -379,11 +466,11 @@ private fun StreakCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "dí­as seguidos",
+                        text = "días seguidos",
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
-                        color = TextPrimary,
+                        color = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary,
                         modifier = Modifier.padding(bottom = 6.dp)
                     )
                 }
@@ -393,7 +480,7 @@ private fun StreakCard(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Medium,
                     fontSize = 13.sp,
-                    color = TextSecondary
+                    color = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
                 )
             }
         }
@@ -461,18 +548,23 @@ private fun MonthlyProgressCard(
     val nextMonthName = remember(month) { getMonthNameInSpanish(if (month == 12) 1 else month + 1) }
     val currentMonthName = remember(month) { getMonthNameInSpanish(month) }
 
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val cardColor = if (isDark) com.relaxmind.app.ui.themes.SurfaceDark else Color.White
+    val borderColor = if (isDark) Color.Transparent else BorderSoft
+    val shadowColor = if (isDark) Color(0xFF68D391).copy(alpha = 0.05f) else PatientGreen.copy(alpha = 0.08f)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(
                 elevation = 10.dp,
                 shape = RoundedCornerShape(28.dp),
-                ambientColor = PatientGreen.copy(alpha = 0.08f),
-                spotColor = PatientGreen.copy(alpha = 0.08f)
+                ambientColor = shadowColor,
+                spotColor = shadowColor
             )
-            .border(1.2.dp, BorderSoft, RoundedCornerShape(28.dp)),
+            .border(1.2.dp, borderColor, RoundedCornerShape(28.dp)),
         shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Column(
             modifier = Modifier
@@ -486,37 +578,49 @@ private fun MonthlyProgressCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "< $prevMonthName",
-                    fontFamily = LexendFontFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                    color = PatientGreenLight,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
                         .clickable { onMonthPrevious() }
                         .padding(horizontal = 8.dp, vertical = 4.dp)
-                )
+                ) {
+                    Icon(imageVector = Icons.Rounded.ArrowBack, contentDescription = "Mes anterior", tint = PatientGreenLight)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = prevMonthName,
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        color = PatientGreenLight
+                    )
+                }
 
                 Text(
                     text = "$currentMonthName $year",
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
-                    color = TextPrimary
+                    color = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary
                 )
 
-                Text(
-                    text = "$nextMonthName >",
-                    fontFamily = LexendFontFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                    color = PatientGreenLight,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
                         .clickable { onMonthNext() }
                         .padding(horizontal = 8.dp, vertical = 4.dp)
-                )
+                ) {
+                    Text(
+                        text = nextMonthName,
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        color = PatientGreenLight
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(imageVector = Icons.Rounded.ArrowForward, contentDescription = "Mes siguiente", tint = PatientGreenLight)
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -533,7 +637,7 @@ private fun MonthlyProgressCard(
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 12.sp,
-                        color = TextSecondary,
+                        color = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.weight(1f)
                     )
@@ -555,7 +659,7 @@ private fun MonthlyProgressCard(
                     ) {
                         rowCells.forEach { cellIndex ->
                             if (cellIndex < emptyCellsBefore) {
-                                Spacer(modifier = Modifier.size(34.dp))
+                                Spacer(modifier = Modifier.size(38.dp))
                             } else {
                                 val dayNumber = cellIndex - emptyCellsBefore + 1
                                 val score = checkIns[dayNumber]
@@ -564,12 +668,13 @@ private fun MonthlyProgressCard(
                                                   LocalDate.now().dayOfMonth == dayNumber
                                 val cellColor = WellnessScoreCalculator.getScoreColor(score)
                                 val hasScore = score != null
+                                val emptyCellColor = if (isDark) Color(0xFF2C3236) else Color(0xFFF4F7F5)
 
                                 Box(
                                     modifier = Modifier
                                         .size(38.dp)
                                         .clip(CircleShape)
-                                        .background(if (hasScore) cellColor else Color(0xFFF4F7F5))
+                                        .background(if (hasScore) cellColor else emptyCellColor)
                                         .then(
                                             if (isCellToday) {
                                                 Modifier.border(1.5.dp, PatientGreen.copy(alpha = 0.45f), CircleShape)
@@ -580,20 +685,16 @@ private fun MonthlyProgressCard(
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    val isLightBackground = !hasScore ||
-                                        cellColor == ScoreGray ||
-                                        cellColor == ScoreYellow ||
-                                        cellColor == ScoreGreenLight
+                                    val isLightBackground = hasScore && (score == 2 || score == 3)
                                     Text(
-                                        text = dayNumber.toString(),
+                                        text = "$dayNumber",
                                         fontFamily = LexendFontFamily,
                                         fontWeight = if (isCellToday || hasScore) FontWeight.Bold else FontWeight.Medium,
-                                        fontSize = 13.sp,
+                                        fontSize = 14.sp,
                                         color = when {
+                                            hasScore && isLightBackground -> Color(0xFF2D3748)
                                             hasScore && !isLightBackground -> Color.White
-                                            hasScore -> TextPrimary
-                                            isCellToday -> PatientGreen
-                                            else -> TextSecondary
+                                            else -> if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary
                                         }
                                     )
                                 }
@@ -657,6 +758,12 @@ private fun AchievementsSection(
     totalCount: Int,
     onNavigateToLibrary: () -> Unit
 ) {
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val textColorPrimary = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary
+    val textColorSecondary = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
+    val cardColor = if (isDark) com.relaxmind.app.ui.themes.SurfaceDark else Color.White
+    val shadowColor = if (isDark) Color(0xFF68D391).copy(alpha = 0.05f) else Color.Black.copy(alpha = 0.05f)
+
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -668,7 +775,7 @@ private fun AchievementsSection(
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
-                color = TextPrimary
+                color = textColorPrimary
             )
         }
 
@@ -677,8 +784,8 @@ private fun AchievementsSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(12.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = 0.05f))
-                .background(Color.White, RoundedCornerShape(20.dp))
+                .shadow(12.dp, RoundedCornerShape(20.dp), ambientColor = shadowColor, spotColor = shadowColor)
+                .background(cardColor, RoundedCornerShape(20.dp))
                 .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -704,14 +811,14 @@ private fun AchievementsSection(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
-                    color = TextPrimary
+                    color = textColorPrimary
                 )
                 Text(
                     text = "$unlockedCount de $totalCount Completados",
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Medium,
                     fontSize = 13.sp,
-                    color = TextSecondary
+                    color = textColorSecondary
                 )
             }
             
@@ -740,6 +847,8 @@ private fun AchievementsSection(
 private fun HistorySection(
     history: List<CheckIn>
 ) {
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val textColorPrimary = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary
     var showFullHistory by remember { mutableStateOf(false) }
     val visibleHistory = remember(history) { history.take(3) }
 
@@ -754,7 +863,7 @@ private fun HistorySection(
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
-                color = TextPrimary
+                color = textColorPrimary
             )
             if (history.size > 3) {
                 Text(
@@ -927,6 +1036,14 @@ private fun HistoryItemRow(
     val title = if (checkIn.type == "initial_test") "Evaluación Inicial" else "Check-in Diario"
     val categoryText = if (checkIn.type == "initial_test") "Test completo" else "Seguimiento diario"
 
+    val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
+    val textColorPrimary = if (isDark) com.relaxmind.app.ui.themes.TextDarkPrimary else TextPrimary
+    val textColorSecondary = if (isDark) com.relaxmind.app.ui.themes.TextDarkSecondary else TextSecondary
+    val cardColor = if (isDark) com.relaxmind.app.ui.themes.SurfaceDark else Color.White
+    val shadowColor = if (isDark) Color(0xFF68D391).copy(alpha = 0.05f) else Color(0xFF8A88A6).copy(alpha = 0.05f)
+    val badgeBgColor = if (isDark) Color(0xFF132A23) else Color(0xFFF4FBF7)
+    val badgeBorderColor = if (isDark) Color(0xFF132A23) else Color(0xFFE2F3EB)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -934,17 +1051,17 @@ private fun HistoryItemRow(
             .shadow(
                 elevation = 4.dp,
                 shape = RoundedCornerShape(20.dp),
-                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.05f),
-                spotColor = Color(0xFF8A88A6).copy(alpha = 0.05f)
+                ambientColor = shadowColor,
+                spotColor = shadowColor
             )
-            .border(1.dp, BorderSoft, RoundedCornerShape(20.dp))
+            .border(1.dp, if (isDark) Color(0xFF68D391).copy(alpha = 0.15f) else BorderSoft, RoundedCornerShape(20.dp))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = { isPressed = !isPressed }
             ),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Row(
             modifier = Modifier
@@ -957,8 +1074,8 @@ private fun HistoryItemRow(
                 modifier = Modifier
                     .size(width = 54.dp, height = 54.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFF4FBF7))
-                    .border(1.dp, Color(0xFFE2F3EB), RoundedCornerShape(12.dp)),
+                    .background(badgeBgColor)
+                    .border(1.dp, badgeBorderColor, RoundedCornerShape(12.dp)),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -967,7 +1084,7 @@ private fun HistoryItemRow(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
-                    color = TextPrimary
+                    color = textColorPrimary
                 )
                 Text(
                     text = monthStr.replace(".", ""), // remove dot from spanish abbreviations like "may."
@@ -988,7 +1105,7 @@ private fun HistoryItemRow(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
-                    color = TextPrimary
+                    color = textColorPrimary
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
@@ -996,7 +1113,7 @@ private fun HistoryItemRow(
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Normal,
                     fontSize = 12.sp,
-                    color = TextSecondary
+                    color = textColorSecondary
                 )
             }
 

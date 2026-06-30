@@ -776,27 +776,43 @@ class FirestoreRepository(
     }
 
     suspend fun getLibraryArticles(role: String): Result<List<LibraryArticle>> = runCatching {
-        val q1 = firestore.collection(LIBRARY_ARTICLES_COLLECTION)
-            .whereEqualTo("targetRole", role)
-            .get()
-            .await()
-            .documents.mapNotNull { doc -> doc.toObject(LibraryArticle::class.java)?.copy(id = doc.id) }
+        val q1 = try {
+            firestore.collection(LIBRARY_ARTICLES_COLLECTION)
+                .whereEqualTo("targetRole", role)
+                .get()
+                .await()
+                .documents.mapNotNull { doc -> doc.toObject(LibraryArticle::class.java)?.copy(id = doc.id) }
+        } catch (e: Exception) {
+            emptyList()
+        }
 
-        val q2 = firestore.collection(LIBRARY_ARTICLES_COLLECTION)
-            .whereEqualTo("targetRole", "both")
-            .get()
-            .await()
-            .documents.mapNotNull { doc -> doc.toObject(LibraryArticle::class.java)?.copy(id = doc.id) }
+        val q2 = try {
+            firestore.collection(LIBRARY_ARTICLES_COLLECTION)
+                .whereEqualTo("targetRole", "both")
+                .get()
+                .await()
+                .documents.mapNotNull { doc -> doc.toObject(LibraryArticle::class.java)?.copy(id = doc.id) }
+        } catch (e: Exception) {
+            emptyList()
+        }
 
-        (q1 + q2).distinctBy { it.id }
+        val mockArticles = getMockArticles().filter { it.targetRole == role || it.targetRole == "both" }
+        (q1 + q2 + mockArticles).distinctBy { it.id }
     }
 
     suspend fun getArticleById(articleId: String): Result<LibraryArticle?> = runCatching {
+        val mockArticle = getMockArticles().find { it.id == articleId }
+        if (mockArticle != null) return@runCatching mockArticle
+
         val doc = firestore.collection(LIBRARY_ARTICLES_COLLECTION)
             .document(articleId)
             .get()
             .await()
         doc.toObject(LibraryArticle::class.java)?.copy(id = doc.id)
+    }
+
+    private fun getMockArticles(): List<LibraryArticle> {
+        return com.relaxmind.app.data.local.MockLibraryData.articles
     }
 
     private companion object {

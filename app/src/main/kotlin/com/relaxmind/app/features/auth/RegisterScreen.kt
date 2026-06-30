@@ -57,7 +57,8 @@ fun RegisterScreen(
     onNavigateBack: () -> Unit,
     onNavigateToEmailVerification: () -> Unit,
     onNavigateToPatientDashboard: () -> Unit,
-    onNavigateToCaregiverDashboard: () -> Unit
+    onNavigateToCaregiverDashboard: () -> Unit,
+    onNavigateToOnboarding: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val toastState = rememberRelaxToastState()
@@ -130,7 +131,9 @@ fun RegisterScreen(
                 // Sin embargo, para no complicar, asumo que Google = verificado. Si FirebaseAuthService dice que current user tiene emailVerified, omitimos EmailVerification.
                 val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
                 if (currentUser?.isEmailVerified == true || currentUser?.providerData?.any { it.providerId == "google.com" } == true) {
-                    if (userRole == "caregiver") {
+                    if (uiState.isNewUser) {
+                        onNavigateToOnboarding()
+                    } else if (userRole == "caregiver") {
                         onNavigateToCaregiverDashboard()
                     } else {
                         onNavigateToPatientDashboard()
@@ -223,16 +226,20 @@ fun RegisterScreen(
                         isFormValid = isFormValid,
                         isLoading = uiState.isLoading,
                         onSubmit = {
-                            viewModel.register(
-                                name = name,
-                                lastName = lastName,
-                                birthDate = birthDate,
-                                email = email,
-                                password = password,
-                                confirmPassword = confirmPassword,
-                                role = selectedRole,
-                                phone = phone
-                            )
+                            if (!isFormValid) {
+                                toastState.showError("Por favor, llena correctamente todos los campos obligatorios.")
+                            } else {
+                                viewModel.register(
+                                    name = name,
+                                    lastName = lastName,
+                                    birthDate = birthDate,
+                                    email = email,
+                                    password = password,
+                                    confirmPassword = confirmPassword,
+                                    role = selectedRole,
+                                    phone = phone
+                                )
+                            }
                         },
                         onGoogleRegister = {
                             scope.launch {
@@ -302,6 +309,7 @@ private fun RegisterScreenPreview() {
         onNavigateBack = {},
         onNavigateToEmailVerification = {},
         onNavigateToPatientDashboard = {},
-        onNavigateToCaregiverDashboard = {}
+        onNavigateToCaregiverDashboard = {},
+        onNavigateToOnboarding = {}
     )
 }

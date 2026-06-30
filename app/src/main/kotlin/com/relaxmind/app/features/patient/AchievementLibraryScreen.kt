@@ -19,11 +19,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
@@ -275,12 +279,15 @@ fun AchievementLibraryCard(
                 .padding(8.dp),
             contentAlignment = Alignment.Center
         ) {
-            AsyncImage(
-                model = achievement.defaultIconUrl,
+            val colorFilter = if (isUnlocked) null else ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+            
+            Image(
+                painter = painterResource(id = achievement.iconResId),
                 contentDescription = achievement.title,
                 modifier = Modifier.size(50.dp).clip(CircleShape),
                 contentScale = ContentScale.Fit,
-                alpha = alpha
+                alpha = alpha,
+                colorFilter = colorFilter
             )
         }
         

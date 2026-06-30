@@ -2,6 +2,9 @@ package com.relaxmind.app.features.common
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,29 +56,30 @@ import kotlinx.coroutines.launch
 private data class OnboardingSlide(
     val title: String,
     val description: String,
-    val illustrationColor: Color
+    val imageResId: Int,
+    val buttonColor: Color
 )
 
 private val slides = listOf(
     OnboardingSlide(
         title = "Tu bienestar, cada día",
         description = "Registra cómo te sientes y construye hábitos saludables paso a paso.",
-        illustrationColor = Color(0xFFB2DFDB)   // soft teal
+        imageResId = com.relaxmind.app.R.drawable.screen1,
+        buttonColor = Color(0xFF67B08B)
     ),
     OnboardingSlide(
         title = "Mindfulness y respiración",
         description = "Ejercicios guiados para calmar tu mente cuando más lo necesitas.",
-        illustrationColor = Color(0xFFC8E6C9)   // soft green
+        imageResId = com.relaxmind.app.R.drawable.screen2,
+        buttonColor = Color(0xFF6993D6)
     ),
     OnboardingSlide(
         title = "Siempre acompañado",
         description = "Tu cuidador siempre conectado para estar ahí cuando lo necesites.",
-        illustrationColor = Color(0xFFDCEDC8)   // soft lime
+        imageResId = com.relaxmind.app.R.drawable.screen3,
+        buttonColor = Color(0xFFE5887C)
     )
 )
-
-// Gradient end color as specified in the design brief
-private val GradientEnd = Color(0xFFE8F5F0)
 
 // ---------------------------------------------------------------------------
 // Screen
@@ -97,11 +101,7 @@ fun WelcomeScreen(onFinish: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(BackgroundLight, GradientEnd)
-                )
-            )
+            .background(Color.White)
     ) {
         // ── "Omitir" top-end button ──────────────────────────────────────
         TextButton(
@@ -114,7 +114,8 @@ fun WelcomeScreen(onFinish: () -> Unit) {
             Text(
                 text = "Omitir",
                 style = MaterialTheme.typography.bodyLarge,
-                color = PatientGreen
+                fontFamily = com.relaxmind.app.ui.themes.LexendFontFamily,
+                color = slides[pagerState.currentPage].buttonColor
             )
         }
 
@@ -154,7 +155,8 @@ fun WelcomeScreen(onFinish: () -> Unit) {
             // Dot indicators
             PageDots(
                 pageCount = slides.size,
-                currentPage = pagerState.currentPage
+                currentPage = pagerState.currentPage,
+                currentColor = slides[pagerState.currentPage].buttonColor
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -174,7 +176,7 @@ fun WelcomeScreen(onFinish: () -> Unit) {
                 },
                 modifier = Modifier.fillMaxWidth(),
                 variant = ButtonVariant.PRIMARY,
-                role = AppRole.PATIENT
+                customColor = slides[pagerState.currentPage].buttonColor
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -195,12 +197,14 @@ private fun SlideContent(slide: OnboardingSlide, alpha: Float) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Illustration placeholder — replaced with real asset in a later sprint
-        Box(
+        Image(
+            painter = painterResource(id = slide.imageResId),
+            contentDescription = slide.title,
             modifier = Modifier
-                .size(280.dp)
-                .clip(RoundedCornerShape(32.dp))
-                .background(slide.illustrationColor)
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(vertical = 16.dp),
+            contentScale = ContentScale.Fit
         )
 
         Spacer(modifier = Modifier.height(40.dp))
@@ -209,6 +213,7 @@ private fun SlideContent(slide: OnboardingSlide, alpha: Float) {
         Text(
             text = slide.title,
             style = MaterialTheme.typography.headlineSmall,
+            fontFamily = com.relaxmind.app.ui.themes.LexendFontFamily,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onBackground
         )
@@ -219,6 +224,7 @@ private fun SlideContent(slide: OnboardingSlide, alpha: Float) {
         Text(
             text = slide.description,
             style = MaterialTheme.typography.bodyLarge,
+            fontFamily = com.relaxmind.app.ui.themes.LexendFontFamily,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             maxLines = 2,
@@ -232,7 +238,7 @@ private fun SlideContent(slide: OnboardingSlide, alpha: Float) {
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun PageDots(pageCount: Int, currentPage: Int) {
+private fun PageDots(pageCount: Int, currentPage: Int, currentColor: Color = PatientGreen) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -249,8 +255,8 @@ private fun PageDots(pageCount: Int, currentPage: Int) {
                     .size(size.dp)
                     .clip(CircleShape)
                     .background(
-                        color = if (isCurrent) PatientGreen
-                        else PatientGreen.copy(alpha = 0.25f)
+                        color = if (isCurrent) currentColor
+                        else currentColor.copy(alpha = 0.25f)
                     )
             )
         }

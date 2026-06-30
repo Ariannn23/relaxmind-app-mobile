@@ -21,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -191,7 +192,7 @@ fun LoginFormCard(
             modifier = Modifier.fillMaxWidth(),
             text = "Iniciar sesión",
             onClick = onLogin,
-            enabled = isFormValid,
+            enabled = !isLoading,
             isLoading = isLoading
         )
 
@@ -219,18 +220,22 @@ fun LoginFormCard(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        RelaxOutlineButton(
+        RelaxPrimaryButton(
             modifier = Modifier.fillMaxWidth(),
             text = "Continuar con Google",
-            onClick = onGoogleLogin
+            onClick = onGoogleLogin,
+            backgroundColor = Color.White,
+            textColor = Color.Black,
+            iconRes = com.relaxmind.app.R.drawable.google
         )
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        RelaxOutlineButton(
+        RelaxPrimaryButton(
             modifier = Modifier.fillMaxWidth(),
-            text = "Crear cuenta con correo",
-            onClick = onCreateAccount
+            text = "Crear cuenta",
+            onClick = onCreateAccount,
+            icon = androidx.compose.material.icons.Icons.Default.Email
         )
         }
     }

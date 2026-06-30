@@ -48,14 +48,10 @@ fun RelaxBackButton(
     
     val isCaregiver = role == AppRole.CAREGIVER
     
-    val bgColor = if (darkMode) Color(0xFF130D26) else Color.White
-    val outlineColor = if (darkMode) Color(0xFF2E2E38) else Color(0xFFE5E7EB)
+    val bgColor = Color.White
     
-    val iconColor = when {
-        darkMode -> Color.White
-        isCaregiver -> Color(0xFF4338A8) // CaregiverPurple
-        else -> Color(0xFF0F6E56) // PatientGreen
-    }
+    val primaryColor = if (isCaregiver) Color(0xFF4338A8) else Color(0xFF0F6E56)
+    val outlineColor = if (isCaregiver) Color(0xFF4338A8).copy(alpha = 0.25f) else Color(0xFF0F6E56).copy(alpha = 0.25f)
 
     Box(
         modifier = modifier
@@ -75,7 +71,7 @@ fun RelaxBackButton(
         Icon(
             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
             contentDescription = null,
-            tint = iconColor,
+            tint = primaryColor,
             modifier = Modifier.size(22.dp)
         )
     }

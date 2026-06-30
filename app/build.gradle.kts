@@ -111,6 +111,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp-sse:4.12.0")
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("com.airbnb.android:lottie-compose:6.4.1")
+    implementation("nl.dionsegijn:konfetti-compose:2.0.4")
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("com.google.zxing:core:3.5.3")

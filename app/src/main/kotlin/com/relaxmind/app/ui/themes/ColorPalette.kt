@@ -24,9 +24,15 @@ val ScoreGray = Color(0xFFCBD5E0)
 
 // Neutral surfaces support light and dark themes across the whole app.
 val BackgroundLight = Color(0xFFF7F7F7)
-val BackgroundDark = Color(0xFF1A1A2E)
+val BackgroundDark = Color(0xFF121418)
 val SurfaceLight = Color(0xFFFFFFFF)
-val SurfaceDark = Color(0xFF252536)
+val SurfaceDark = Color(0xFF22252F)
+
+// Dark mode specific text and borders
+val TextDarkPrimary = Color(0xFFF5F7FA)
+val TextDarkSecondary = Color(0xFF9CA3AF)
+val BorderDark = Color(0xFF313543)
+val DarkGlass = Color(0xFF22252F).copy(alpha = 0.75f)
 
 // Login / soft UI palette — pastel wellness surfaces and readable text.
 val BackgroundWhite = Color(0xFFFFFFFF)

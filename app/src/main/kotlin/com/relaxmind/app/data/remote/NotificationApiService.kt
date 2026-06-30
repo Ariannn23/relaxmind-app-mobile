@@ -50,6 +50,40 @@ class NotificationApiService(
         }
     }
 
+    suspend fun sendWellnessAlert(
+        patientId: String,
+        caregiverId: String,
+        alertId: String,
+        patientName: String,
+        score: Int,
+        category: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val payload = JsonObject().apply {
+                addProperty("patientId", patientId)
+                addProperty("caregiverId", caregiverId)
+                addProperty("alertId", alertId)
+                addProperty("patientName", patientName)
+                addProperty("score", score)
+                addProperty("category", category)
+            }
+
+            val request = Request.Builder()
+                .url("${baseUrl.trimEnd('/')}/api/send-wellness-alert")
+                .post(payload.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string().orEmpty()
+                if (!response.isSuccessful || body.contains("\"error\"")) {
+                    error("HTTP ${response.code}: $body")
+                }
+                Log.d(TAG, "Wellness push sent successfully for alert $alertId")
+            }
+            Unit
+        }
+    }
+
     private companion object {
         const val TAG = "NotificationApiService"
     }

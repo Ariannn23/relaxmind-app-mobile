@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Button
@@ -25,9 +26,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.relaxmind.app.ui.themes.LexendFontFamily
 import com.relaxmind.app.ui.themes.PatientGreen
 
@@ -38,43 +41,62 @@ fun RelaxPrimaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     isLoading: Boolean = false,
-    backgroundColor: Color = PatientGreen
+    backgroundColor: Color = PatientGreen,
+    textColor: Color = Color.White,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    iconRes: Int? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed && enabled && !isLoading) 0.98f else 1f,
-        label = "primary-button-scale"
+    val yOffset by animateFloatAsState(
+        targetValue = if (isPressed && enabled && !isLoading) 4f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 100),
+        label = "primary-button-y-offset"
     )
-    val shape = RoundedCornerShape(22.dp)
+    val shape = RoundedCornerShape(50)
+    val gradientBrush = androidx.compose.ui.graphics.Brush.verticalGradient(
+        colors = listOf(
+            Color.White.copy(alpha = 0.25f),
+            Color.Transparent
+        )
+    )
 
-    Button(
+        Button(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .height(58.dp)
-            .scale(scale)
-            .shadow(
-                elevation = if (enabled) 10.dp else 0.dp,
-                shape = shape,
-                ambientColor = backgroundColor.copy(alpha = 0.25f),
-                spotColor = backgroundColor.copy(alpha = 0.35f)
-            ),
+            .height(54.dp)
+            .offset(y = yOffset.dp)
+            .drawBehind {
+                if (enabled) {
+                    val edgeHeight = 4.dp.toPx() - yOffset.dp.toPx()
+                    if (edgeHeight > 0) {
+                        drawRoundRect(
+                            color = Color.Black.copy(alpha = 0.12f),
+                            topLeft = androidx.compose.ui.geometry.Offset(0f, edgeHeight),
+                            size = size,
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2f)
+                        )
+                    }
+                }
+            }
+            .background(backgroundColor, shape)
+            .background(gradientBrush, shape),
         enabled = enabled && !isLoading,
         shape = shape,
         interactionSource = interactionSource,
         colors = ButtonDefaults.buttonColors(
-            containerColor = backgroundColor,
-            contentColor = Color.White,
-            disabledContainerColor = backgroundColor.copy(alpha = 0.45f),
-            disabledContentColor = Color.White.copy(alpha = 0.85f)
+            containerColor = Color.Transparent,
+            contentColor = textColor,
+            disabledContainerColor = Color.Transparent,
+            disabledContentColor = textColor.copy(alpha = 0.85f)
         ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+        elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp, 0.dp, 0.dp, 0.dp)
     ) {
         if (isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(24.dp),
-                color = Color.White,
+                color = textColor,
                 strokeWidth = 2.dp
             )
         } else {
@@ -86,17 +108,28 @@ fun RelaxPrimaryButton(
                 Text(
                     text = text,
                     style = MaterialTheme.typography.labelLarge.copy(
-                        fontFamily = LexendFontFamily
+                        fontFamily = LexendFontFamily,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                        fontSize = 16.sp
                     ),
-                    color = Color.White
+                    color = textColor
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = Color.White
-                )
+                if (icon != null) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = textColor
+                    )
+                } else if (iconRes != null) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(id = iconRes),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }

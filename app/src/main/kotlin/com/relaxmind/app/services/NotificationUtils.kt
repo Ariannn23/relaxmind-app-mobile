@@ -91,11 +91,11 @@ object NotificationUtils {
         contentIntent: PendingIntent
     ): Notification {
         val alertTitle = title.ifBlank { "🆘 ALERTA SOS" }
-        val alertBody = body.ifBlank { "Un paciente necesita ayuda inmediata. Toca para responder." }
-        val largeIcon = BitmapFactory.decodeResource(context.resources, R.drawable.alerta)
+        val alertBody = body.ifBlank { "Emergencia activa. Toca para responder." }
+        val largeIcon = BitmapFactory.decodeResource(context.resources, R.drawable.sos)
 
         return NotificationCompat.Builder(context, CHANNEL_SOS)
-            .setSmallIcon(R.drawable.alerta)
+            .setSmallIcon(R.drawable.sos)
             .setLargeIcon(largeIcon)
             .setContentTitle(alertTitle)
             .setContentText(alertBody)
@@ -115,6 +115,47 @@ object NotificationUtils {
             .setAutoCancel(true)
             .setOnlyAlertOnce(false)
             .setDefaults(0)
+            .build()
+    }
+
+    fun buildWellnessNotification(
+        context: Context,
+        title: String,
+        body: String,
+        contentIntent: PendingIntent
+    ): Notification {
+        val alertTitle = title.ifBlank { "Alerta de Bienestar" }
+        val alertBody = body.ifBlank { "El bienestar de tu paciente ha bajado. Te sugerimos contactarlo." }
+        val largeIcon = BitmapFactory.decodeResource(context.resources, R.drawable.checkin_bajo)
+
+        return NotificationCompat.Builder(context, CHANNEL_WELLNESS)
+            .setSmallIcon(R.drawable.checkin_bajo)
+            .setLargeIcon(largeIcon)
+            .setContentTitle(alertTitle)
+            .setContentText(alertBody)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(alertBody).setBigContentTitle(alertTitle))
+            .setAutoCancel(true)
+            .setContentIntent(contentIntent)
+            .build()
+    }
+
+    fun buildCheckInCompletedNotification(
+        context: Context,
+        title: String,
+        body: String,
+        contentIntent: PendingIntent
+    ): Notification {
+        val alertTitle = title.ifBlank { "Check-in Completado" }
+        val alertBody = body.ifBlank { "Tu paciente ha completado su check-in diario. Revisa su estado." }
+        val largeIcon = BitmapFactory.decodeResource(context.resources, R.drawable.checkin_completado)
+
+        return NotificationCompat.Builder(context, CHANNEL_WELLNESS)
+            .setSmallIcon(R.drawable.checkin_completado)
+            .setLargeIcon(largeIcon)
+            .setContentTitle(alertTitle)
+            .setContentText(alertBody)
+            .setAutoCancel(true)
+            .setContentIntent(contentIntent)
             .build()
     }
 

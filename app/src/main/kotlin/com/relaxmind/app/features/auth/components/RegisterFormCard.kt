@@ -53,12 +53,12 @@ import com.relaxmind.app.ui.components.RelaxIcons
 import com.relaxmind.app.ui.components.auth.RelaxMindAuthTextField
 import com.relaxmind.app.ui.components.auth.RelaxPrimaryButton
 import com.relaxmind.app.ui.themes.BorderSoft
-import com.relaxmind.app.ui.themes.CaregiverBlue
-import com.relaxmind.app.ui.themes.SoftBlue
+import com.relaxmind.app.ui.themes.CaregiverPurple
+import com.relaxmind.app.ui.themes.SoftLavender
 import com.relaxmind.app.ui.themes.LexendFontFamily
 import com.relaxmind.app.ui.themes.PatientGreen
 import com.relaxmind.app.ui.themes.SOSCoral
-import com.relaxmind.app.ui.themes.SoftLavender
+import com.relaxmind.app.ui.themes.SoftBlue
 import com.relaxmind.app.ui.themes.SoftMint
 import com.relaxmind.app.ui.themes.SurfaceWhite
 import com.relaxmind.app.ui.themes.TextPrimary
@@ -104,9 +104,9 @@ fun RegisterFormCard(
     modifier: Modifier = Modifier
 ) {
     val cardShape = RoundedCornerShape(34.dp)
-    val accentColor = if (selectedRole == "caregiver") CaregiverBlue else PatientGreen
+    val accentColor = if (selectedRole == "caregiver") CaregiverPurple else PatientGreen
     val iconColor = accentColor
-    val iconBgColor = if (selectedRole == "caregiver") SoftBlue else SoftMint
+    val iconBgColor = if (selectedRole == "caregiver") SoftLavender else SoftMint
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -338,8 +338,8 @@ fun RegisterFormCard(
                     sublabel = "Acompaño el bienestar de otra persona",
                     icon = RelaxIcons.Groups,
                     isSelected = selectedRole == "caregiver",
-                    selectedBorderColor = CaregiverBlue,
-                    selectedBgColor = SoftBlue,
+                    selectedBorderColor = CaregiverPurple,
+                    selectedBgColor = SoftLavender,
                     modifier = Modifier.weight(1f),
                     onClick = { onRoleSelected("caregiver") }
                 )
@@ -362,7 +362,7 @@ fun RegisterFormCard(
             RelaxPrimaryButton(
                 text = "Registrarme",
                 onClick = onSubmit,
-                enabled = isFormValid && !isLoading,
+                enabled = !isLoading,
                 isLoading = isLoading,
                 backgroundColor = accentColor
             )
@@ -391,10 +391,13 @@ fun RegisterFormCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            com.relaxmind.app.ui.components.auth.RelaxOutlineButton(
+            RelaxPrimaryButton(
                 modifier = Modifier.fillMaxWidth(),
                 text = "Continuar con Google",
-                onClick = onGoogleRegister
+                onClick = onGoogleRegister,
+                backgroundColor = Color.White,
+                textColor = Color.Black,
+                iconRes = com.relaxmind.app.R.drawable.google
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -434,7 +437,7 @@ fun RegisterFormCard(
 }
 
 @Composable
-private fun RoleCard(
+internal fun RoleCard(
     label: String,
     sublabel: String,
     icon: ImageVector,

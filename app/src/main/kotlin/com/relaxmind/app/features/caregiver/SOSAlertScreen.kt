@@ -266,7 +266,8 @@ fun SOSAlertScreen(
                         .padding(horizontal = 24.dp, vertical = 24.dp)
                 ) {
                     // Call Button
-                    Button(
+                    com.relaxmind.app.ui.components.RelaxButton(
+                        text = "LLAMAR AL PACIENTE",
                         onClick = {
                             val phone = uiState.patientPhone
                             if (phone.isNotBlank()) {
@@ -276,33 +277,10 @@ fun SOSAlertScreen(
                                 context.startActivity(intent)
                             }
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .shadow(4.dp, RoundedCornerShape(16.dp), spotColor = SOSCoral),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = SOSCoral,
-                            contentColor = Color.White
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(0.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Phone,
-                                contentDescription = "Llamar",
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = "LLAMAR AL PACIENTE",
-                                fontFamily = LexendFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                letterSpacing = 0.5.sp
-                            )
-                        }
-                    }
+                        variant = com.relaxmind.app.ui.components.ButtonVariant.DESTRUCTIVE,
+                        icon = Icons.Default.Phone,
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
                     Spacer(modifier = Modifier.height(20.dp))
 
@@ -467,22 +445,20 @@ fun SOSAlertScreen(
                 )
             },
             confirmButton = {
-                Button(
+                com.relaxmind.app.ui.components.RelaxButton(
+                    text = "Sí, resolver",
                     onClick = {
-                        showResolveDialog = false
-                        viewModel.markResolved(onSuccess = {
-                            onNavigateBack()
-                        })
+                        viewModel.markResolved(
+                            onSuccess = {
+                                showResolveDialog = false
+                                onNavigateBack()
+                            }
+                        )
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = SOSCoral),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = "Sí, resolver",
-                        fontFamily = LexendFontFamily,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                    isLoading = uiState.isLoading,
+                    role = com.relaxmind.app.ui.components.AppRole.CAREGIVER,
+                    modifier = Modifier.fillMaxWidth()
+                )
             },
             dismissButton = {
                 TextButton(onClick = { showResolveDialog = false }) {

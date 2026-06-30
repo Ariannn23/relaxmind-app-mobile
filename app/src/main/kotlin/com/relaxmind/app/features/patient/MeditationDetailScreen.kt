@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,12 +32,15 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -136,11 +140,11 @@ private fun getThemeConfig(exerciseId: String): MeditationThemeConfig {
             iconEmoji = "💖"
         )
         "resp_diafragmatica" -> MeditationThemeConfig(
-            bgGradient = listOf(Color(0xFF064E3B), Color(0xFF063C31), Color(0xFF022C22)),
-            primaryColor = Color(0xFF059669),
-            lightColor = Color(0xFFECFDF5),
-            accentColor = Color(0xFF34D399),
-            iconEmoji = "🌿"
+            bgGradient = listOf(Color(0xFFB45309), Color(0xFF92400E), Color(0xFF78350F)),
+            primaryColor = Color(0xFFD97706),
+            lightColor = Color(0xFFFFFBEB),
+            accentColor = Color(0xFFFBBF24),
+            iconEmoji = "🌅"
         )
         else -> MeditationThemeConfig(
             bgGradient = listOf(Color(0xFF0F6E56), Color(0xFF0A4D3C), Color(0xFF063C31)),
@@ -152,49 +156,116 @@ private fun getThemeConfig(exerciseId: String): MeditationThemeConfig {
     }
 }
 
-private fun getBreathingPhaseInfo(type: String, elapsedSeconds: Int): BreathingPhaseInfo {
+private fun getExerciseImageResId(exerciseId: String): Int {
+    return when (exerciseId) {
+        "resp_478" -> R.drawable.meditacion
+        "resp_caja" -> R.drawable.respiracion_caja
+        "body_scan" -> R.drawable.escaneo_corporal
+        "gratitud" -> R.drawable.meditacion_gratitud
+        "resp_diafragmatica" -> R.drawable.respiracion_diafragmatica
+        else -> R.drawable.meditacion
+    }
+}
+
+private fun getBreathingPhaseInfo(exerciseId: String, type: String, elapsedSeconds: Int): BreathingPhaseInfo {
     return when (type) {
         "respiracion" -> {
-            val cycleSecond = elapsedSeconds % 19
-            when {
-                cycleSecond < 4 -> {
-                    val scale = 0.6f + (cycleSecond / 4f) * 0.4f
-                    BreathingPhaseInfo(
-                        stepText = "Paso 1 de 3",
-                        stepIndicator = 1,
-                        title = "Inhala por la nariz",
-                        subtitle = "durante 4 segundos",
-                        secondsRemaining = 4 - cycleSecond,
-                        scale = scale,
-                        currentPhaseText = "Inhala",
-                        subText = "Luego mantén 7s · Exhala 8s"
-                    )
+            when (exerciseId) {
+                "resp_caja" -> {
+                    val cycleSecond = elapsedSeconds % 16
+                    when {
+                        cycleSecond < 4 -> {
+                            val scale = 0.6f + (cycleSecond / 4f) * 0.4f
+                            BreathingPhaseInfo(
+                                stepText = "Paso 1 de 4", stepIndicator = 1,
+                                title = "Inhala", subtitle = "por 4 segundos",
+                                secondsRemaining = 4 - cycleSecond, scale = scale,
+                                currentPhaseText = "Inhala", subText = "Luego mantén 4s"
+                            )
+                        }
+                        cycleSecond < 8 -> {
+                            BreathingPhaseInfo(
+                                stepText = "Paso 2 de 4", stepIndicator = 2,
+                                title = "Mantén", subtitle = "por 4 segundos",
+                                secondsRemaining = 8 - cycleSecond, scale = 1.0f,
+                                currentPhaseText = "Mantén", subText = "Luego exhala 4s"
+                            )
+                        }
+                        cycleSecond < 12 -> {
+                            val progress = (cycleSecond - 8) / 4f
+                            val scale = 1.0f - progress * 0.4f
+                            BreathingPhaseInfo(
+                                stepText = "Paso 3 de 4", stepIndicator = 3,
+                                title = "Exhala", subtitle = "por 4 segundos",
+                                secondsRemaining = 12 - cycleSecond, scale = scale,
+                                currentPhaseText = "Exhala", subText = "Luego mantén sin aire 4s"
+                            )
+                        }
+                        else -> {
+                            BreathingPhaseInfo(
+                                stepText = "Paso 4 de 4", stepIndicator = 4,
+                                title = "Mantén sin aire", subtitle = "por 4 segundos",
+                                secondsRemaining = 16 - cycleSecond, scale = 0.6f,
+                                currentPhaseText = "Vacío", subText = "Luego inhala de nuevo"
+                            )
+                        }
+                    }
                 }
-                cycleSecond < 11 -> {
-                    BreathingPhaseInfo(
-                        stepText = "Paso 2 de 3",
-                        stepIndicator = 2,
-                        title = "Mantén el aire",
-                        subtitle = "durante 7 segundos",
-                        secondsRemaining = 11 - cycleSecond,
-                        scale = 1.0f,
-                        currentPhaseText = "Mantén",
-                        subText = "Luego exhala 8s"
-                    )
+                "resp_diafragmatica" -> {
+                    val cycleSecond = elapsedSeconds % 10
+                    when {
+                        cycleSecond < 4 -> {
+                            val scale = 0.6f + (cycleSecond / 4f) * 0.4f
+                            BreathingPhaseInfo(
+                                stepText = "Paso 1 de 2", stepIndicator = 1,
+                                title = "Inhala inflando el abdomen", subtitle = "por 4 segundos",
+                                secondsRemaining = 4 - cycleSecond, scale = scale,
+                                currentPhaseText = "Inhala", subText = "Luego exhala 6s"
+                            )
+                        }
+                        else -> {
+                            val progress = (cycleSecond - 4) / 6f
+                            val scale = 1.0f - progress * 0.4f
+                            BreathingPhaseInfo(
+                                stepText = "Paso 2 de 2", stepIndicator = 2,
+                                title = "Exhala lentamente", subtitle = "por 6 segundos",
+                                secondsRemaining = 10 - cycleSecond, scale = scale,
+                                currentPhaseText = "Exhala", subText = "Luego inhala de nuevo"
+                            )
+                        }
+                    }
                 }
                 else -> {
-                    val progress = (cycleSecond - 11) / 8f
-                    val scale = 1.0f - progress * 0.4f
-                    BreathingPhaseInfo(
-                        stepText = "Paso 3 de 3",
-                        stepIndicator = 3,
-                        title = "Exhala por la boca",
-                        subtitle = "durante 8 segundos",
-                        secondsRemaining = 19 - cycleSecond,
-                        scale = scale,
-                        currentPhaseText = "Exhala",
-                        subText = "Luego inhala de nuevo"
-                    )
+                    val cycleSecond = elapsedSeconds % 19
+                    when {
+                        cycleSecond < 4 -> {
+                            val scale = 0.6f + (cycleSecond / 4f) * 0.4f
+                            BreathingPhaseInfo(
+                                stepText = "Paso 1 de 3", stepIndicator = 1,
+                                title = "Inhala por la nariz", subtitle = "durante 4 segundos",
+                                secondsRemaining = 4 - cycleSecond, scale = scale,
+                                currentPhaseText = "Inhala", subText = "Luego mantén 7s · Exhala 8s"
+                            )
+                        }
+                        cycleSecond < 11 -> {
+                            BreathingPhaseInfo(
+                                stepText = "Paso 2 de 3", stepIndicator = 2,
+                                title = "Mantén el aire", subtitle = "durante 7 segundos",
+                                secondsRemaining = 11 - cycleSecond, scale = 1.0f,
+                                currentPhaseText = "Mantén", subText = "Luego exhala 8s"
+                            )
+                        }
+                        else -> {
+                            val progress = (cycleSecond - 11) / 8f
+                            val scale = 1.0f - progress * 0.4f
+                            BreathingPhaseInfo(
+                                stepText = "Paso 3 de 3", stepIndicator = 3,
+                                title = "Exhala por la boca", subtitle = "durante 8 segundos",
+                                secondsRemaining = 19 - cycleSecond, scale = scale,
+                                currentPhaseText = "Exhala", subText = "Luego inhala de nuevo"
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -215,7 +286,7 @@ private fun getBreathingPhaseInfo(type: String, elapsedSeconds: Int): BreathingP
                 subtitle = "Mantente en el presente",
                 secondsRemaining = 10 - cycleSecond,
                 scale = scale,
-                currentPhaseText = "Mindfulness",
+                currentPhaseText = "Concéntrate",
                 subText = "Sigue respirando a tu propio ritmo"
             )
         }
@@ -362,28 +433,10 @@ fun MeditationTopBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Translucent back button
-        Box(
-            modifier = Modifier
-                .size(46.dp)
-                .shadow(
-                    elevation = 4.dp,
-                    shape = CircleShape,
-                    ambientColor = Color.Black.copy(alpha = 0.15f),
-                    spotColor = Color.Black.copy(alpha = 0.15f)
-                )
-                .background(Color.White.copy(alpha = 0.22f), CircleShape)
-                .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape)
-                .clickable(onClick = onBackClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Volver a Meditar",
-                tint = Color.White,
-                modifier = Modifier.size(22.dp)
-            )
-        }
+        com.relaxmind.app.ui.components.RelaxBackButton(
+            onClick = onBackClick,
+            role = com.relaxmind.app.ui.components.AppRole.PATIENT
+        )
         
         // Centered Title
         Text(
@@ -794,17 +847,14 @@ fun MeditationActionButtons(
     ) {
         Box(
             modifier = Modifier
-                .weight(1.3f)
+                .weight(1.0f)
                 .height(56.dp)
                 .shadow(
-                    elevation = 4.dp,
-                    shape = RoundedCornerShape(22.dp),
-                    ambientColor = themeConfig.primaryColor.copy(alpha = 0.08f),
-                    spotColor = themeConfig.primaryColor.copy(alpha = 0.08f)
+                    elevation = 0.dp,
+                    shape = RoundedCornerShape(100)
                 )
-                .border(2.dp, themeConfig.primaryColor, RoundedCornerShape(22.dp))
-                .clip(RoundedCornerShape(22.dp))
-                .background(Color.White)
+                .clip(RoundedCornerShape(100))
+                .background(themeConfig.primaryColor.copy(alpha = 0.15f))
                 .clickable(onClick = onPauseClick),
             contentAlignment = Alignment.Center
         ) {
@@ -821,7 +871,7 @@ fun MeditationActionButtons(
                 Text(
                     text = if (isPaused) "Reanudar" else "Pausar",
                     fontFamily = LexendFontFamily,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     color = themeConfig.primaryColor
                 )
@@ -833,14 +883,13 @@ fun MeditationActionButtons(
                 .weight(1.0f)
                 .height(56.dp)
                 .shadow(
-                    elevation = 4.dp,
-                    shape = RoundedCornerShape(22.dp),
-                    ambientColor = themeConfig.primaryColor.copy(alpha = 0.08f),
-                    spotColor = themeConfig.primaryColor.copy(alpha = 0.08f)
+                    elevation = 16.dp,
+                    shape = RoundedCornerShape(100),
+                    ambientColor = themeConfig.primaryColor,
+                    spotColor = themeConfig.primaryColor
                 )
-                .border(2.dp, themeConfig.primaryColor, RoundedCornerShape(22.dp))
-                .clip(RoundedCornerShape(22.dp))
-                .background(Color.White)
+                .clip(RoundedCornerShape(100))
+                .background(themeConfig.primaryColor)
                 .clickable(onClick = onCompleteClick),
             contentAlignment = Alignment.Center
         ) {
@@ -849,16 +898,16 @@ fun MeditationActionButtons(
                 horizontalArrangement = Arrangement.Center
             ) {
                 CheckMarkIcon(
-                    tint = themeConfig.primaryColor,
+                    tint = Color.White,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     text = "Completar",
                     fontFamily = LexendFontFamily,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
-                    color = themeConfig.primaryColor
+                    color = Color.White
                 )
             }
         }
@@ -879,7 +928,7 @@ fun MeditationDetailScreen(
     val exercise by viewModel.selectedExercise.collectAsState()
     val successCompletion by viewModel.meditationCompleteSuccess.collectAsState(initial = null)
 
-    var elapsedSeconds by remember { mutableStateOf(0) }
+    var elapsedSeconds by remember { mutableStateOf(viewModel.getExerciseProgress(exerciseId)) }
     var isPaused by remember { mutableStateOf(false) }
 
     LaunchedEffect(exerciseId) {
@@ -887,8 +936,22 @@ fun MeditationDetailScreen(
         viewModel.resetMeditationCompleteSuccess()
     }
 
+    var showExitWarning by remember { mutableStateOf(false) }
+    val onBackRequest = {
+        if (elapsedSeconds > 0 && successCompletion == null && elapsedSeconds < (exercise?.durationMinutes ?: 1) * 60) {
+            isPaused = true
+            showExitWarning = true
+        } else {
+            onNavigateBack()
+        }
+    }
+    
+    BackHandler {
+        onBackRequest()
+    }
+
     val totalDurationMinutes = exercise?.durationMinutes ?: 5
-    val totalSeconds = totalDurationMinutes * 60
+    val totalSeconds = if (totalDurationMinutes == 1) 90 else totalDurationMinutes * 60
 
     // Core Timer Loop
     LaunchedEffect(isPaused, exercise) {
@@ -904,7 +967,7 @@ fun MeditationDetailScreen(
 
     val remainingSeconds = (totalSeconds - elapsedSeconds).coerceAtLeast(0)
     val themeConfig = getThemeConfig(exerciseId)
-    val phaseInfo = getBreathingPhaseInfo(exercise?.type ?: "respiracion", elapsedSeconds)
+    val phaseInfo = getBreathingPhaseInfo(exercise?.id ?: "", exercise?.type ?: "respiracion", elapsedSeconds)
 
     // Apply Lexend fonts globally to detail screen
     MaterialTheme(
@@ -912,68 +975,153 @@ fun MeditationDetailScreen(
         typography = LexendTypography
     ) {
         if (successCompletion != null) {
-            AlertDialog(
+            androidx.compose.ui.window.Dialog(
                 onDismissRequest = {
                     viewModel.resetMeditationCompleteSuccess()
                     onNavigateBack()
-                },
-                title = {
-                    Text(
-                        text = "🎉 ¡Ejercicio completado!",
-                        fontFamily = LexendFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                },
-                text = {
+                }
+            ) {
+                val adviceTexts = listOf(
+                    "Recuerda que tomarte unos minutos al día para respirar reduce tus niveles de cortisol.",
+                    "La constancia es clave. Cada pequeño paso cuenta para tu bienestar mental.",
+                    "Respirar profundo oxigena tu cerebro y mejora tu enfoque.",
+                    "Estos breves instantes de calma te preparan para afrontar mejor el resto del día."
+                )
+                val randomAdvice = remember { adviceTexts.random() }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.95f)
+                        .shadow(32.dp, RoundedCornerShape(32.dp), ambientColor = themeConfig.primaryColor)
+                        .background(Color.White, RoundedCornerShape(32.dp))
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.fillMaxWidth()
                     ) {
+                        val completedIconRes = when (exerciseId) {
+                            "resp_caja" -> com.relaxmind.app.R.drawable.respiracion_caja_icono
+                            "body_scan" -> com.relaxmind.app.R.drawable.escaneo_corporal_icono
+                            "gratitud" -> com.relaxmind.app.R.drawable.meditacion_gratitud_icono
+                            "resp_diafragmatica" -> com.relaxmind.app.R.drawable.respiracion_diafragmatica_icono
+                            else -> com.relaxmind.app.R.drawable.meditacion_icono
+                        }
+                        
+                        Image(
+                            painter = painterResource(id = completedIconRes),
+                            contentDescription = "Icono completado",
+                            modifier = Modifier.size(80.dp)
+                        )
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Text(
+                            text = "¡Ejercicio completado!",
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 22.sp,
+                            color = themeConfig.primaryColor,
+                            textAlign = TextAlign.Center
+                        )
                         Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = randomAdvice,
+                            fontFamily = LexendFontFamily,
+                            fontSize = 15.sp,
+                            color = TextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(32.dp))
+                        
                         Box(
                             modifier = Modifier
-                                .size(72.dp)
-                                .clip(CircleShape)
-                                .background(themeConfig.lightColor),
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .shadow(16.dp, RoundedCornerShape(100), spotColor = themeConfig.primaryColor)
+                                .clip(RoundedCornerShape(100))
+                                .background(themeConfig.primaryColor)
+                                .clickable {
+                                    viewModel.resetMeditationCompleteSuccess()
+                                    onNavigateBack()
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = themeConfig.iconEmoji,
-                                fontSize = 40.sp
+                                text = "Ir al inicio",
+                                fontFamily = LexendFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = Color.White
                             )
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+            }
+        }
+        
+        if (showExitWarning) {
+            androidx.compose.ui.window.Dialog(
+                onDismissRequest = { showExitWarning = false }
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.95f)
+                        .shadow(24.dp, RoundedCornerShape(32.dp))
+                        .background(Color.White, RoundedCornerShape(32.dp))
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Text(
-                            text = "Has completado con éxito este ejercicio de meditación.",
+                            text = "¿Deseas salir?",
                             fontFamily = LexendFontFamily,
-                            fontSize = 14.sp,
-                            textAlign = TextAlign.Center,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 22.sp,
                             color = TextPrimary
                         )
-                    }
-                },
-                confirmButton = {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        RelaxButton(
-                            text = "Volver",
-                            onClick = {
-                                viewModel.resetMeditationCompleteSuccess()
-                                onNavigateBack()
-                            },
-                            variant = ButtonVariant.PRIMARY,
-                            role = AppRole.PATIENT
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Si sales ahora no completarás el ejercicio, pero tu progreso se guardará y podrás reanudarlo cuando vuelvas.",
+                            fontFamily = LexendFontFamily,
+                            fontSize = 15.sp,
+                            color = TextSecondary,
+                            textAlign = TextAlign.Center
                         )
+                        Spacer(modifier = Modifier.height(32.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Button(
+                                onClick = { showExitWarning = false },
+                                modifier = Modifier.weight(1f).height(56.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = PatientGreenLight.copy(alpha = 0.15f)),
+                                shape = RoundedCornerShape(100),
+                                elevation = ButtonDefaults.buttonElevation(0.dp),
+                                contentPadding = PaddingValues(0.dp)
+                            ) {
+                                Text("Cancelar", color = PatientGreen, fontFamily = LexendFontFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+                            }
+                            Button(
+                                onClick = { 
+                                    viewModel.saveExerciseProgress(exerciseId, elapsedSeconds)
+                                    showExitWarning = false
+                                    onNavigateBack() 
+                                },
+                                modifier = Modifier.weight(1f).height(56.dp).shadow(12.dp, RoundedCornerShape(100), spotColor = PatientGreen),
+                                colors = ButtonDefaults.buttonColors(containerColor = PatientGreen),
+                                shape = RoundedCornerShape(100),
+                                contentPadding = PaddingValues(0.dp)
+                            ) {
+                                Text("Salir", color = Color.White, fontFamily = LexendFontFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+                            }
+                        }
                     }
-                },
-                shape = RoundedCornerShape(24.dp),
-                containerColor = Color.White
-            )
+                }
+            }
         }
 
         Scaffold { paddingValues ->
@@ -1006,21 +1154,29 @@ fun MeditationDetailScreen(
                         // 1. Top navigation bar
                         MeditationTopBar(
                             exerciseTitle = currentExercise.title,
-                            onBackClick = onNavigateBack
+                            onBackClick = onBackRequest
                         )
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // 2. Interactive Metaphor Center Section
-                        // Dynamic calculation of active phase (1: Inhala, 2: Mantén, 3: Exhala)
-                        val cycleSecond = elapsedSeconds % 19
-                        val activePhase = when {
-                            cycleSecond < 4 -> 1
-                            cycleSecond < 11 -> 2
-                            else -> 3
-                        }
+                        // Use stepIndicator directly for the active phase
+                        val activePhase = phaseInfo.stepIndicator
                         
                         val isRespiracion = currentExercise.type == "respiracion"
+                        
+                        // Dynamic card info
+                        val hasHold = currentExercise.id != "resp_diafragmatica"
+                        val holdDur = if (currentExercise.id == "resp_caja") "4 seg" else "7 seg"
+                        val exhaleDur = when (currentExercise.id) {
+                            "resp_caja" -> "4 seg"
+                            "resp_diafragmatica" -> "6 seg"
+                            else -> "8 seg"
+                        }
+                        
+                        // Active states
+                        val isInhaleActive = activePhase == 1
+                        val isHoldActive = activePhase == 2 || (currentExercise.id == "resp_caja" && activePhase == 4)
+                        val isExhaleActive = activePhase == 3 || (currentExercise.id == "resp_diafragmatica" && activePhase == 2)
 
                         Box(
                             modifier = Modifier
@@ -1044,14 +1200,14 @@ fun MeditationDetailScreen(
                                             title = "Inhala",
                                             durationText = "4 seg",
                                             icon = { PhaseLungsIcon(it) },
-                                            isActive = activePhase == 1,
+                                            isActive = isInhaleActive,
                                             themeConfig = themeConfig
                                         )
                                         
                                         Spacer(modifier = Modifier.height(12.dp))
                                         
                                         AnimatedVisibility(
-                                            visible = activePhase == 1,
+                                            visible = isInhaleActive,
                                             enter = fadeIn(animationSpec = tween(300))
                                         ) {
                                             InhaleArrowsAnimation(themeConfig = themeConfig)
@@ -1079,12 +1235,11 @@ fun MeditationDetailScreen(
                                         )
                                         
                                         Image(
-                                            painter = painterResource(id = R.drawable.meditate_boy),
-                                            contentDescription = "Personaje Meditando",
+                                            painter = painterResource(id = getExerciseImageResId(currentExercise.id)),
+                                            contentDescription = "Ilustración de Ejercicio",
                                             modifier = Modifier
-                                                .size(185.dp)
-                                                .clip(CircleShape),
-                                            contentScale = ContentScale.Crop
+                                                .size(185.dp * animatedScale),
+                                            contentScale = ContentScale.Fit
                                         )
                                     }
 
@@ -1093,24 +1248,26 @@ fun MeditationDetailScreen(
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
-                                        PhaseCard(
-                                            title = "Mantén",
-                                            durationText = "7 seg",
-                                            icon = { PhaseHourglassIcon(it) },
-                                            isActive = activePhase == 2,
-                                            themeConfig = themeConfig
-                                        )
+                                        if (hasHold) {
+                                            PhaseCard(
+                                                title = if (currentExercise.id == "resp_caja" && activePhase == 4) "Vacío" else "Mantén",
+                                                durationText = holdDur,
+                                                icon = { PhaseHourglassIcon(it) },
+                                                isActive = isHoldActive,
+                                                themeConfig = themeConfig
+                                            )
+                                        }
                                         
                                         PhaseCard(
                                             title = "Exhala",
-                                            durationText = "8 seg",
+                                            durationText = exhaleDur,
                                             icon = { PhaseWindIcon(it) },
-                                            isActive = activePhase == 3,
+                                            isActive = isExhaleActive,
                                             themeConfig = themeConfig
                                         )
                                         
                                         AnimatedVisibility(
-                                            visible = activePhase == 3,
+                                            visible = isExhaleActive,
                                             enter = fadeIn(animationSpec = tween(300))
                                         ) {
                                             ExhaleWindAnimation(themeConfig = themeConfig)
@@ -1142,12 +1299,11 @@ fun MeditationDetailScreen(
                                         )
                                         
                                         Image(
-                                            painter = painterResource(id = R.drawable.meditate_boy),
-                                            contentDescription = "Personaje Meditando",
+                                            painter = painterResource(id = getExerciseImageResId(currentExercise.id)),
+                                            contentDescription = "Ilustración de Ejercicio",
                                             modifier = Modifier
-                                                .size(200.dp)
-                                                .clip(CircleShape),
-                                            contentScale = ContentScale.Crop
+                                                .size(200.dp * animatedScale),
+                                            contentScale = ContentScale.Fit
                                         )
                                     }
                                     
@@ -1216,25 +1372,27 @@ fun MeditationDetailScreen(
                                 Spacer(modifier = Modifier.height(14.dp))
                                 
                                 // Large Current Phase count (e.g. Inhala... 4)
-                                val secondsCount = when {
-                                    isRespiracion -> {
-                                        when {
-                                            cycleSecond < 4 -> 4 - cycleSecond
-                                            cycleSecond < 11 -> 11 - cycleSecond
-                                            else -> 19 - cycleSecond
-                                        }
-                                    }
-                                    else -> phaseInfo.secondsRemaining
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = "${phaseInfo.currentPhaseText}...",
+                                        fontFamily = LexendFontFamily,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 32.sp,
+                                        color = themeConfig.primaryColor,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Text(
+                                        text = "${phaseInfo.secondsRemaining}",
+                                        fontFamily = LexendFontFamily,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 46.sp,
+                                        color = themeConfig.primaryColor,
+                                        textAlign = TextAlign.Center
+                                    )
                                 }
-                                
-                                Text(
-                                    text = "${phaseInfo.currentPhaseText}... $secondsCount",
-                                    fontFamily = LexendFontFamily,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 42.sp,
-                                    color = themeConfig.primaryColor,
-                                    textAlign = TextAlign.Center
-                                )
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
