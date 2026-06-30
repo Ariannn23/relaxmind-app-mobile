@@ -16,6 +16,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -117,82 +119,99 @@ fun RelaxSoundsScreen(
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
                     modifier = Modifier.weight(1f)
                 ) {
                     items(SoundCatalog) { item ->
                         val isPlaying = activeSoundIds.contains(item.id)
                         
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                            shape = RoundedCornerShape(24.dp),
-                            modifier = Modifier
-                                .aspectRatio(1f)
-                                .shadow(if (isPlaying) 8.dp else 4.dp, RoundedCornerShape(24.dp))
-                                .border(
-                                    width = if (isPlaying) 3.dp else 0.dp,
-                                    color = if (isPlaying) PatientGreen else Color.Transparent,
-                                    shape = RoundedCornerShape(24.dp)
-                                )
-                                .clip(RoundedCornerShape(24.dp))
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) {
-                                    if (isPlaying) {
-                                        SoundPlayerManager.stop(item.id)
-                                    } else {
-                                        SoundPlayerManager.play(context, item.id, item.resId)
-                                    }
-                                }
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Box(modifier = Modifier.fillMaxSize()) {
-                                // Image background
-                                Image(
-                                    painter = painterResource(id = item.imageResId),
-                                    contentDescription = item.name,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                                shape = RoundedCornerShape(24.dp),
+                                modifier = Modifier
+                                    .aspectRatio(1f)
+                                    .shadow(if (isPlaying) 8.dp else 4.dp, RoundedCornerShape(24.dp))
+                                    .border(
+                                        width = if (isPlaying) 3.dp else 0.dp,
+                                        color = if (isPlaying) PatientGreen else Color.Transparent,
+                                        shape = RoundedCornerShape(24.dp)
+                                    )
+                                    .clip(RoundedCornerShape(24.dp))
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) {
+                                        if (isPlaying) {
+                                            SoundPlayerManager.stop(item.id)
+                                        } else {
+                                            SoundPlayerManager.play(context, item.id, item.resId)
+                                        }
+                                    }
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    // Image background
+                                    Image(
+                                        painter = painterResource(id = item.imageResId),
+                                        contentDescription = item.name,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
 
-
-
-                                // Play / Pause / Repeat overlay indicator
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .align(Alignment.TopEnd)
-                                        .padding(8.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (isPlaying) {
-                                        Icon(
-                                            painter = painterResource(id = android.R.drawable.ic_media_pause),
-                                            contentDescription = "Pausar",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    } else {
-                                        Icon(
-                                            imageVector = Icons.Default.PlayArrow,
-                                            contentDescription = "Reproducir",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(28.dp)
-                                        )
+                                    // Play / Pause overlay indicator
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .align(Alignment.TopEnd)
+                                            .padding(8.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (isPlaying) {
+                                            Icon(
+                                                painter = painterResource(id = android.R.drawable.ic_media_pause),
+                                                contentDescription = "Pausar",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        } else {
+                                            Icon(
+                                                imageVector = Icons.Default.PlayArrow,
+                                                contentDescription = "Reproducir",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(28.dp)
+                                            )
+                                        }
                                     }
                                 }
-
-                                // Sound title
+                            }
+                            
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            // Sound title below the image in a pill shape
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        color = if (isPlaying) PatientGreen else Color.White,
+                                        shape = CircleShape
+                                    )
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isPlaying) PatientGreen else BorderSoft,
+                                        shape = CircleShape
+                                    )
+                                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text(
                                     text = item.name,
                                     fontFamily = LexendFontFamily,
                                     fontWeight = FontWeight.SemiBold,
-                                    fontSize = 15.sp,
-                                    color = Color.White,
-                                    modifier = Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .padding(bottom = 12.dp)
+                                    fontSize = 14.sp,
+                                    color = if (isPlaying) Color.White else TextPrimary
                                 )
                             }
                         }
@@ -251,6 +270,8 @@ fun RelaxSoundsScreen(
                                         mutableFloatStateOf(SoundPlayerManager.getVolume(soundId)) 
                                     }
 
+                                    var isLooping by remember(soundId) { mutableStateOf(true) }
+
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         verticalAlignment = Alignment.CenterVertically
@@ -277,8 +298,26 @@ fun RelaxSoundsScreen(
                                             ),
                                             modifier = Modifier.weight(1f)
                                         )
+                                        
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        
+                                        // Loop button
+                                        IconButton(
+                                            onClick = {
+                                                isLooping = !isLooping
+                                                SoundPlayerManager.setLooping(soundId, isLooping)
+                                            },
+                                            modifier = Modifier.size(36.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isLooping) Icons.Default.RepeatOne else Icons.Default.Repeat,
+                                                contentDescription = "Repetir",
+                                                tint = if (isLooping) PatientGreen else TextSecondary,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
 
-                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
 
                                         // Stop button
                                         Box(

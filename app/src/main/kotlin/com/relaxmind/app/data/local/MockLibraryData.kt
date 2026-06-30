@@ -62,7 +62,7 @@ object MockLibraryData {
             category = "ansiedad",
             readTimeMinutes = 4,
             author = "Dr. Roberto Casas",
-            coverImageUrl = "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=800",
+            coverImageUrl = "https://picsum.photos/id/13/800/600",
             targetRole = "both",
             content = """
                 ## ¿Qué es realmente la ansiedad?
@@ -99,7 +99,7 @@ object MockLibraryData {
             category = "ansiedad",
             readTimeMinutes = 5,
             author = "Psi. Laura Gómez",
-            coverImageUrl = "https://images.unsplash.com/photo-1512314889357-e157c22f938d?auto=format&fit=crop&q=80&w=800",
+            coverImageUrl = "https://picsum.photos/id/14/800/600",
             targetRole = "both",
             content = """
                 ## Diferenciando la Ansiedad del Pánico
@@ -129,7 +129,7 @@ object MockLibraryData {
             category = "sueño",
             readTimeMinutes = 5,
             author = "Dra. Elena Martínez",
-            coverImageUrl = "https://images.unsplash.com/photo-1511295742362-92c96b1cf484?auto=format&fit=crop&q=80&w=800",
+            coverImageUrl = "https://picsum.photos/id/15/800/600",
             targetRole = "both",
             content = """
                 ## La importancia del descanso
@@ -160,7 +160,7 @@ object MockLibraryData {
             category = "sueño",
             readTimeMinutes = 6,
             author = "Dr. Martín Silva",
-            coverImageUrl = "https://images.unsplash.com/photo-1455390582262-044cdead27d8?auto=format&fit=crop&q=80&w=800",
+            coverImageUrl = "https://picsum.photos/id/16/800/600",
             targetRole = "both",
             content = """
                 ## El ciclo del Insomnio Inducido
@@ -220,7 +220,7 @@ object MockLibraryData {
             category = "autoestima",
             readTimeMinutes = 5,
             author = "Psi. Sofía Mendoza",
-            coverImageUrl = "https://images.unsplash.com/photo-1494959764136-6be9eb3c261e?auto=format&fit=crop&q=80&w=800",
+            coverImageUrl = "https://picsum.photos/id/28/800/600",
             targetRole = "both",
             content = """
                 ## ¿Qué son los límites personales?
@@ -249,7 +249,7 @@ object MockLibraryData {
             category = "depresion",
             readTimeMinutes = 5,
             author = "Dr. Andrés López",
-            coverImageUrl = "https://images.unsplash.com/photo-1481277542470-605612bd2d61?auto=format&fit=crop&q=80&w=800",
+            coverImageUrl = "https://picsum.photos/id/29/800/600",
             targetRole = "both",
             content = """
                 ## La neblina de la depresión
@@ -277,7 +277,7 @@ object MockLibraryData {
             category = "depresion",
             readTimeMinutes = 6,
             author = "Psi. Carlos Navarro",
-            coverImageUrl = "https://images.unsplash.com/photo-1473221326025-9183b464bb7e?auto=format&fit=crop&q=80&w=800",
+            coverImageUrl = "https://picsum.photos/id/46/800/600",
             targetRole = "both",
             content = """
                 ## El caos de la falta de estructura
@@ -336,7 +336,7 @@ object MockLibraryData {
             category = "cuidado_del_cuidador",
             readTimeMinutes = 5,
             author = "Psi. Andrea Solís",
-            coverImageUrl = "https://images.unsplash.com/photo-1543807535-eceef0bc6599?auto=format&fit=crop&q=80&w=800",
+            coverImageUrl = "https://picsum.photos/id/137/800/600",
             targetRole = "both",
             content = """
                 ## El mito de la autosuficiencia total
@@ -364,7 +364,7 @@ object MockLibraryData {
             category = "comunicacion",
             readTimeMinutes = 5,
             author = "Psic. Fernando Silva",
-            coverImageUrl = "https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&q=80&w=800",
+            coverImageUrl = "https://picsum.photos/id/201/800/600",
             targetRole = "both",
             content = """
                 ## El desafío de comunicarse bajo estrés
@@ -392,7 +392,7 @@ object MockLibraryData {
             category = "comunicacion",
             readTimeMinutes = 4,
             author = "Psi. Laura Martínez",
-            coverImageUrl = "https://images.unsplash.com/photo-1516302752625-fcc3c50ae61f?auto=format&fit=crop&q=80&w=800",
+            coverImageUrl = "https://picsum.photos/id/212/800/600",
             targetRole = "both",
             content = """
                 ## Oír vs. Escuchar
@@ -420,7 +420,7 @@ object MockLibraryData {
             category = "general",
             readTimeMinutes = 4,
             author = "Revista RelaxMind",
-            coverImageUrl = "https://images.unsplash.com/photo-1508672019048-805c876b67e2?auto=format&fit=crop&q=80&w=800",
+            coverImageUrl = "https://picsum.photos/id/240/800/600",
             targetRole = "both",
             content = """
                 ## ¿Qué es el Mindfulness?
@@ -449,7 +449,7 @@ object MockLibraryData {
             category = "general",
             readTimeMinutes = 6,
             author = "Dra. Carolina Castro",
-            coverImageUrl = "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&q=80&w=800",
+            coverImageUrl = "https://picsum.photos/id/244/800/600",
             targetRole = "both",
             content = """
                 ## El segundo cerebro

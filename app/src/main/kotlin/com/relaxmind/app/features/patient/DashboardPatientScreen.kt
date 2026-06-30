@@ -438,9 +438,7 @@ private fun DashboardHeader(
 ) {
     val colors = LocalPatientDashboardColors.current
     val hasInitialTestNotification = !isDismissed && initialTestBannerState is InitialTestBannerState.SkippedWithin24h
-    var dummy1Visible by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
-    var dummy2Visible by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
-    val hasNotifications = hasInitialTestNotification || dummy1Visible || dummy2Visible
+    val hasNotifications = hasInitialTestNotification
     var notificationsExpanded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
     Row(
@@ -548,37 +546,6 @@ private fun DashboardHeader(
                                         )
                                     }
 
-                                    if (dummy1Visible) {
-                                        DashboardNotificationItem(
-                                            title = "Nueva sesión recomendada",
-                                            subtitle = "Descubre una meditación para hoy",
-                                            icon = RelaxIcons.Meditation,
-                                            iconColorLight = Color(0xFF1D4ED8), // Blue 700
-                                            iconColorDark = Color(0xFF93C5FD), // Blue 300
-                                            bgColorLight = Color(0xFFEFF6FF), // Soft Blue
-                                            bgColorDark = Color(0xFF1E3A8A), // Blue 900
-                                            fillColorLight = Color(0xFFDBEAFE), // Darker Blue fill
-                                            fillColorDark = Color(0xFF1D4ED8), // Blue 700
-                                            onDismiss = { dummy1Visible = false },
-                                            onClick = { notificationsExpanded = false }
-                                        )
-                                    }
-
-                                    if (dummy2Visible) {
-                                        DashboardNotificationItem(
-                                            title = "Check-in diario",
-                                            subtitle = "No olvides registrar cómo te sientes",
-                                            icon = Icons.Filled.CheckCircle,
-                                            iconColorLight = Color(0xFF15803D), // Green 700
-                                            iconColorDark = Color(0xFF86EFAC), // Green 300
-                                            bgColorLight = Color(0xFFF0FDF4), // Soft Green
-                                            bgColorDark = Color(0xFF14532D), // Green 900
-                                            fillColorLight = Color(0xFFDCFCE7), // Darker Green fill
-                                            fillColorDark = Color(0xFF15803D), // Green 700
-                                            onDismiss = { dummy2Visible = false },
-                                            onClick = { notificationsExpanded = false }
-                                        )
-                                    }
                                 }
                             } else {
                                 Column(

@@ -108,7 +108,7 @@ fun EditProfileCaregiverScreen(
     val nameError = if (name.isNotEmpty() && name.trim().length < 2) "El nombre debe tener al menos 2 caracteres." else null
     val lastNameError = if (lastName.isNotEmpty() && lastName.trim().length < 2) "El apellido debe tener al menos 2 caracteres." else null
     val phoneError = if (phone.isNotEmpty() && (phone.length < 9 || !phone.all { it.isDigit() })) "El teléfono debe tener 9 dígitos numéricos." else null
-    val isFormValid = name.isNotBlank() && lastName.isNotBlank() && phone.isNotBlank() &&
+    val isFormValid = name.isNotBlank() && lastName.isNotBlank() &&
             nameError == null && lastNameError == null && phoneError == null
 
     // Date picker

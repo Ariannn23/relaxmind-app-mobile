@@ -43,6 +43,10 @@ object SoundPlayerManager {
         return activePlayers[soundId]?.volume ?: 1.0f
     }
 
+    fun setLooping(soundId: String, isLooping: Boolean) {
+        activePlayers[soundId]?.repeatMode = if (isLooping) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+    }
+
     fun stopAll() {
         activePlayers.values.forEach { it.release() }
         activePlayers.clear()

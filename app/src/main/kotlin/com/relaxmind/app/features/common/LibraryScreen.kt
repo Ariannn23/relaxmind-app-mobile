@@ -328,7 +328,7 @@ fun FeaturedArticleCard(
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
                 Text(
-                    text = article.category.uppercase(),
+                    text = article.category.replace("_", " ").uppercase(),
                     fontSize = 9.sp,
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.Bold,
@@ -441,7 +441,7 @@ fun RegularArticleCard(
                             .padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = article.category.lowercase(),
+                            text = article.category.replace("_", " ").replaceFirstChar { it.uppercase() },
                             fontSize = 10.sp,
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Bold,

@@ -59,7 +59,8 @@ fun RelaxButton(
         label = "relax-button-y-offset"
     )
 
-    val roleColor = customColor ?: role.primaryColor()
+    val activeRoleColor = customColor ?: role.primaryColor()
+    val roleColor = if (enabled) activeRoleColor else Color.Gray.copy(alpha = 0.5f)
     val gradientBrush = androidx.compose.ui.graphics.Brush.verticalGradient(
         colors = listOf(
             Color.White.copy(alpha = 0.25f),

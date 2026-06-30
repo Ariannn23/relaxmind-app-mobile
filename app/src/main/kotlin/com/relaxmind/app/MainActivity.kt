@@ -19,6 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.util.Consumer
+import android.content.Intent
+import androidx.compose.runtime.DisposableEffect
 import androidx.navigation.compose.rememberNavController
 import com.relaxmind.app.data.remote.FirebaseAuthService
 import com.relaxmind.app.data.remote.FirestoreRepository
@@ -142,30 +145,18 @@ class MainActivity : FragmentActivity() {
                             userRole = userRole
                         )
                         
+                        
                         LaunchedEffect(intent) {
-                            val action = intent.getStringExtra("action")
-                            when (action) {
-                                "open_sos" -> {
-                                    val alertId = intent.getStringExtra("alertId")
-                                    if (alertId != null) {
-                                        navController.navigate(com.relaxmind.app.Screen.SOSAlert.createRoute(alertId))
-                                    }
-                                }
-                                "open_patient_detail" -> {
-                                    val patientId = intent.getStringExtra("patientId")
-                                    if (patientId != null) {
-                                        navController.navigate(com.relaxmind.app.Screen.PatientDetail.createRoute(patientId))
-                                    }
-                                }
-                                "open_checkin" -> {
-                                    navController.navigate(com.relaxmind.app.Screen.CheckIn.route)
-                                }
-                                "open_appointment" -> {
-                                    val appointmentId = intent.getStringExtra("appointmentId")
-                                    if (appointmentId != null) {
-                                        navController.navigate(com.relaxmind.app.Screen.AppointmentDetail.createRoute(appointmentId))
-                                    }
-                                }
+                            handleIntentAction(intent, navController)
+                        }
+
+                        DisposableEffect(Unit) {
+                            val listener = Consumer<Intent> { newIntent ->
+                                handleIntentAction(newIntent, navController)
+                            }
+                            addOnNewIntentListener(listener)
+                            onDispose {
+                                removeOnNewIntentListener(listener)
                             }
                         }
                         
@@ -181,6 +172,33 @@ class MainActivity : FragmentActivity() {
     }
 }
 }
+
+    private fun handleIntentAction(intent: Intent, navController: androidx.navigation.NavHostController) {
+        val action = intent.getStringExtra("action")
+        when (action) {
+            "open_sos" -> {
+                val alertId = intent.getStringExtra("alertId")
+                if (alertId != null) {
+                    navController.navigate(com.relaxmind.app.Screen.SOSAlert.createRoute(alertId))
+                }
+            }
+            "open_patient_detail" -> {
+                val patientId = intent.getStringExtra("patientId")
+                if (patientId != null) {
+                    navController.navigate(com.relaxmind.app.Screen.PatientDetail.createRoute(patientId))
+                }
+            }
+            "open_checkin" -> {
+                navController.navigate(com.relaxmind.app.Screen.CheckIn.route)
+            }
+            "open_appointment" -> {
+                val appointmentId = intent.getStringExtra("appointmentId")
+                if (appointmentId != null) {
+                    navController.navigate(com.relaxmind.app.Screen.AppointmentDetail.createRoute(appointmentId))
+                }
+            }
+        }
+    }
 
     private fun updateAppLocale(lang: String) {
         try {
