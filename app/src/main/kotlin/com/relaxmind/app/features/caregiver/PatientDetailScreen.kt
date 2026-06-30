@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,14 +35,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.ReportProblem
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -133,6 +139,7 @@ fun PatientDetailScreen(
     val context = LocalContext.current
     val toastState = rememberRelaxToastState()
     var selectedTab by remember { mutableStateOf(PatientDetailTab.PROGRESS) }
+    var selectedCheckIn by remember { mutableStateOf<CheckIn?>(null) }
 
     LaunchedEffect(patientId) {
         viewModel.loadPatientDetail(patientId)
@@ -218,7 +225,8 @@ fun PatientDetailScreen(
                                 PatientDetailTab.HISTORY -> PatientHistoryTab(
                                     checkIns = checkIns,
                                     alerts = alerts,
-                                    onSosAlertClick = onSosAlertClick
+                                    onSosAlertClick = onSosAlertClick,
+                                    onCheckInClick = { selectedCheckIn = it }
                                 )
                             }
                         }
@@ -247,6 +255,23 @@ fun PatientDetailScreen(
 
             RelaxToastHost(state = toastState)
         }
+    }
+
+    selectedCheckIn?.let { checkIn ->
+        val relatedAlert = alerts.firstOrNull { alert ->
+            alert.patientId == checkIn.patientId &&
+            (alert.createdAtText.contains(checkIn.date) ||
+             alert.type.equals("sos", ignoreCase = true))
+        }
+        CheckInDetailBottomSheet(
+            checkIn = checkIn,
+            relatedAlert = relatedAlert,
+            onDismiss = { selectedCheckIn = null },
+            onViewSosAlert = { alertId ->
+                selectedCheckIn = null
+                onSosAlertClick(alertId)
+            }
+        )
     }
 }
 
@@ -733,11 +758,13 @@ private fun PatientStreakCard(streakDays: Int) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PatientHistoryTab(
     checkIns: List<CheckIn>,
     alerts: List<CaregiverAlert>,
-    onSosAlertClick: (String) -> Unit
+    onSosAlertClick: (String) -> Unit,
+    onCheckInClick: (CheckIn) -> Unit
 ) {
     if (checkIns.isEmpty()) {
         EmptyPatientDetailState(
@@ -752,10 +779,7 @@ private fun PatientHistoryTab(
             PatientHistoryItem(
                 checkIn = checkIn,
                 generatedAlert = alerts.any { alert -> alert.patientId == checkIn.patientId && alert.createdAtText.contains(checkIn.date) },
-                onClick = {
-                    alerts.firstOrNull { it.type.equals("sos", ignoreCase = true) && it.patientId == checkIn.patientId }
-                        ?.let { onSosAlertClick(it.id) }
-                }
+                onClick = { onCheckInClick(checkIn) }
             )
             if (index < checkIns.take(10).lastIndex) {
                 Box(
@@ -776,77 +800,92 @@ private fun PatientHistoryItem(
     generatedAlert: Boolean,
     onClick: () -> Unit
 ) {
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Box(
-            modifier = Modifier.size(36.dp).background(LavenderPill, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.CalendarMonth,
-                contentDescription = null,
-                tint = CaregiverPurple,
-                modifier = Modifier.size(20.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClickLabel = "Ver detalle del check-in",
+                onClick = onClick
             )
-        }
-        Column(modifier = Modifier.weight(1f)) {
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        // Row 1: Icon + Date
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier.size(36.dp).background(LavenderPill, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CalendarMonth,
+                    contentDescription = null,
+                    tint = CaregiverPurple,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
             Text(
                 text = "${checkIn.relativeDateLabel()} · ${checkIn.timeLabel()}",
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 13.sp,
-                color = TextPrimary
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
+        }
+        // Row 2: Alert label + Score chip + Ver detalle
+        Row(
+            modifier = Modifier.padding(start = 46.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             AnimatedVisibility(visible = generatedAlert || checkIn.score < 25, enter = fadeIn(), exit = fadeOut()) {
                 Row(
-                    modifier = Modifier.padding(top = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.ReportProblem,
                         contentDescription = null,
                         tint = PatientScoreStatus.CRITICAL.color,
-                        modifier = Modifier.size(15.dp)
+                        modifier = Modifier.size(14.dp)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Alerta enviada",
+                        text = "Alerta",
                         fontFamily = LexendFontFamily,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 11.sp,
                         color = PatientScoreStatus.CRITICAL.color
                     )
+                    Spacer(modifier = Modifier.width(4.dp))
                 }
             }
-        }
-        PatientScoreChip(score = checkIn.score)
-        Row(
-            modifier = Modifier.clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClickLabel = "Ver detalle",
-                onClick = onClick
-            ),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Ver detalle",
-                fontFamily = LexendFontFamily,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 12.sp,
-                color = CaregiverPurple
-            )
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = CaregiverPurple,
-                modifier = Modifier.size(18.dp)
-            )
+            PatientScoreChip(score = checkIn.score)
+            Spacer(modifier = Modifier.weight(1f))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = "Ver detalle",
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 12.sp,
+                    color = CaregiverPurple
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = CaregiverPurple,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
 }
@@ -1044,4 +1083,222 @@ private fun CheckIn.relativeDateLabel(): String {
 private fun CheckIn.timeLabel(): String {
     val created = createdAt ?: return "--:--"
     return SimpleDateFormat("HH:mm", Locale("es", "ES")).format(created)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CheckInDetailBottomSheet(
+    checkIn: CheckIn,
+    relatedAlert: CaregiverAlert?,
+    onDismiss: () -> Unit,
+    onViewSosAlert: (String) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState()
+    val status = scoreStatus(checkIn.score)
+    val isSos = relatedAlert?.type?.equals("sos", ignoreCase = true) == true
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = Color.White,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Title
+            Text(
+                text = "Detalle del Check-in",
+                fontFamily = LexendFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = TextPrimary
+            )
+
+            // Date row
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xFFF6F4FF)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.size(40.dp).background(LavenderPill, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CalendarMonth,
+                            contentDescription = null,
+                            tint = CaregiverPurple,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = checkIn.relativeDateLabel(),
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = checkIn.timeLabel(),
+                            fontFamily = LexendFontFamily,
+                            fontSize = 13.sp,
+                            color = TextSecondary
+                        )
+                    }
+                }
+            }
+
+            // Score row
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = status.softColor
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.size(40.dp).background(status.color, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${checkIn.score}",
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = Color.White
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "${checkIn.score}/100 — ${status.label}",
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = status.color
+                        )
+                        Text(
+                            text = "Rango: ${status.range}",
+                            fontFamily = LexendFontFamily,
+                            fontSize = 13.sp,
+                            color = TextSecondary
+                        )
+                    }
+                }
+            }
+
+            // Alert section
+            if (relatedAlert != null) {
+                val alertBg = if (isSos) Color(0xFFFFE8EA) else Color(0xFFFFF3DC)
+                val alertColor = if (isSos) PatientScoreStatus.CRITICAL.color else PatientScoreStatus.LOW.color
+                val alertLabel = if (isSos) "Alerta SOS enviada" else "Alerta de bienestar enviada"
+                val alertDesc = if (isSos)
+                    "Se activó una alerta de emergencia (SOS) para este check-in."
+                else
+                    "La puntuación baja activó una alerta de bienestar para este paciente."
+                val alertStatusText = if (relatedAlert.resolved) "Atendida ✓" else "Pendiente"
+                val alertStatusColor = if (relatedAlert.resolved) Color(0xFF38C172) else alertColor
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = alertBg
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isSos) Icons.Default.Warning else Icons.Default.ReportProblem,
+                                contentDescription = null,
+                                tint = alertColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = alertLabel,
+                                fontFamily = LexendFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = alertColor
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = alertStatusColor.copy(alpha = 0.12f)
+                            ) {
+                                Text(
+                                    text = alertStatusText,
+                                    fontFamily = LexendFontFamily,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 12.sp,
+                                    color = alertStatusColor,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                        Text(
+                            text = alertDesc,
+                            fontFamily = LexendFontFamily,
+                            fontSize = 13.sp,
+                            color = TextSecondary
+                        )
+                        if (isSos && !relatedAlert.resolved) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Ver alerta SOS →",
+                                fontFamily = LexendFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = alertColor,
+                                modifier = Modifier.clickable { onViewSosAlert(relatedAlert.id) }
+                            )
+                        }
+                    }
+                }
+            } else {
+                // No alert generated
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color(0xFFE8F8EF)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Color(0xFF38C172),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = "No se generó ninguna alerta para este check-in.",
+                            fontFamily = LexendFontFamily,
+                            fontSize = 13.sp,
+                            color = TextSecondary
+                        )
+                    }
+                }
+            }
+        }
+    }
 }

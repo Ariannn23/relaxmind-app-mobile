@@ -55,6 +55,9 @@ class CaregiverViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
+    private val _isPatientsLoading = MutableStateFlow(true)
+    val isPatientsLoading = _isPatientsLoading.asStateFlow()
+
     private val _isLinking = MutableStateFlow(false)
     val isLinking = _isLinking.asStateFlow()
 
@@ -92,13 +95,19 @@ class CaregiverViewModel(
 
         if (patientsListener != null && alertsListener != null) return
 
+        _isPatientsLoading.value = true
+
         patientsListener = firestoreRepository.listenPatientsForCaregiver(
             caregiverId = caregiverId,
             onChange = { patients ->
                 rawPatients = patients
+                _isPatientsLoading.value = false
                 rebuildPatientSummaries()
             },
-            onError = { _error.value = it.toUserFriendlyMessage("No se pudieron escuchar los pacientes.") }
+            onError = {
+                _isPatientsLoading.value = false
+                _error.value = it.toUserFriendlyMessage("No se pudieron escuchar los pacientes.")
+            }
         )
 
         alertsListener = firestoreRepository.listenAlertsForCaregiver(
@@ -292,11 +301,21 @@ class CaregiverViewModel(
     }
 
     fun updateNotificationsEnabled(enabled: Boolean) {
-        // Stub
+        val uid = authService.getCurrentUser()?.uid ?: return
+        _caregiver.value = _caregiver.value?.copy(notificationsEnabled = enabled)
+        viewModelScope.launch {
+            firestoreRepository.updateCaregiver(uid, mapOf("notificationsEnabled" to enabled))
+                .onFailure { _error.value = it.toUserFriendlyMessage("No se pudo guardar la preferencia.") }
+        }
     }
 
     fun updateBiometricEnabled(enabled: Boolean) {
-        // Stub
+        val uid = authService.getCurrentUser()?.uid ?: return
+        _caregiver.value = _caregiver.value?.copy(biometricEnabled = enabled)
+        viewModelScope.launch {
+            firestoreRepository.updateCaregiver(uid, mapOf("biometricEnabled" to enabled))
+                .onFailure { _error.value = it.toUserFriendlyMessage("No se pudo guardar la preferencia.") }
+        }
     }
 
     fun deleteAccount(reason: String, passwordConfirm: String, onSuccess: () -> Unit, onError: (String) -> Unit) {

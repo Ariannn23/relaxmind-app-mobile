@@ -43,11 +43,14 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -134,6 +137,7 @@ fun AlertsHistoryScreen(
     var selectedPatientId by remember { mutableStateOf<String?>(null) }
     var selectedDateRange by remember { mutableStateOf(AlertDateRange.LAST_10) }
     var alertToResolve by remember { mutableStateOf<CaregiverAlert?>(null) }
+    var alertToView by remember { mutableStateOf<CaregiverAlert?>(null) }
     var patientMenuExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -273,7 +277,13 @@ fun AlertsHistoryScreen(
                                 enter = fadeIn(tween(180)) + slideInVertically(initialOffsetY = { it / 5 }),
                                 exit = fadeOut()
                             ) {
-                                AlertItemCard(alert = alert)
+                                AlertItemCard(
+                                    alert = alert,
+                                    onClick = {
+                                        if (!alert.resolved) alertToResolve = alert
+                                        else alertToView = alert
+                                    }
+                                )
                             }
                         }
                         item { Spacer(modifier = Modifier.height(88.dp)) }
@@ -292,6 +302,13 @@ fun AlertsHistoryScreen(
                 viewModel.markAlertResolved(alert.id)
                 alertToResolve = null
             }
+        )
+    }
+
+    alertToView?.let { alert ->
+        AlertDetailBottomSheet(
+            alert = alert,
+            onDismiss = { alertToView = null }
         )
     }
 }
@@ -531,7 +548,8 @@ private fun DropdownLabel(text: String) {
 
 @Composable
 private fun AlertItemCard(
-    alert: CaregiverAlert
+    alert: CaregiverAlert,
+    onClick: () -> Unit
 ) {
     val scale by animateFloatAsState(targetValue = 1f, label = "alert-card-scale")
 
@@ -544,6 +562,11 @@ private fun AlertItemCard(
                 shape = RoundedCornerShape(26.dp),
                 ambientColor = Color.Black.copy(alpha = 0.06f),
                 spotColor = Color.Black.copy(alpha = 0.06f)
+            )
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
             ),
         shape = RoundedCornerShape(26.dp),
         color = Color.White
@@ -872,4 +895,175 @@ private fun Date.isAfterDaysAgo(days: Int): Boolean {
         add(Calendar.DAY_OF_YEAR, -days)
     }.time
     return !before(cutoff)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AlertDetailBottomSheet(
+    alert: CaregiverAlert,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState()
+    val type = alert.alertType()
+    val isSos = type == AlertType.SOS
+
+    val headerBg = when (type) {
+        AlertType.SOS -> AlertRedSoft
+        AlertType.LOW_CHECKIN -> WarningOrangeSoft
+        AlertType.NO_CHECKIN -> LavenderPill
+        AlertType.UNLINK -> LavenderPill
+    }
+    val headerColor = when (type) {
+        AlertType.SOS -> AlertRed
+        AlertType.LOW_CHECKIN -> WarningOrange
+        AlertType.NO_CHECKIN -> CaregiverIndigo
+        AlertType.UNLINK -> CaregiverIndigo
+    }
+    val typeLabel = when (type) {
+        AlertType.SOS -> "Alerta de emergencia (SOS)"
+        AlertType.LOW_CHECKIN -> "Bienestar bajo detectado"
+        AlertType.NO_CHECKIN -> "Check-in no realizado"
+        AlertType.UNLINK -> "Acceso revocado"
+    }
+    val typeDesc = when (type) {
+        AlertType.SOS -> "El paciente activó manualmente la alarma de emergencia."
+        AlertType.LOW_CHECKIN -> "La puntuación del último check-in fue muy baja, indicando posible malestar."
+        AlertType.NO_CHECKIN -> "El paciente no completó su check-in diario en el tiempo esperado."
+        AlertType.UNLINK -> "El paciente revocaró el acceso del cuidador a su cuenta."
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = Color.White,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "Detalle de Alerta",
+                fontFamily = LexendFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = TextPrimary
+            )
+
+            // Type header
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = headerBg
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    AlertTypeIcon(type = type)
+                    Column {
+                        Text(
+                            text = typeLabel,
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = headerColor
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = typeDesc,
+                            fontFamily = LexendFontFamily,
+                            fontSize = 13.sp,
+                            color = TextSecondary
+                        )
+                    }
+                }
+            }
+
+            // Patient + Date
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xFFF6F4FF)
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Paciente:",
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            color = TextSecondary
+                        )
+                        Text(
+                            text = alert.patientName.ifBlank { "Sin nombre" },
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = TextPrimary
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Fecha:",
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            color = TextSecondary
+                        )
+                        Text(
+                            text = alert.createdAtText.ifBlank { "Sin fecha" },
+                            fontFamily = LexendFontFamily,
+                            fontSize = 14.sp,
+                            color = TextPrimary
+                        )
+                    }
+                }
+            }
+
+            // Resolution status
+            val resolvedBg = if (alert.resolved) Color(0xFFE8F8EF) else WarningOrangeSoft
+            val resolvedColor = if (alert.resolved) Color(0xFF38C172) else WarningOrange
+            val resolvedLabel = if (alert.resolved) "✓ Atendida" else "⏳ Pendiente de atención"
+            val resolvedDesc = if (alert.resolved)
+                "Esta alerta ya fue atendida por el cuidador."
+            else
+                "Esta alerta aún no ha sido marcada como atendida."
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = resolvedBg
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = resolvedLabel,
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = resolvedColor
+                        )
+                        Text(
+                            text = resolvedDesc,
+                            fontFamily = LexendFontFamily,
+                            fontSize = 13.sp,
+                            color = TextSecondary
+                        )
+                    }
+                }
+            }
+        }
+    }
 }

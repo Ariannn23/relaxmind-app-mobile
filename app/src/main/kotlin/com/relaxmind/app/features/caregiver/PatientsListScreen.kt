@@ -102,6 +102,7 @@ fun PatientsListScreen(
 ) {
     val patients by viewModel.patients.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isPatientsLoading by viewModel.isPatientsLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val toastState = rememberRelaxToastState()
     var query by remember { mutableStateOf("") }
@@ -173,8 +174,8 @@ fun PatientsListScreen(
 
                     item { Spacer(modifier = Modifier.height(16.dp)) }
 
-                    if (isLoading && patients.isEmpty() && error == null) {
-                        item { PatientsLoadingSkeleton() }
+                    if ((isLoading || isPatientsLoading) && patients.isEmpty() && error == null) {
+                        item { com.relaxmind.app.ui.components.PatientListSkeleton() }
                     } else if (error != null && patients.isEmpty()) {
                         item {
                             com.relaxmind.app.ui.components.ErrorStateScreen(
