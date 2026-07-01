@@ -241,7 +241,7 @@ fun PatientDetailScreen(
             }
 
             if (isLoading && patient == null) {
-                LoadingIndicator()
+                LoadingIndicator(isCaregiver = true)
             }
 
             if (!isLoading && patient == null) {

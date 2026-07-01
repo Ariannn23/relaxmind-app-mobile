@@ -36,6 +36,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.relaxmind.app.ui.components.FullScreenLoadingOverlay
+import com.relaxmind.app.ui.components.AppRole
+import com.relaxmind.app.ui.components.NotificationPermissionDialog
+import com.relaxmind.app.ui.components.hasNotificationPermission
+import com.relaxmind.app.ui.components.openNotificationSettings
+import com.relaxmind.app.ui.components.rememberNotificationPermissionLauncher
+import com.relaxmind.app.ui.components.requestNotificationPermission
 import com.relaxmind.app.ui.components.toast.LocalRelaxToast
 import com.relaxmind.app.ui.components.toast.RelaxToastType
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
@@ -56,6 +62,7 @@ fun CreateAppointmentScreen(
     val context = LocalContext.current
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMsg by viewModel.error.collectAsState()
+    val patient by viewModel.patient.collectAsState()
 
     var title by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf("cita") } // "cita" | "medicacion" | "recordatorio"
@@ -67,9 +74,22 @@ fun CreateAppointmentScreen(
     var recurringDays by remember { mutableStateOf<List<Int>>(emptyList()) }
 
     var isTitleError by remember { mutableStateOf(false) }
+    var showNotificationPermissionDialog by remember { mutableStateOf(false) }
+    val notificationPermissionLauncher = rememberNotificationPermissionLauncher { granted ->
+        if (granted) {
+            viewModel.updateNotificationsEnabled(true)
+            showNotificationPermissionDialog = false
+        } else {
+            showNotificationPermissionDialog = true
+        }
+    }
     
     val relaxToast = LocalRelaxToast.current
     val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadDashboardData()
+    }
 
     // DatePickerDialog launcher
     val datePickerDialog = remember {
@@ -511,6 +531,8 @@ fun CreateAppointmentScreen(
                         onClick = {
                             if (title.isBlank()) {
                                 isTitleError = true
+                            } else if (patient?.notificationsEnabled == false || !hasNotificationPermission(context)) {
+                                showNotificationPermissionDialog = true
                             } else {
                                 viewModel.createAppointment(
                                     title = title,
@@ -546,6 +568,34 @@ fun CreateAppointmentScreen(
 
             if (isLoading) {
                 FullScreenLoadingOverlay()
+            }
+
+            if (showNotificationPermissionDialog) {
+                NotificationPermissionDialog(
+                    role = AppRole.PATIENT,
+                    title = "Activa tus notificaciones",
+                    message = "Para guardar recordatorios y recibirlos a tiempo, debes permitir las notificaciones de RelaxMind.",
+                    primaryText = "Activar ahora",
+                    secondaryText = "Ir a ajustes",
+                    onPrimaryClick = {
+                        if (hasNotificationPermission(context)) {
+                            viewModel.updateNotificationsEnabled(true)
+                            showNotificationPermissionDialog = false
+                        } else {
+                            requestNotificationPermission(
+                                launcher = notificationPermissionLauncher,
+                                onAlreadyGranted = {
+                                    viewModel.updateNotificationsEnabled(true)
+                                    showNotificationPermissionDialog = false
+                                }
+                            )
+                        }
+                    },
+                    onDismiss = {
+                        openNotificationSettings(context)
+                        showNotificationPermissionDialog = false
+                    }
+                )
             }
         }
     }

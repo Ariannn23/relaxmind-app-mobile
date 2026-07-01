@@ -249,7 +249,10 @@ fun AlertsHistoryScreen(
                 when {
                     isLoading && alerts.isEmpty() && error == null -> {
                         item {
-                            AlertsHistorySkeleton()
+                            com.relaxmind.app.ui.components.RelaxLoadingContent(
+                                message = "Cargando...",
+                                isCaregiver = true
+                            )
                         }
                     }
 

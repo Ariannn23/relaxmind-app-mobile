@@ -63,6 +63,7 @@ class SOSPatientViewModel(
                 caregiverId = caregiverId,
                 caregiverPhone = caregiverPhone,
                 caregiverName = caregiverName,
+                notificationsEnabled = patient.notificationsEnabled,
                 isDataLoaded = true
             )
         }
@@ -194,6 +195,16 @@ class SOSPatientViewModel(
         _uiState.value = _uiState.value.copy(isSOSActive = false)
     }
 
+    fun updateNotificationsEnabled(enabled: Boolean) {
+        val patientId = _uiState.value.patientId.ifBlank { authService.getCurrentUser()?.uid.orEmpty() }
+        if (patientId.isBlank()) return
+
+        _uiState.value = _uiState.value.copy(notificationsEnabled = enabled)
+        viewModelScope.launch {
+            firestoreRepository.updatePatient(patientId, mapOf("notificationsEnabled" to enabled))
+        }
+    }
+
     private fun stopLocationUpdates() {
         locationCallback?.let {
             fusedLocationClient.removeLocationUpdates(it)
@@ -219,5 +230,6 @@ data class SOSPatientUiState(
     val caregiverId: String? = null,
     val caregiverPhone: String = "",
     val caregiverName: String = "",
+    val notificationsEnabled: Boolean = true,
     val error: String? = null
 )

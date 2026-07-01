@@ -182,6 +182,57 @@ class FirestoreRepository(
             }
     }
 
+    suspend fun previewPatientForBindingCode(
+        code: String,
+        caregiverId: String
+    ): Result<Patient> = runCatching {
+        require(caregiverId.isNotBlank()) { "No se encontro una sesion activa." }
+        require(code.length == 6) { "Ingresa un codigo de 6 digitos." }
+
+        val now = Date()
+        val docs = bindingCodes
+            .whereEqualTo("code", code)
+            .get()
+            .await()
+            .documents
+
+        val bindingSnapshot = docs.firstOrNull { doc ->
+            val expiresAt = doc.getDate("expiresAt")
+            expiresAt != null && expiresAt.after(now)
+        } ?: error("Codigo invalido o expirado")
+
+        val bindingCode = bindingSnapshot.toObject(BindingCode::class.java)
+            ?: error("Codigo invalido o expirado")
+
+        val linkedPatientsCount = patients
+            .whereEqualTo("caregiverId", caregiverId)
+            .get()
+            .await()
+            .size()
+
+        if (linkedPatientsCount >= MAX_PATIENTS_PER_CAREGIVER) {
+            error("Has alcanzado el limite de $MAX_PATIENTS_PER_CAREGIVER pacientes vinculados.")
+        }
+
+        val patient = patients.document(bindingCode.patientId)
+            .get()
+            .await()
+            .toObject(Patient::class.java)
+            ?.copy(id = bindingCode.patientId)
+            ?: error("No se encontro el paciente del codigo.")
+
+        val currentCaregiverId = patient.caregiverId
+        if (!currentCaregiverId.isNullOrBlank()) {
+            if (currentCaregiverId == caregiverId) {
+                error("Este paciente ya esta vinculado contigo.")
+            } else {
+                error("Este paciente ya esta vinculado a otro cuidador.")
+            }
+        }
+
+        patient
+    }
+
     fun listenPatientsForCaregiver(
         caregiverId: String,
         onChange: (List<Patient>) -> Unit,
@@ -296,6 +347,17 @@ class FirestoreRepository(
         val bindingCode = bindingSnapshot.toObject(BindingCode::class.java)
             ?: error("Código inválido o expirado")
         val patientRef = patients.document(bindingCode.patientId)
+        val patient = patientRef.get().await().toObject(Patient::class.java)
+            ?: error("No se encontro el paciente del codigo.")
+        val currentCaregiverId = patient.caregiverId
+        if (!currentCaregiverId.isNullOrBlank()) {
+            if (currentCaregiverId == caregiverId) {
+                error("Este paciente ya esta vinculado contigo.")
+            } else {
+                error("Este paciente ya esta vinculado a otro cuidador.")
+            }
+        }
+
         val linkedPatientsCount = patients
             .whereEqualTo("caregiverId", caregiverId)
             .get()

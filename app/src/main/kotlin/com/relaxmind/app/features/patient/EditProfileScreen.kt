@@ -54,6 +54,22 @@ import com.relaxmind.app.ui.components.getAvatarDrawableRes
 
 private val sexOptions = listOf("Masculino", "Femenino", "No binario", "Prefiero no decirlo")
 
+private fun parseBirthDateToCalendar(value: String): Calendar? {
+    val parts = value.split("/")
+    if (parts.size != 3) return null
+    val day = parts[0].toIntOrNull() ?: return null
+    val month = parts[1].toIntOrNull() ?: return null
+    val year = parts[2].toIntOrNull() ?: return null
+    return Calendar.getInstance().apply {
+        set(Calendar.YEAR, year)
+        set(Calendar.MONTH, month - 1)
+        set(Calendar.DAY_OF_MONTH, day)
+    }
+}
+
+private fun defaultBirthDateCalendar(): Calendar =
+    Calendar.getInstance().apply { add(Calendar.YEAR, -25) }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
@@ -83,21 +99,30 @@ fun EditProfileScreen(
     val phoneError = if (phone.isNotEmpty() && (phone.length < 9 || !phone.all { it.isDigit() })) "El teléfono debe tener 9 dígitos numéricos." else null
     val isFormValid = name.isNotBlank() && lastName.isNotBlank() &&
             nameError == null && lastNameError == null && phoneError == null
+    val hasChanges = patient?.let {
+        val currentAvatarUrl = it.avatarUrl.ifBlank { "relaxmind://avatar/01" }
+        name.trim() != it.name.trim() ||
+                lastName.trim() != it.lastName.trim() ||
+                birthDate != it.birthDate ||
+                sex != it.sex ||
+                phone != it.phone ||
+                condition.trim() != it.condition.trim() ||
+                selectedAvatarUrl != currentAvatarUrl
+    } ?: false
 
-    // Date picker
-    val cal = Calendar.getInstance()
-    val datePickerDialog = remember {
+    fun showBirthDatePicker() {
+        val initialDate = parseBirthDateToCalendar(birthDate) ?: defaultBirthDateCalendar()
         DatePickerDialog(
             context,
             { _, year, month, day ->
                 birthDate = "%02d/%02d/%04d".format(day, month + 1, year)
             },
-            cal.get(Calendar.YEAR) - 25,
-            cal.get(Calendar.MONTH),
-            cal.get(Calendar.DAY_OF_MONTH)
+            initialDate.get(Calendar.YEAR),
+            initialDate.get(Calendar.MONTH),
+            initialDate.get(Calendar.DAY_OF_MONTH)
         ).apply {
             datePicker.maxDate = Calendar.getInstance().apply { add(Calendar.YEAR, -13) }.timeInMillis
-        }
+        }.show()
     }
 
     LaunchedEffect(patient) {
@@ -298,7 +323,7 @@ fun EditProfileScreen(
                             )
 
                             // Fecha de nacimiento (tappable)
-                            Box(modifier = Modifier.fillMaxWidth().clickable { datePickerDialog.show() }) {
+                            Box(modifier = Modifier.fillMaxWidth().clickable { showBirthDatePicker() }) {
                                 ProfileTextField(
                                     value = birthDate,
                                     onValueChange = {},
@@ -316,7 +341,7 @@ fun EditProfileScreen(
                                         )
                                     }
                                 )
-                                Box(modifier = Modifier.matchParentSize().clickable { datePickerDialog.show() })
+                                Box(modifier = Modifier.matchParentSize().clickable { showBirthDatePicker() })
                             }
 
                             // Sexo (ExposedDropdownMenu)
@@ -432,7 +457,7 @@ fun EditProfileScreen(
                                     onError = { toastState.showError(it) }
                                 )
                             },
-                            enabled = isFormValid && !isLoading,
+                            enabled = isFormValid && hasChanges && !isLoading,
                             isLoading = isLoading,
                             role = com.relaxmind.app.ui.components.AppRole.PATIENT,
                             modifier = Modifier.fillMaxWidth()

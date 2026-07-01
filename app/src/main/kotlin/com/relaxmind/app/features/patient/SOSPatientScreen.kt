@@ -41,6 +41,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.location.LocationServices
+import com.relaxmind.app.ui.components.AppRole
+import com.relaxmind.app.ui.components.NotificationPermissionDialog
+import com.relaxmind.app.ui.components.hasNotificationPermission
+import com.relaxmind.app.ui.components.openNotificationSettings
+import com.relaxmind.app.ui.components.rememberNotificationPermissionLauncher
+import com.relaxmind.app.ui.components.requestNotificationPermission
 import com.relaxmind.app.ui.components.toast.LocalRelaxToast
 import com.relaxmind.app.ui.components.toast.RelaxToastType
 import com.relaxmind.app.ui.themes.*
@@ -63,6 +69,7 @@ fun SOSPatientScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     var showCancelDialog by remember { mutableStateOf(false) }
+    var showNotificationPermissionDialog by remember { mutableStateOf(false) }
     val relaxToast = LocalRelaxToast.current
     val coroutineScope = rememberCoroutineScope()
 
@@ -78,15 +85,33 @@ fun SOSPatientScreen(
             viewModel.activateSOS()
         }
     }
-
-    LaunchedEffect(uiState.isDataLoaded) {
-        if (uiState.isDataLoaded && !uiState.isSOSActive) {
+    val notificationPermissionLauncher = rememberNotificationPermissionLauncher { granted ->
+        if (granted) {
+            viewModel.updateNotificationsEnabled(true)
+            showNotificationPermissionDialog = false
             permissionLauncher.launch(
                 arrayOf(
                     Manifest.permission.ACCESS_FINE_LOCATION,
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 )
             )
+        } else {
+            showNotificationPermissionDialog = true
+        }
+    }
+
+    LaunchedEffect(uiState.isDataLoaded) {
+        if (uiState.isDataLoaded && !uiState.isSOSActive) {
+            if (uiState.notificationsEnabled && hasNotificationPermission(context)) {
+                permissionLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    )
+                )
+            } else {
+                showNotificationPermissionDialog = true
+            }
         }
     }
 
@@ -159,6 +184,46 @@ fun SOSPatientScreen(
                     onNavigateBack()
                 },
                 onDismiss = { showCancelDialog = false }
+            )
+        }
+
+        if (showNotificationPermissionDialog) {
+            NotificationPermissionDialog(
+                role = AppRole.PATIENT,
+                title = "Activa notificaciones para SOS",
+                message = "Para enviar alertas SOS con seguridad, RelaxMind necesita que las notificaciones estén activadas antes de iniciar la alerta.",
+                primaryText = "Activar ahora",
+                secondaryText = "Ir a ajustes",
+                onPrimaryClick = {
+                    if (hasNotificationPermission(context)) {
+                        viewModel.updateNotificationsEnabled(true)
+                        showNotificationPermissionDialog = false
+                        permissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        )
+                    } else {
+                        requestNotificationPermission(
+                            launcher = notificationPermissionLauncher,
+                            onAlreadyGranted = {
+                                viewModel.updateNotificationsEnabled(true)
+                                showNotificationPermissionDialog = false
+                                permissionLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
+                                )
+                            }
+                        )
+                    }
+                },
+                onDismiss = {
+                    openNotificationSettings(context)
+                    showNotificationPermissionDialog = false
+                }
             )
         }
 

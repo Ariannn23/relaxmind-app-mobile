@@ -140,7 +140,10 @@ fun ScheduleScreen(
             }
 
             if (isLoading && selectedDateAppointments.isEmpty() && monthlyAppointments.isEmpty() && error == null) {
-                ScheduleSkeleton(modifier = Modifier.align(Alignment.Center))
+                com.relaxmind.app.ui.components.RelaxLoadingContent(
+                    modifier = Modifier.align(Alignment.Center),
+                    message = "Cargando..."
+                )
             } else if (error != null && selectedDateAppointments.isEmpty() && monthlyAppointments.isEmpty()) {
                 ErrorStateScreen(
                     message = error ?: "",

@@ -30,6 +30,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.MedicalInformation
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.*
@@ -44,6 +48,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -63,6 +68,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
+import com.relaxmind.app.data.model.Patient
 import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.FullScreenLoadingOverlay
 import com.relaxmind.app.ui.components.RelaxButton
@@ -84,6 +90,7 @@ fun CaregiverLinkPatientScreen(
     val message by viewModel.message.collectAsState()
     val isLinking by viewModel.isLinking.collectAsState()
     val linkedPatientName by viewModel.linkedPatientName.collectAsState()
+    val pendingPatientLink by viewModel.pendingPatientLink.collectAsState()
 
     var manualCode by remember { mutableStateOf("") }
     var cameraError by remember { mutableStateOf<String?>(null) }
@@ -171,7 +178,7 @@ fun CaregiverLinkPatientScreen(
                                     val code = extractBindingCode(rawValue)
                                     if (!scanLocked && code != null) {
                                         scanLocked = true
-                                        viewModel.verifyBindingCode(code, onSuccess = {})
+                                        viewModel.previewBindingCode(code)
                                     }
                                 }
                             )
@@ -306,7 +313,8 @@ fun CaregiverLinkPatientScreen(
                             com.relaxmind.app.ui.components.RelaxButton(
                                 text = "Verificar código",
                                 onClick = {
-                                    viewModel.verifyBindingCode(manualCode, onSuccess = {})
+                                    scanLocked = true
+                                    viewModel.previewBindingCode(manualCode)
                                 },
                                 enabled = manualCode.length == 6 && !isLinking,
                                 isLoading = isLinking,
@@ -383,6 +391,20 @@ fun CaregiverLinkPatientScreen(
                     }
                 }
 
+                pendingPatientLink?.let { pending ->
+                    ConfirmPatientLinkDialog(
+                        patient = pending.patient,
+                        isLoading = isLinking,
+                        onDismiss = {
+                            viewModel.clearPendingPatientLink()
+                            scanLocked = false
+                        },
+                        onConfirm = {
+                            viewModel.confirmPendingPatientLink(onSuccess = {})
+                        }
+                    )
+                }
+
                 // Success Modal Dialog
                 if (showSuccessModal) {
                     Dialog(onDismissRequest = {
@@ -446,6 +468,191 @@ fun CaregiverLinkPatientScreen(
             }
         }
     }
+}
+
+@Composable
+private fun ConfirmPatientLinkDialog(
+    patient: Patient,
+    isLoading: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val fullName = "${patient.name} ${patient.lastName}".trim().ifBlank { "Paciente RelaxMind" }
+    Dialog(onDismissRequest = { if (!isLoading) onDismiss() }) {
+        Surface(
+            shape = RoundedCornerShape(30.dp),
+            color = Color.White,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            tonalElevation = 0.dp,
+            shadowElevation = 18.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(76.dp)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                listOf(Color(0xFFEDE9FE), Color(0xFFDCD6FF))
+                            ),
+                            shape = CircleShape
+                        )
+                        .border(2.dp, CaregiverIndigo.copy(alpha = 0.16f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = fullName.initials(),
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp,
+                        color = CaregiverIndigo
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Text(
+                    text = "Confirmar vinculacion",
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = TextPrimary,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Antes de enlazarte, verifica que estos datos correspondan al paciente.",
+                    fontFamily = LexendFontFamily,
+                    fontSize = 13.sp,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 18.sp
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    color = Color(0xFFFAF8FF),
+                    border = BorderStroke(1.dp, Color(0xFFE5E0F7))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        PatientPreviewRow(Icons.Default.Person, "Nombre", fullName)
+                        if (patient.email.isNotBlank()) {
+                            PatientPreviewRow(Icons.Default.Email, "Correo", patient.email)
+                        }
+                        if (patient.phone.isNotBlank()) {
+                            PatientPreviewRow(Icons.Default.Phone, "Telefono", patient.phone)
+                        }
+                        if (patient.condition.isNotBlank()) {
+                            PatientPreviewRow(Icons.Default.MedicalInformation, "Condicion", patient.condition)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        enabled = !isLoading,
+                        modifier = Modifier.weight(1f).height(52.dp),
+                        shape = RoundedCornerShape(50),
+                        border = BorderStroke(1.3.dp, Color(0xFFE5E0F7)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = CaregiverIndigo)
+                    ) {
+                        Text(
+                            text = "Cancelar",
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    Button(
+                        onClick = onConfirm,
+                        enabled = !isLoading,
+                        modifier = Modifier.weight(1f).height(52.dp),
+                        shape = RoundedCornerShape(50),
+                        colors = ButtonDefaults.buttonColors(containerColor = CaregiverIndigo)
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = "Si, vincular",
+                                fontFamily = LexendFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PatientPreviewRow(
+    icon: ImageVector,
+    label: String,
+    value: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .background(Color(0xFFEDE9FE), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = CaregiverIndigo,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                fontFamily = LexendFontFamily,
+                fontSize = 11.sp,
+                color = TextSecondary
+            )
+            Text(
+                text = value,
+                fontFamily = LexendFontFamily,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                color = TextPrimary,
+                maxLines = 2
+            )
+        }
+    }
+}
+
+private fun String.initials(): String {
+    val parts = trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+    return parts.take(2).joinToString("") { it.first().uppercaseChar().toString() }.ifBlank { "RM" }
 }
 
 @Composable

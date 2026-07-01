@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.ListenerRegistration
 import com.relaxmind.app.data.model.BindingCode
+import com.relaxmind.app.data.model.Caregiver
 import com.relaxmind.app.data.remote.FirebaseAuthService
 import com.relaxmind.app.data.remote.FirestoreRepository
 import com.relaxmind.app.utils.toUserFriendlyMessage
@@ -33,6 +34,9 @@ class LinkCaregiverViewModel(
 
     private val _linked = MutableStateFlow(false)
     val linked = _linked.asStateFlow()
+
+    private val _linkedCaregiver = MutableStateFlow<Caregiver?>(null)
+    val linkedCaregiver = _linkedCaregiver.asStateFlow()
 
     private var listenerRegistration: ListenerRegistration? = null
     private var timerJob: Job? = null
@@ -73,8 +77,13 @@ class LinkCaregiverViewModel(
         listenerRegistration = firestoreRepository.listenToBindingCode(
             bindingCodeId = bindingCodeId,
             onChange = { code ->
-                if (!code?.caregiverId.isNullOrBlank()) {
-                    _linked.value = true
+                val caregiverId = code?.caregiverId
+                if (!caregiverId.isNullOrBlank()) {
+                    viewModelScope.launch {
+                        firestoreRepository.getCaregiverById(caregiverId)
+                            .onSuccess { caregiver -> _linkedCaregiver.value = caregiver }
+                        _linked.value = true
+                    }
                 }
             },
             onError = { exception ->
@@ -98,6 +107,10 @@ class LinkCaregiverViewModel(
     }
 
     private fun generateCode(): String = Random.nextInt(0, 1_000_000).toString().padStart(6, '0')
+
+    fun consumeLinkedConfirmation() {
+        _linked.value = false
+    }
 
     override fun onCleared() {
         listenerRegistration?.remove()

@@ -9,24 +9,18 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,27 +28,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.relaxmind.app.R
+import com.relaxmind.app.ui.themes.CaregiverPurple
 import com.relaxmind.app.ui.themes.LexendFontFamily
 import com.relaxmind.app.ui.themes.PatientGreen
-import com.relaxmind.app.ui.themes.PatientGreenLight
 import com.relaxmind.app.ui.themes.RelaxMindTheme
 import com.relaxmind.app.ui.themes.TextPrimary
-import com.relaxmind.app.ui.themes.TextSecondary
 
 private val LoadingBackground = Color(0xFFFFFFFF)
-private val LoadingSoftMint = Color(0xFFF4FBF7)
-private val LoadingTrack = Color(0xFFDDF3E9)
 
 @Composable
 fun RelaxLoadingScreen(
@@ -62,12 +48,13 @@ fun RelaxLoadingScreen(
     message: String = "Cargando...",
     subtitle: String? = null,
     showProgressBar: Boolean = true,
-    compact: Boolean = false
+    compact: Boolean = false,
+    isCaregiver: Boolean = false
 ) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(LoadingSoftMint),
+            .background(LoadingBackground),
         contentAlignment = Alignment.Center
     ) {
         RelaxLoadingContent(
@@ -75,7 +62,7 @@ fun RelaxLoadingScreen(
             subtitle = subtitle,
             showProgressBar = showProgressBar,
             compact = compact,
-            modifier = Modifier.offset(y = if (compact) 0.dp else (-28).dp)
+            isCaregiver = isCaregiver
         )
     }
 }
@@ -87,7 +74,8 @@ fun RelaxLoadingOverlay(
     message: String = "Cargando...",
     subtitle: String? = null,
     showProgressBar: Boolean = true,
-    compact: Boolean = false
+    compact: Boolean = false,
+    isCaregiver: Boolean = false
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -104,7 +92,8 @@ fun RelaxLoadingOverlay(
                 message = message,
                 subtitle = subtitle,
                 showProgressBar = showProgressBar,
-                compact = compact
+                compact = compact,
+                isCaregiver = isCaregiver
             )
         }
     }
@@ -116,134 +105,48 @@ fun RelaxLoadingContent(
     message: String = "Cargando...",
     subtitle: String? = null,
     showProgressBar: Boolean = true,
-    compact: Boolean = false
+    compact: Boolean = false,
+    isCaregiver: Boolean = false
 ) {
-    val characterSize = if (compact) 120.dp else 240.dp
-    val progressWidth = if (compact) 188.dp else 260.dp
+    val color = if (isCaregiver) CaregiverPurple else PatientGreen
 
     Column(
         modifier = modifier.padding(horizontal = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        RelaxLoadingCharacter(size = characterSize)
+        RadarAnimation(
+            color = color,
+            modifier = Modifier.size(if (compact) 112.dp else 136.dp)
+        )
 
-        Spacer(modifier = Modifier.height(if (compact) 16.dp else 24.dp))
+        Spacer(modifier = Modifier.height(if (compact) 18.dp else 26.dp))
 
         Text(
             text = message,
             fontFamily = LexendFontFamily,
             fontSize = if (compact) 16.sp else 20.sp,
             fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-            color = PatientGreen,
-            style = MaterialTheme.typography.titleLarge
-        )
-
-        if (!subtitle.isNullOrBlank()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = subtitle,
-                fontFamily = LexendFontFamily,
-                fontSize = if (compact) 12.sp else 14.sp,
-                color = TextSecondary,
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-
-        if (showProgressBar) {
-            Spacer(modifier = Modifier.height(if (compact) 18.dp else 26.dp))
-            RelaxProgressBar(width = progressWidth)
-        }
-    }
-}
-
-@Composable
-fun RelaxLoadingCharacter(
-    modifier: Modifier = Modifier,
-    size: Dp = 184.dp
-) {
-    val transition = rememberInfiniteTransition(label = "relax-loading-character")
-    val verticalOffset by transition.animateFloat(
-        initialValue = -4f,
-        targetValue = 4f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2100, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "loading-character-offset"
-    )
-    val characterScale by transition.animateFloat(
-        initialValue = 0.985f,
-        targetValue = 1.02f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2100, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "loading-character-scale"
-    )
-
-    Box(
-        modifier = modifier.size(size + 32.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        // Floor shadow
-        Box(
-            modifier = Modifier
-                .size(width = size * 0.8f, height = size * 0.2f)
-                .offset(y = (size * 0.45f))
-                .clip(CircleShape)
-                .background(PatientGreenLight.copy(alpha = 0.25f))
-        )
-
-        Image(
-            painter = painterResource(id = R.drawable.loaded3),
-            contentDescription = "Cargando RelaxMind",
-            modifier = Modifier
-                .size(size)
-                .offset(y = verticalOffset.dp)
-                .scale(characterScale),
-            contentScale = ContentScale.Fit
+            color = TextPrimary
         )
     }
 }
 
 @Composable
-fun RelaxProgressBar(
+fun LoadingIndicator(
     modifier: Modifier = Modifier,
-    width: Dp = 260.dp
+    isCaregiver: Boolean = false
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier
-    ) {
-        androidx.compose.material3.LinearProgressIndicator(
-            modifier = Modifier
-                .width(width)
-                .height(10.dp)
-                .clip(RoundedCornerShape(5.dp)),
-            color = PatientGreen,
-            trackColor = LoadingTrack
-        )
-    }
-}
-
-@Composable
-fun RelaxAnimatedProgressBar(
-    modifier: Modifier = Modifier,
-    width: Dp = 260.dp
-) {
-    RelaxProgressBar(modifier = modifier, width = width)
-}
-
-@Composable
-fun LoadingIndicator(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(LoadingBackground),
         contentAlignment = Alignment.Center
     ) {
-        RelaxLoadingContent(message = stringResource(id = R.string.loading_default))
+        RelaxLoadingContent(
+            message = stringResource(id = R.string.loading_default),
+            isCaregiver = isCaregiver
+        )
     }
 }
 
@@ -253,18 +156,21 @@ fun FullScreenLoadingScreen(
     modifier: Modifier = Modifier,
     backgroundColor: Color = LoadingBackground,
     indicatorColor: Color = PatientGreen,
-    textColor: Color = TextPrimary
+    textColor: Color = TextPrimary,
+    isCaregiver: Boolean = false
 ) {
     RelaxLoadingScreen(
         modifier = modifier.background(backgroundColor),
-        message = text.ifBlank { stringResource(id = R.string.loading_default) }
+        message = stringResource(id = R.string.loading_default),
+        isCaregiver = isCaregiver
     )
 }
 
 @Composable
 fun FullScreenLoadingOverlay(
     modifier: Modifier = Modifier,
-    overlayColor: Color = LoadingBackground
+    overlayColor: Color = LoadingBackground,
+    isCaregiver: Boolean = false
 ) {
     Box(
         modifier = modifier
@@ -272,7 +178,10 @@ fun FullScreenLoadingOverlay(
             .background(overlayColor),
         contentAlignment = Alignment.Center
     ) {
-        RelaxLoadingContent(message = stringResource(id = R.string.loading_default))
+        RelaxLoadingContent(
+            message = stringResource(id = R.string.loading_default),
+            isCaregiver = isCaregiver
+        )
     }
 }
 
@@ -291,6 +200,124 @@ private fun RelaxLoadingCompactPreview() {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             RelaxLoadingContent(compact = true)
         }
+    }
+}
+
+@Composable
+fun RadarLoadingOverlay(
+    visible: Boolean,
+    isCaregiver: Boolean,
+    modifier: Modifier = Modifier,
+    text: String = "Cargando..."
+) {
+    if (!visible) return
+
+    val color = if (isCaregiver) com.relaxmind.app.ui.themes.CaregiverPurple else PatientGreen
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .pointerInput(Unit) { detectTapGestures { } },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            RadarAnimation(color = color)
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = text,
+                color = TextPrimary,
+                fontSize = 18.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                fontFamily = LexendFontFamily
+            )
+        }
+    }
+}
+
+@Composable
+fun RadarAnimation(
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    val transition = rememberInfiniteTransition(label = "radar")
+
+    val scale1 by transition.animateFloat(
+        initialValue = 1f,
+        targetValue = 3.5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = androidx.compose.animation.core.LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "scale1"
+    )
+    val alpha1 by transition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = androidx.compose.animation.core.LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "alpha1"
+    )
+
+    val scale2 by transition.animateFloat(
+        initialValue = 1f,
+        targetValue = 3.5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = androidx.compose.animation.core.LinearEasing, delayMillis = 1000),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "scale2"
+    )
+    val alpha2 by transition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = androidx.compose.animation.core.LinearEasing, delayMillis = 1000),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "alpha2"
+    )
+
+    val innerScale by transition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "innerScale"
+    )
+
+    Box(
+        modifier = modifier.size(120.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .scale(scale1)
+                .clip(CircleShape)
+                .background(color.copy(alpha = alpha1))
+        )
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .scale(scale2)
+                .clip(CircleShape)
+                .background(color.copy(alpha = alpha2))
+        )
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .scale(innerScale)
+                .clip(CircleShape)
+                .background(color)
+        )
     }
 }
 

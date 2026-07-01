@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Timer
@@ -63,6 +64,7 @@ fun PatientLinkCaregiverScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val linked by viewModel.linked.collectAsState()
+    val linkedCaregiver by viewModel.linkedCaregiver.collectAsState()
     val toastState = rememberRelaxToastState()
     val clipboardManager = LocalClipboardManager.current
 
@@ -78,8 +80,7 @@ fun PatientLinkCaregiverScreen(
 
     LaunchedEffect(linked) {
         if (linked) {
-            toastState.showSuccess("¡Cuidador vinculado con éxito!")
-            onLinked()
+            toastState.showSuccess("Cuidador vinculado con exito")
         }
     }
 
@@ -367,7 +368,78 @@ fun PatientLinkCaregiverScreen(
                     FullScreenLoadingOverlay()
                 }
 
+                if (linked) {
+                    PatientLinkedSuccessDialog(
+                        caregiverName = "${linkedCaregiver?.name.orEmpty()} ${linkedCaregiver?.lastName.orEmpty()}"
+                            .trim()
+                            .ifBlank { "tu cuidador" },
+                        onContinue = {
+                            viewModel.consumeLinkedConfirmation()
+                            onLinked()
+                        }
+                    )
+                }
+
                 RelaxToastHost(state = toastState)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PatientLinkedSuccessDialog(
+    caregiverName: String,
+    onContinue: () -> Unit
+) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onContinue) {
+        Surface(
+            shape = RoundedCornerShape(30.dp),
+            color = Color.White,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            shadowElevation = 18.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(76.dp)
+                        .background(Color(0xFFEAF8F1), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = PatientGreen,
+                        modifier = Modifier.size(46.dp)
+                    )
+                }
+                Text(
+                    text = "Cuidador vinculado",
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = TextPrimary,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = "$caregiverName ya puede acompanarte desde su panel de cuidador.",
+                    fontFamily = LexendFontFamily,
+                    fontSize = 14.sp,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp
+                )
+                com.relaxmind.app.ui.components.RelaxButton(
+                    text = "Ir al inicio",
+                    onClick = onContinue,
+                    role = AppRole.PATIENT,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }

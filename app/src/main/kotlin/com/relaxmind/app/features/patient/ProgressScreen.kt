@@ -187,7 +187,10 @@ fun ProgressScreen(
                 }
 
                 if (isLoading && allCheckIns.isEmpty() && streakData == null && error == null) {
-                    ProgressCalendarSkeleton(modifier = Modifier.align(Alignment.Center))
+                    com.relaxmind.app.ui.components.RelaxLoadingContent(
+                        modifier = Modifier.align(Alignment.Center),
+                        message = "Cargando..."
+                    )
                 } else if (error != null && allCheckIns.isEmpty()) {
                     ErrorStateScreen(
                         message = error ?: "",

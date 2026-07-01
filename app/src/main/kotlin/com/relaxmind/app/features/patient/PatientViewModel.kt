@@ -30,6 +30,7 @@ import java.util.UUID
 import java.util.Date
 import android.net.Uri
 import android.content.Context
+import android.util.Log
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
@@ -786,6 +787,11 @@ class PatientViewModel(
                             androidx.work.ExistingWorkPolicy.REPLACE,
                             request
                         )
+                    } else {
+                        Log.w(
+                            "PatientViewModel",
+                            "Skipping recurring reminder because target time is in the past: ${appointment.id} day=$dayOfWeek"
+                        )
                     }
                 }
             } else {
@@ -815,22 +821,40 @@ class PatientViewModel(
                         androidx.work.ExistingWorkPolicy.REPLACE,
                         request
                     )
+                } else {
+                    Log.w(
+                        "PatientViewModel",
+                        "Skipping appointment reminder because target time is in the past: ${appointment.id}"
+                    )
                 }
             }
         }
     }
 
-    fun updateAppointmentCompletion(appointmentId: String, completed: Boolean, date: String) {
+    fun updateAppointmentCompletion(appointmentId: String, completed: Boolean, date: String, context: Context? = null) {
         viewModelScope.launch {
             _isLoading.value = true
             val result = firestoreRepository.updateAppointmentCompletion(appointmentId, completed)
             if (result.isSuccess) {
+                _selectedAppointment.update { current ->
+                    current?.let { if (it.id == appointmentId) it.copy(completed = completed) else it }
+                }
+                _nextAppointment.update { current ->
+                    if (current?.id == appointmentId && completed) null else current
+                }
                 loadAppointmentsForDate(date)
                 val parts = date.split("-")
                 if (parts.size == 3) {
                     val year = parts[0].toIntOrNull() ?: LocalDate.now().year
                     val month = parts[1].toIntOrNull() ?: LocalDate.now().monthValue
                     loadMonthlyEvents(year, month)
+                }
+                if (completed) {
+                    context?.let { WorkManager.getInstance(it).cancelAllWorkByTag("appointment_$appointmentId") }
+                } else if (context != null) {
+                    _selectedAppointment.value?.let { appointment ->
+                        scheduleAppointmentReminder(context, appointment.copy(completed = false))
+                    }
                 }
             } else {
                 _error.value = result.exceptionOrNull().toUserFriendlyMessage("Error al actualizar el evento.")

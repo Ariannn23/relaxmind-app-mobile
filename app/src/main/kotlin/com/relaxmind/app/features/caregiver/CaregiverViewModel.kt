@@ -24,6 +24,11 @@ data class CaregiverPatientSummary(
     val lastCheckInDate: String? = latestCheckIn?.date
 }
 
+data class PendingPatientLink(
+    val code: String,
+    val patient: Patient
+)
+
 class CaregiverViewModel(
     private val authService: FirebaseAuthService = FirebaseAuthService(),
     private val firestoreRepository: FirestoreRepository = FirestoreRepository()
@@ -69,6 +74,9 @@ class CaregiverViewModel(
 
     private val _linkedPatientName = MutableStateFlow<String?>(null)
     val linkedPatientName = _linkedPatientName.asStateFlow()
+
+    private val _pendingPatientLink = MutableStateFlow<PendingPatientLink?>(null)
+    val pendingPatientLink = _pendingPatientLink.asStateFlow()
 
     private var patientsListener: ListenerRegistration? = null
     private var alertsListener: ListenerRegistration? = null
@@ -161,16 +169,16 @@ class CaregiverViewModel(
         }
     }
 
-    fun verifyBindingCode(code: String, onSuccess: () -> Unit) {
+    fun previewBindingCode(code: String) {
         val caregiverId = authService.getCurrentUser()?.uid
         if (caregiverId.isNullOrBlank()) {
-            _error.value = "No se encontró una sesión activa."
+            _error.value = "No se encontro una sesion activa."
             return
         }
 
         val sanitizedCode = code.filter { it.isDigit() }
         if (sanitizedCode.length != 6) {
-            _error.value = "Ingresa un código de 6 dígitos."
+            _error.value = "Ingresa un codigo de 6 digitos."
             return
         }
 
@@ -178,21 +186,57 @@ class CaregiverViewModel(
             _isLinking.value = true
             _error.value = null
 
-            firestoreRepository.linkPatientWithCode(sanitizedCode, caregiverId)
-                .onSuccess { patientId ->
-                    firestoreRepository.getPatientById(patientId).onSuccess { p ->
-                        _linkedPatientName.value = "${p?.name.orEmpty()} ${p?.lastName.orEmpty()}".trim().ifBlank { "Paciente" }
-                    }
-                    _message.value = "Vinculación exitosa"
-                    loadDashboard()
-                    onSuccess()
+            firestoreRepository.previewPatientForBindingCode(sanitizedCode, caregiverId)
+                .onSuccess { patient ->
+                    _pendingPatientLink.value = PendingPatientLink(
+                        code = sanitizedCode,
+                        patient = patient
+                    )
                 }
                 .onFailure { throwable ->
-                    _error.value = throwable.toUserFriendlyMessage("Código inválido o expirado")
+                    _error.value = throwable.toUserFriendlyMessage("Codigo invalido o expirado")
                 }
 
             _isLinking.value = false
         }
+    }
+
+    fun confirmPendingPatientLink(onSuccess: () -> Unit) {
+        val caregiverId = authService.getCurrentUser()?.uid
+        if (caregiverId.isNullOrBlank()) {
+            _error.value = "No se encontro una sesion activa."
+            return
+        }
+
+        val pending = _pendingPatientLink.value ?: run {
+            _error.value = "Primero verifica un codigo de vinculacion."
+            return
+        }
+
+        viewModelScope.launch {
+            _isLinking.value = true
+            _error.value = null
+
+            firestoreRepository.linkPatientWithCode(pending.code, caregiverId)
+                .onSuccess { patientId ->
+                    firestoreRepository.getPatientById(patientId).onSuccess { p ->
+                        _linkedPatientName.value = "${p?.name.orEmpty()} ${p?.lastName.orEmpty()}".trim().ifBlank { "Paciente" }
+                    }
+                    _pendingPatientLink.value = null
+                    _message.value = "Vinculacion exitosa"
+                    loadDashboard()
+                    onSuccess()
+                }
+                .onFailure { throwable ->
+                    _error.value = throwable.toUserFriendlyMessage("No se pudo vincular al paciente")
+                }
+
+            _isLinking.value = false
+        }
+    }
+
+    fun clearPendingPatientLink() {
+        _pendingPatientLink.value = null
     }
 
     fun consumeMessage() {

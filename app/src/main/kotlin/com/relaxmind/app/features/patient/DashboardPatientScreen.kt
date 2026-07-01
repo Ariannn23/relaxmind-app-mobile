@@ -111,7 +111,13 @@ import com.relaxmind.app.ui.components.getAvatarDrawableRes
 import com.relaxmind.app.ui.components.DashboardSkeleton
 import com.relaxmind.app.ui.components.ErrorStateScreen
 import com.relaxmind.app.ui.components.LoadingIndicator
+import com.relaxmind.app.ui.components.NotificationPermissionDialog
 import com.relaxmind.app.ui.components.RelaxCard
+import com.relaxmind.app.ui.components.hasNotificationPermission
+import com.relaxmind.app.ui.components.openNotificationSettings
+import com.relaxmind.app.ui.components.rememberNotificationPermissionLauncher
+import com.relaxmind.app.ui.components.rememberNotificationPermissionStatus
+import com.relaxmind.app.ui.components.requestNotificationPermission
 import com.relaxmind.app.utils.SoundPlayerManager
 import com.relaxmind.app.data.model.UserAchievement
 import com.relaxmind.app.features.patient.AchievementUnlockedScreen
@@ -243,6 +249,22 @@ fun DashboardPatientScreen(
     val dashboardColors = remember(isDarkDashboard) { patientDashboardColors(isDarkDashboard) }
     val initialTestBannerState by viewModel.initialTestBannerState.collectAsState()
     val isDismissed by viewModel.isInitialTestNotificationDismissed.collectAsState()
+    val context = LocalContext.current
+    val notificationsPermissionGranted = rememberNotificationPermissionStatus()
+    var showNotificationPermissionDialog by remember { mutableStateOf(false) }
+    var notificationPromptShown by remember { mutableStateOf(false) }
+    val notificationPermissionLauncher = rememberNotificationPermissionLauncher { granted ->
+        viewModel.updateNotificationsEnabled(granted)
+        showNotificationPermissionDialog = !granted
+    }
+
+    LaunchedEffect(patient?.id, patient?.notificationsEnabled, notificationsPermissionGranted) {
+        val currentPatient = patient ?: return@LaunchedEffect
+        if (!notificationPromptShown && (!currentPatient.notificationsEnabled || !notificationsPermissionGranted)) {
+            notificationPromptShown = true
+            showNotificationPermissionDialog = true
+        }
+    }
 
     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
@@ -344,8 +366,6 @@ fun DashboardPatientScreen(
                             onDismissNotification = { viewModel.dismissInitialTestNotification() }
                         )
                         
-
-
                         // 2. Main Wellbeing Today Card
                         WellbeingTodayCard(
                             score = todayCheckIn?.score,
@@ -410,16 +430,51 @@ fun DashboardPatientScreen(
 
                     // 7. SOS Floating Button
                     SOSFloatingButton(
-                        onSOSHoldTriggered = onNavigateToSOS,
+                        onSOSHoldTriggered = {
+                            if (patient?.notificationsEnabled == true && hasNotificationPermission(context)) {
+                                onNavigateToSOS()
+                            } else {
+                                showNotificationPermissionDialog = true
+                            }
+                        },
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             // 100.dp to avoid the bottom bar, 16.dp for normal margin
                             .padding(bottom = 116.dp, end = 20.dp)
                     )
                 }
+
             }
         }
         }
+    }
+
+    if (showNotificationPermissionDialog) {
+        NotificationPermissionDialog(
+            role = AppRole.PATIENT,
+            title = "Activa tus notificaciones",
+            message = "Para recibir recordatorios de check-in, avisos de agenda y poder enviar SOS con seguridad, RelaxMind necesita que las notificaciones estén activadas.",
+            primaryText = "Activar ahora",
+            secondaryText = "Ir a ajustes",
+            onPrimaryClick = {
+                if (hasNotificationPermission(context)) {
+                    viewModel.updateNotificationsEnabled(true)
+                    showNotificationPermissionDialog = false
+                } else {
+                    requestNotificationPermission(
+                        launcher = notificationPermissionLauncher,
+                        onAlreadyGranted = {
+                            viewModel.updateNotificationsEnabled(true)
+                            showNotificationPermissionDialog = false
+                        }
+                    )
+                }
+            },
+            onDismiss = {
+                openNotificationSettings(context)
+                showNotificationPermissionDialog = false
+            }
+        )
     }
 }
 
@@ -1615,14 +1670,14 @@ private fun NextReminderCard(
                 }
 
                 if (title != null && time != null) {
-                    Column {
+                    Column(modifier = Modifier.fillMaxWidth()) {
                         Text(
                             text = title,
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             color = colors.textPrimary,
-                            maxLines = 2,
+                            maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Spacer(modifier = Modifier.height(4.dp))
@@ -1656,12 +1711,13 @@ private fun NextReminderCard(
 
                 Row(
                     modifier = Modifier
+                        .width(118.dp)
                         .shadow(2.dp, RoundedCornerShape(50))
                         .background(colors.primaryStrong, RoundedCornerShape(50))
                         .clickable(onClick = onCardClick)
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                        .padding(horizontal = 16.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
                         text = stringResource(id = R.string.dashboard_review),

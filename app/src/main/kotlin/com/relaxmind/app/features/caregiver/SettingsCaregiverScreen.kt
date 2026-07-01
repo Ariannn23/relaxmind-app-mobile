@@ -52,11 +52,18 @@ import coil.compose.AsyncImage
 import com.relaxmind.app.R
 import com.relaxmind.app.MainActivity
 import com.relaxmind.app.ui.components.AppRole
+import com.relaxmind.app.ui.components.DisableNotificationsWarningDialog
 import com.relaxmind.app.ui.components.FullScreenLoadingOverlay
+import com.relaxmind.app.ui.components.NotificationPermissionDialog
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxIcons
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.components.getAvatarDrawableRes
+import com.relaxmind.app.ui.components.hasNotificationPermission
+import com.relaxmind.app.ui.components.openNotificationSettings
+import com.relaxmind.app.ui.components.rememberNotificationPermissionLauncher
+import com.relaxmind.app.ui.components.rememberNotificationPermissionStatus
+import com.relaxmind.app.ui.components.requestNotificationPermission
 import com.relaxmind.app.ui.components.SettingsSkeleton
 import com.relaxmind.app.ui.components.ScreenHeader
 import com.relaxmind.app.ui.components.ErrorStateScreen
@@ -81,6 +88,13 @@ fun SettingsCaregiverScreen(
 
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
+    var showNotificationPermissionDialog by remember { mutableStateOf(false) }
+    var showDisableNotificationsDialog by remember { mutableStateOf(false) }
+    val notificationsPermissionGranted = rememberNotificationPermissionStatus()
+    val notificationPermissionLauncher = rememberNotificationPermissionLauncher { granted ->
+        viewModel.updateNotificationsEnabled(granted)
+        showNotificationPermissionDialog = !granted
+    }
 
     LaunchedEffect(Unit) {
         viewModel.loadDashboard()
@@ -162,8 +176,18 @@ fun SettingsCaregiverScreen(
                                 CaregiverSettingsToggleRow(
                                     label = "Notificaciones",
                                     icon = Icons.Filled.Notifications,
-                                    checked = currCaregiver.notificationsEnabled,
-                                    onToggle = { viewModel.updateNotificationsEnabled(it) }
+                                    checked = currCaregiver.notificationsEnabled && notificationsPermissionGranted,
+                                    onToggle = { enabled ->
+                                        if (enabled) {
+                                            if (hasNotificationPermission(context)) {
+                                                viewModel.updateNotificationsEnabled(true)
+                                            } else {
+                                                showNotificationPermissionDialog = true
+                                            }
+                                        } else {
+                                            showDisableNotificationsDialog = true
+                                        }
+                                    }
                                 )
                                 CaregiverSettingsDivider()
 
@@ -257,6 +281,45 @@ fun SettingsCaregiverScreen(
     }
 
     // Language bottom sheet removed
+
+    if (showNotificationPermissionDialog) {
+        NotificationPermissionDialog(
+            role = AppRole.CAREGIVER,
+            title = "Activa tus notificaciones",
+            message = "Como cuidador necesitas recibir alertas SOS, avisos de bienestar bajo y notificaciones importantes de tus pacientes vinculados.",
+            primaryText = "Activar ahora",
+            secondaryText = "Ir a ajustes",
+            onPrimaryClick = {
+                if (hasNotificationPermission(context)) {
+                    viewModel.updateNotificationsEnabled(true)
+                    showNotificationPermissionDialog = false
+                } else {
+                    requestNotificationPermission(
+                        launcher = notificationPermissionLauncher,
+                        onAlreadyGranted = {
+                            viewModel.updateNotificationsEnabled(true)
+                            showNotificationPermissionDialog = false
+                        }
+                    )
+                }
+            },
+            onDismiss = {
+                openNotificationSettings(context)
+                showNotificationPermissionDialog = false
+            }
+        )
+    }
+
+    if (showDisableNotificationsDialog) {
+        DisableNotificationsWarningDialog(
+            role = AppRole.CAREGIVER,
+            onConfirm = {
+                showDisableNotificationsDialog = false
+                viewModel.updateNotificationsEnabled(false)
+            },
+            onDismiss = { showDisableNotificationsDialog = false }
+        )
+    }
 
     if (showDeleteAccountDialog) {
         var deleteErrorMessage by remember { mutableStateOf<String?>(null) }

@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -65,7 +66,7 @@ fun AppointmentDetailScreen(
         ) {
             SoftGradientBackground(animateBlobs = true)
 
-            if (appointment == null || isLoading) {
+            if (appointment == null) {
                 LoadingIndicator()
             } else {
                 val appt = appointment!!
@@ -250,7 +251,9 @@ fun AppointmentDetailScreen(
                                         fontFamily = LexendFontFamily,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 22.sp,
-                                        color = TextPrimary
+                                        color = TextPrimary,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
                                     )
 
                                     // Divider
@@ -331,10 +334,15 @@ fun AppointmentDetailScreen(
                                 viewModel.updateAppointmentCompletion(
                                     appointmentId = appt.id,
                                     completed = !isCompleted,
-                                    date = appt.date
+                                    date = appt.date,
+                                    context = context
                                 )
                             },
-                            border = androidx.compose.foundation.BorderStroke(1.5.dp, PatientGreen),
+                            enabled = !isLoading && !isCompleted,
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.5.dp,
+                                if (isCompleted) Color(0xFF94A3B8) else PatientGreen
+                            ),
                             shape = RoundedCornerShape(24.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -346,26 +354,35 @@ fun AppointmentDetailScreen(
                                     spotColor = Color(0xFF8A88A6).copy(alpha = 0.05f)
                                 ),
                             colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = if (isCompleted) PatientGreen.copy(alpha = 0.05f) else Color.White
+                                containerColor = if (isCompleted) Color(0xFFF1F5F9) else Color.White,
+                                disabledContainerColor = Color(0xFFF1F5F9)
                             )
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = PatientGreen,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Text(
-                                    text = if (isCompleted) "Marcar como pendiente" else "Marcar como completado",
-                                    fontFamily = LexendFontFamily,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 14.sp,
-                                    color = PatientGreen
-                                )
+                                if (isLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        color = PatientGreen,
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = if (isCompleted) Color(0xFF64748B) else PatientGreen,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = if (isCompleted) "Completado" else "Marcar como completado",
+                                        fontFamily = LexendFontFamily,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 14.sp,
+                                        color = if (isCompleted) Color(0xFF64748B) else PatientGreen
+                                    )
+                                }
                             }
                         }
 

@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -37,9 +38,15 @@ import com.relaxmind.app.Screen
 import com.relaxmind.app.data.model.CaregiverAlert
 import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.FullScreenLoadingScreen
+import com.relaxmind.app.ui.components.NotificationPermissionDialog
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxToastHost
 import com.relaxmind.app.ui.components.getAvatarDrawableRes
+import com.relaxmind.app.ui.components.hasNotificationPermission
+import com.relaxmind.app.ui.components.openNotificationSettings
+import com.relaxmind.app.ui.components.rememberNotificationPermissionLauncher
+import com.relaxmind.app.ui.components.rememberNotificationPermissionStatus
+import com.relaxmind.app.ui.components.requestNotificationPermission
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import com.relaxmind.app.ui.components.rememberRelaxToastState
@@ -127,6 +134,14 @@ fun DashboardCaregiverScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val toastState = rememberRelaxToastState()
+    val context = LocalContext.current
+    val notificationsPermissionGranted = rememberNotificationPermissionStatus()
+    var showNotificationPermissionDialog by remember { mutableStateOf(false) }
+    var notificationPromptShown by remember { mutableStateOf(false) }
+    val notificationPermissionLauncher = rememberNotificationPermissionLauncher { granted ->
+        viewModel.updateNotificationsEnabled(granted)
+        showNotificationPermissionDialog = !granted
+    }
     
     val isDarkCaregiverDashboard = true
     val colors = caregiverDashboardColors(isDark = isDarkCaregiverDashboard)
@@ -140,10 +155,16 @@ fun DashboardCaregiverScreen(
         }
     }
 
-    if (isLoading && caregiver == null && error == null) {
-        Box(modifier = Modifier.fillMaxSize().background(colors.background)) {
-            CaregiverDashboardSkeleton(modifier = Modifier.align(Alignment.Center))
+    LaunchedEffect(caregiver?.id, caregiver?.notificationsEnabled, notificationsPermissionGranted) {
+        val currentCaregiver = caregiver ?: return@LaunchedEffect
+        if (!notificationPromptShown && (!currentCaregiver.notificationsEnabled || !notificationsPermissionGranted)) {
+            notificationPromptShown = true
+            showNotificationPermissionDialog = true
         }
+    }
+
+    if (isLoading && caregiver == null && error == null) {
+        FullScreenLoadingScreen(text = "Cargando...", isCaregiver = true)
         return
     } else if (error != null && caregiver == null) {
         Box(modifier = Modifier.fillMaxSize().background(colors.background)) {
@@ -248,6 +269,34 @@ fun DashboardCaregiverScreen(
                 RelaxToastHost(state = toastState)
             }
         }
+    }
+
+    if (showNotificationPermissionDialog) {
+        NotificationPermissionDialog(
+            role = AppRole.CAREGIVER,
+            title = "Activa tus notificaciones",
+            message = "Necesitas notificaciones para recibir alertas SOS y avisos de bienestar de tus pacientes en tiempo real.",
+            primaryText = "Activar ahora",
+            secondaryText = "Ir a ajustes",
+            onPrimaryClick = {
+                if (hasNotificationPermission(context)) {
+                    viewModel.updateNotificationsEnabled(true)
+                    showNotificationPermissionDialog = false
+                } else {
+                    requestNotificationPermission(
+                        launcher = notificationPermissionLauncher,
+                        onAlreadyGranted = {
+                            viewModel.updateNotificationsEnabled(true)
+                            showNotificationPermissionDialog = false
+                        }
+                    )
+                }
+            },
+            onDismiss = {
+                openNotificationSettings(context)
+                showNotificationPermissionDialog = false
+            }
+        )
     }
 }
 

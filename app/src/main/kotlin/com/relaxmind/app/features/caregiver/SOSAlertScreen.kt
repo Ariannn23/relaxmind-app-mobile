@@ -64,7 +64,7 @@ fun SOSAlertScreen(
 
     if (uiState.isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            LoadingIndicator()
+            LoadingIndicator(isCaregiver = true)
         }
         return
     }

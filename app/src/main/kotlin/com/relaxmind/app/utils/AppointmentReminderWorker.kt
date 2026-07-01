@@ -1,10 +1,13 @@
 package com.relaxmind.app.utils
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
@@ -36,6 +39,19 @@ class AppointmentReminderWorker(
             else -> "Recordatorio: $title"
         }
 
+        val appointmentDoc = runCatching {
+            FirebaseFirestore.getInstance()
+                .collection("appointments")
+                .document(appointmentId)
+                .get()
+                .await()
+        }.getOrNull()
+
+        if (appointmentDoc?.getBoolean("completed") == true) {
+            Log.d(TAG, "Skipping completed appointment reminder: $appointmentId")
+            return Result.success()
+        }
+
         showNotification(title, message, appointmentId)
 
         // Mark as notificationSent in Firestore (only for non-recurring or general tracking)
@@ -50,15 +66,15 @@ class AppointmentReminderWorker(
         // Reschedule if recurring
         runCatching {
             val db = FirebaseFirestore.getInstance()
-            val appointmentDoc = db.collection("appointments")
+            val recurringAppointmentDoc = appointmentDoc ?: db.collection("appointments")
                 .document(appointmentId)
                 .get()
                 .await()
             
-            val isRecurring = appointmentDoc.getBoolean("recurring") ?: false
+            val isRecurring = recurringAppointmentDoc.getBoolean("recurring") ?: false
             if (isRecurring && dayOfWeek != -1) {
-                val time = appointmentDoc.getString("time") ?: "10:30"
-                val reminderMinutes = appointmentDoc.getLong("reminderTime")?.toInt() ?: 15
+                val time = recurringAppointmentDoc.getString("time") ?: "10:30"
+                val reminderMinutes = recurringAppointmentDoc.getLong("reminderTime")?.toInt() ?: 15
                 
                 // Calculate next week's delay
                 val formatter = java.time.format.DateTimeFormatter.ISO_LOCAL_TIME
@@ -97,7 +113,14 @@ class AppointmentReminderWorker(
     }
 
     private fun showNotification(title: String, message: String, appointmentId: String) {
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.w(TAG, "POST_NOTIFICATIONS permission is missing. Reminder skipped for $appointmentId")
+            return
+        }
+
+        NotificationUtils.createNotificationChannels(context)
 
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -117,13 +140,18 @@ class AppointmentReminderWorker(
             .setSmallIcon(com.relaxmind.app.R.drawable.recodatorio)
             .setLargeIcon(largeIcon)
             .setContentTitle(title)
-            .setContentText("Tienes una cita programada. Toca para ver los detalles.")
-            .setStyle(NotificationCompat.BigTextStyle().bigText("Tienes una cita programada. Toca para ver los detalles."))
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
 
-        notificationManager.notify(appointmentId.hashCode(), notification)
+        NotificationManagerCompat.from(context).notify(appointmentId.hashCode(), notification)
+        Log.d(TAG, "Appointment reminder notification shown: $appointmentId")
+    }
+
+    private companion object {
+        const val TAG = "AppointmentReminder"
     }
 }

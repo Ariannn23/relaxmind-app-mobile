@@ -175,7 +175,12 @@ fun PatientsListScreen(
                     item { Spacer(modifier = Modifier.height(16.dp)) }
 
                     if ((isLoading || isPatientsLoading) && patients.isEmpty() && error == null) {
-                        item { com.relaxmind.app.ui.components.PatientListSkeleton() }
+                        item {
+                            com.relaxmind.app.ui.components.RelaxLoadingContent(
+                                message = "Cargando...",
+                                isCaregiver = true
+                            )
+                        }
                     } else if (error != null && patients.isEmpty()) {
                         item {
                             com.relaxmind.app.ui.components.ErrorStateScreen(

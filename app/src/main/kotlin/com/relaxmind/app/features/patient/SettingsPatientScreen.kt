@@ -55,9 +55,16 @@ import com.relaxmind.app.R
 import com.relaxmind.app.MainActivity
 import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.FullScreenLoadingOverlay
+import com.relaxmind.app.ui.components.DisableNotificationsWarningDialog
+import com.relaxmind.app.ui.components.NotificationPermissionDialog
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxIcons
 import com.relaxmind.app.ui.components.getAvatarDrawableRes
+import com.relaxmind.app.ui.components.hasNotificationPermission
+import com.relaxmind.app.ui.components.openNotificationSettings
+import com.relaxmind.app.ui.components.rememberNotificationPermissionLauncher
+import com.relaxmind.app.ui.components.rememberNotificationPermissionStatus
+import com.relaxmind.app.ui.components.requestNotificationPermission
 import com.relaxmind.app.ui.components.RelaxButton
 import com.relaxmind.app.ui.components.RelaxTopBar
 import com.relaxmind.app.ui.components.SettingsSkeleton
@@ -84,6 +91,18 @@ fun SettingsPatientScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showUnlinkDialog by remember { mutableStateOf(false) }
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
+    var showNotificationPermissionDialog by remember { mutableStateOf(false) }
+    var showDisableNotificationsDialog by remember { mutableStateOf(false) }
+    val notificationsPermissionGranted = rememberNotificationPermissionStatus()
+    val notificationPermissionLauncher = rememberNotificationPermissionLauncher { granted ->
+        viewModel.updateNotificationsEnabled(granted)
+        showNotificationPermissionDialog = !granted
+        if (granted) {
+            patient?.let {
+                com.relaxmind.app.utils.ReminderManager.scheduleReminder(context, it.checkInReminderTime)
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.loadDashboardData()
@@ -173,13 +192,24 @@ fun SettingsPatientScreen(
                                 SettingsToggleRow(
                                     label = "Notificaciones",
                                     icon = Icons.Filled.Notifications,
-                                    checked = currPatient.notificationsEnabled,
-                                    onToggle = { viewModel.updateNotificationsEnabled(it) }
+                                    checked = currPatient.notificationsEnabled && notificationsPermissionGranted,
+                                    onToggle = { enabled ->
+                                        if (enabled) {
+                                            if (hasNotificationPermission(context)) {
+                                                viewModel.updateNotificationsEnabled(true)
+                                                com.relaxmind.app.utils.ReminderManager.scheduleReminder(context, currPatient.checkInReminderTime)
+                                            } else {
+                                                showNotificationPermissionDialog = true
+                                            }
+                                        } else {
+                                            showDisableNotificationsDialog = true
+                                        }
+                                    }
                                 )
 
                                 val context = androidx.compose.ui.platform.LocalContext.current
                                 
-                                if (currPatient.notificationsEnabled) {
+                                if (currPatient.notificationsEnabled && notificationsPermissionGranted) {
                                     SettingsDivider()
                                     // Recordatorio check-in
                                     SettingsToggleRow(
@@ -325,6 +355,46 @@ fun SettingsPatientScreen(
     }
 
     // Language bottom sheet removed
+
+    if (showNotificationPermissionDialog) {
+        NotificationPermissionDialog(
+            role = AppRole.PATIENT,
+            title = "Activa tus notificaciones",
+            message = "Las notificaciones son necesarias para tus check-ins, recordatorios y alertas SOS. Actívalas para que RelaxMind pueda acompañarte a tiempo.",
+            primaryText = "Activar ahora",
+            secondaryText = "Ir a ajustes",
+            onPrimaryClick = {
+                if (hasNotificationPermission(context)) {
+                    viewModel.updateNotificationsEnabled(true)
+                    showNotificationPermissionDialog = false
+                } else {
+                    requestNotificationPermission(
+                        launcher = notificationPermissionLauncher,
+                        onAlreadyGranted = {
+                            viewModel.updateNotificationsEnabled(true)
+                            showNotificationPermissionDialog = false
+                        }
+                    )
+                }
+            },
+            onDismiss = {
+                openNotificationSettings(context)
+                showNotificationPermissionDialog = false
+            }
+        )
+    }
+
+    if (showDisableNotificationsDialog) {
+        DisableNotificationsWarningDialog(
+            role = AppRole.PATIENT,
+            onConfirm = {
+                showDisableNotificationsDialog = false
+                viewModel.updateNotificationsEnabled(false)
+                com.relaxmind.app.utils.ReminderManager.cancelReminder(context)
+            },
+            onDismiss = { showDisableNotificationsDialog = false }
+        )
+    }
 
     // Custom dialog flows
     if (showUnlinkDialog) {
