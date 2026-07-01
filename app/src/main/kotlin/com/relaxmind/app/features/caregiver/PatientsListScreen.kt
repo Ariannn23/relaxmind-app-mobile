@@ -75,6 +75,7 @@ import com.relaxmind.app.R
 import com.relaxmind.app.ui.components.getAvatarDrawableRes
 import com.relaxmind.app.Screen
 import com.relaxmind.app.ui.components.AppRole
+import com.relaxmind.app.ui.components.CaregiverAddPatientButton
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxButton
 import com.relaxmind.app.ui.components.RelaxLoadingContent
@@ -145,21 +146,7 @@ fun PatientsListScreen(
                         role = AppRole.CAREGIVER
                     )
                 }
-            },
-        floatingActionButton = {
-            androidx.compose.material3.FloatingActionButton(
-                onClick = onScanQr,
-                containerColor = com.relaxmind.app.ui.themes.CaregiverPurple,
-                contentColor = androidx.compose.ui.graphics.Color.White,
-                elevation = FloatingActionButtonDefaults.elevation(8.dp),
-                modifier = Modifier.padding(bottom = if (showBottomNav) 80.dp else 16.dp)
-            ) {
-                Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.Add,
-                    contentDescription = "Vincular nuevo paciente"
-                )
             }
-        }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -230,6 +217,13 @@ fun PatientsListScreen(
             }
 
             RelaxToastHost(state = toastState)
+
+            CaregiverAddPatientButton(
+                onClick = onScanQr,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = if (showBottomNav) 116.dp else 24.dp, end = 20.dp)
+            )
         }
     }
 }

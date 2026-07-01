@@ -40,6 +40,7 @@ import android.content.Intent
 import android.net.Uri
 import com.relaxmind.app.ui.components.MissedCheckInDialog
 import com.relaxmind.app.ui.components.AppRole
+import com.relaxmind.app.ui.components.CaregiverAddPatientButton
 import com.relaxmind.app.ui.components.FullScreenLoadingScreen
 import com.relaxmind.app.ui.components.NotificationPermissionDialog
 import com.relaxmind.app.ui.components.RelaxBottomNav
@@ -245,15 +246,6 @@ fun DashboardCaregiverScreen(
                         darkMode = colors.isDark
                     )
                 }
-            },
-            floatingActionButton = {
-                CaregiverFAB(colors = colors, isAtLimit = patients.size >= 5, onScanQr = {
-                    if (patients.size >= 5) {
-                        showLimitDialog = true
-                    } else {
-                        onScanQr()
-                    }
-                })
             }
         ) { innerPadding ->
             Box(
@@ -311,6 +303,20 @@ fun DashboardCaregiverScreen(
 
                 // Toast overlay
                 RelaxToastHost(state = toastState)
+
+                CaregiverAddPatientButton(
+                    isAtLimit = patients.size >= 5,
+                    onClick = {
+                        if (patients.size >= 5) {
+                            showLimitDialog = true
+                        } else {
+                            onScanQr()
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = if (showBottomNav) 116.dp else 24.dp, end = 20.dp)
+                )
             }
         }
     }
@@ -340,41 +346,6 @@ fun DashboardCaregiverScreen(
                 openNotificationSettings(context)
                 showNotificationPermissionDialog = false
             }
-        )
-    }
-}
-
-//  FAB 
-@Composable
-private fun CaregiverFAB(
-    colors: CaregiverDashboardColors,
-    isAtLimit: Boolean,
-    onScanQr: () -> Unit
-) {
-    val fabColor = if (isAtLimit) Color(0xFF9B93BD) else colors.primaryLight
-    Box(
-        modifier = Modifier
-            .size(64.dp)
-            .shadow(
-                elevation = 16.dp,
-                shape = CircleShape,
-                ambientColor = fabColor.copy(alpha = if (isAtLimit) 0.18f else 0.4f),
-                spotColor = fabColor.copy(alpha = if (isAtLimit) 0.18f else 0.5f)
-            )
-            .clip(CircleShape)
-            .background(fabColor)
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() },
-                onClick = onScanQr
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.Add,
-            contentDescription = "Vincular paciente",
-            tint = Color.White,
-            modifier = Modifier.size(30.dp)
         )
     }
 }

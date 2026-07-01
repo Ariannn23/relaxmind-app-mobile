@@ -127,7 +127,7 @@ fun AccountDeletedGoodbyeScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Puedes reactivar tu cuenta iniciando sesión nuevamente antes de que pasen 7 días.",
+                            text = "Puedes reactivar tu cuenta iniciando sesión nuevamente.",
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 14.sp,

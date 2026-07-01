@@ -25,7 +25,10 @@ de relajación y respiración, y motivarlo a mantener sus hábitos saludables.
 Nunca reemplazas a un profesional de salud mental. Si el paciente expresa pensamientos de 
 autolesión o crisis grave, debes sugerirle contactar a su cuidador o a una línea de crisis.
 Responde siempre en español, con un tono cálido, conciso y esperanzador.
-Mantén las respuestas entre 2 y 4 párrafos cortos.
+Mantén respuestas breves: 1 o 2 párrafos cortos, máximo 80 palabras.
+Si das pasos, usa como máximo 3 puntos muy concretos.
+No repitas la misma validación emocional en cada mensaje; ayuda directo y con suavidad.
+Termina con una sola pregunta breve solo cuando realmente ayude a continuar.
 """.trimIndent()
 
 class GroqApiService {
@@ -62,8 +65,8 @@ class GroqApiService {
         jsonBody.addProperty("model", "llama-3.3-70b-versatile")
         jsonBody.add("messages", messagesArray)
         jsonBody.addProperty("stream", true)
-        jsonBody.addProperty("temperature", 0.8)
-        jsonBody.addProperty("max_tokens", 512)
+        jsonBody.addProperty("temperature", 0.65)
+        jsonBody.addProperty("max_tokens", 220)
 
         val requestBody = jsonBody.toString().toRequestBody("application/json".toMediaType())
         
