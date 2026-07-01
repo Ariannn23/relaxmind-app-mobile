@@ -78,6 +78,7 @@ import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.AlertsHistorySkeleton
 import com.relaxmind.app.ui.components.ErrorStateScreen
+import com.relaxmind.app.ui.components.MissedCheckInDialog
 import com.relaxmind.app.ui.components.RelaxLoadingContent
 import com.relaxmind.app.ui.components.ScreenHeader
 import com.relaxmind.app.ui.components.RelaxToastHost
@@ -133,12 +134,15 @@ fun AlertsHistoryScreen(
     val error by viewModel.error.collectAsState()
 
     val toastState = rememberRelaxToastState()
+    val context = androidx.compose.ui.platform.LocalContext.current
     var selectedFilter by remember { mutableStateOf(AlertFilter.ALL) }
+    var patientMenuExpanded by remember { mutableStateOf(false) }
     var selectedPatientId by remember { mutableStateOf<String?>(null) }
     var selectedDateRange by remember { mutableStateOf(AlertDateRange.LAST_10) }
     var alertToResolve by remember { mutableStateOf<CaregiverAlert?>(null) }
     var alertToView by remember { mutableStateOf<CaregiverAlert?>(null) }
-    var patientMenuExpanded by remember { mutableStateOf(false) }
+    var missedCheckInAlert by remember { mutableStateOf<CaregiverAlert?>(null) }
+    var selectedUnlinkAlert by remember { mutableStateOf<CaregiverAlert?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.observeCaregiverData()
@@ -283,8 +287,15 @@ fun AlertsHistoryScreen(
                                 AlertItemCard(
                                     alert = alert,
                                     onClick = {
-                                        if (!alert.resolved) alertToResolve = alert
-                                        else alertToView = alert
+                                        if (alert.title.contains("no registrado", ignoreCase = true) || alert.type.contains("missed", ignoreCase = true)) {
+                                            missedCheckInAlert = alert
+                                        } else if (alert.type.equals("UNLINK", ignoreCase = true)) {
+                                            selectedUnlinkAlert = alert
+                                        } else if (!alert.resolved) {
+                                            alertToResolve = alert
+                                        } else {
+                                            alertToView = alert
+                                        }
                                     }
                                 )
                             }
@@ -296,6 +307,18 @@ fun AlertsHistoryScreen(
 
             RelaxToastHost(state = toastState)
         }
+    }
+
+    selectedUnlinkAlert?.let { alert ->
+        com.relaxmind.app.ui.components.UnlinkNotificationDialog(
+            type = com.relaxmind.app.ui.components.UnlinkDialogType.RECEIVED,
+            otherPartyName = alert.patientName,
+            primaryColor = CaregiverPurple,
+            onDismissRequest = {
+                viewModel.markAlertResolved(alert.id)
+                selectedUnlinkAlert = null
+            }
+        )
     }
 
     alertToResolve?.let { alert ->
@@ -312,6 +335,27 @@ fun AlertsHistoryScreen(
         AlertDetailBottomSheet(
             alert = alert,
             onDismiss = { alertToView = null }
+        )
+    }
+
+    missedCheckInAlert?.let { alert ->
+        MissedCheckInDialog(
+            patientName = alert.patientName,
+            dateText = alert.createdAtText,
+            onCallClick = {
+                val phone = patients.find { it.patient.id == alert.patientId }?.patient?.phone.orEmpty()
+                if (phone.isNotBlank()) {
+                    context.startActivity(android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:$phone")))
+                } else {
+                    toastState.showError("Número no disponible para este paciente.")
+                }
+                viewModel.markAlertResolved(alert.id)
+                missedCheckInAlert = null
+            },
+            onDismiss = {
+                viewModel.markAlertResolved(alert.id)
+                missedCheckInAlert = null
+            }
         )
     }
 }

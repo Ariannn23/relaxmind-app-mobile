@@ -32,5 +32,6 @@ data class Patient(
     val isDeleted: Boolean = false,
     val deletedAt: String? = null,
     val deletionReason: String? = null,
+    val pendingCaregiverUnlinkAlert: Boolean = false,
     val createdAt: String = ""
 )

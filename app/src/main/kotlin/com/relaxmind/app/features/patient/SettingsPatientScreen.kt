@@ -178,16 +178,6 @@ fun SettingsPatientScreen(
                         ) {
                             SettingsSectionTitle("Preferencias")
                             SettingsGroupCard {
-                                // Modo oscuro
-                                SettingsToggleRow(
-                                    label = "Modo oscuro",
-                                    icon = Icons.Filled.DarkMode,
-                                    checked = currPatient.darkMode,
-                                    onToggle = { viewModel.updateDarkMode(it) }
-                                )
-                                SettingsDivider()
-
-                                // Removed language row
                                 // Notificaciones
                                 SettingsToggleRow(
                                     label = "Notificaciones",
@@ -397,6 +387,20 @@ fun SettingsPatientScreen(
     }
 
     // Custom dialog flows
+    var showUnlinkConfirmationDialog by remember { mutableStateOf(false) }
+    var unlinkedCaregiverName by remember { mutableStateOf("") }
+
+    if (showUnlinkConfirmationDialog) {
+        com.relaxmind.app.ui.components.UnlinkNotificationDialog(
+            type = com.relaxmind.app.ui.components.UnlinkDialogType.CONFIRMATION,
+            otherPartyName = unlinkedCaregiverName,
+            primaryColor = com.relaxmind.app.ui.themes.PatientGreen,
+            onDismissRequest = {
+                showUnlinkConfirmationDialog = false
+            }
+        )
+    }
+
     if (showUnlinkDialog) {
         var unlinkErrorMessage by remember { mutableStateOf<String?>(null) }
         UnlinkCaregiverDialog(
@@ -406,11 +410,13 @@ fun SettingsPatientScreen(
                 unlinkErrorMessage = null
             },
             onConfirm = { password ->
+                unlinkedCaregiverName = caregiver?.let { "${it.name} ${it.lastName}" } ?: "tu cuidador"
                 viewModel.unlinkCaregiver(
                     passwordConfirm = password,
                     onSuccess = {
                         showUnlinkDialog = false
                         unlinkErrorMessage = null
+                        showUnlinkConfirmationDialog = true
                     },
                     onError = { error ->
                         unlinkErrorMessage = error

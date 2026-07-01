@@ -36,6 +36,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.relaxmind.app.Screen
 import com.relaxmind.app.data.model.CaregiverAlert
+import android.content.Intent
+import android.net.Uri
+import com.relaxmind.app.ui.components.MissedCheckInDialog
 import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.FullScreenLoadingScreen
 import com.relaxmind.app.ui.components.NotificationPermissionDialog
@@ -138,12 +141,13 @@ fun DashboardCaregiverScreen(
     val notificationsPermissionGranted = rememberNotificationPermissionStatus()
     var showNotificationPermissionDialog by remember { mutableStateOf(false) }
     var notificationPromptShown by remember { mutableStateOf(false) }
+    var selectedMissedCheckInAlert by remember { mutableStateOf<com.relaxmind.app.data.model.CaregiverAlert?>(null) }
     val notificationPermissionLauncher = rememberNotificationPermissionLauncher { granted ->
         viewModel.updateNotificationsEnabled(granted)
         showNotificationPermissionDialog = !granted
     }
     
-    val isDarkCaregiverDashboard = true
+    val isDarkCaregiverDashboard = false
     val colors = caregiverDashboardColors(isDark = isDarkCaregiverDashboard)
 
     LaunchedEffect(Unit) { viewModel.loadDashboard() }
@@ -189,10 +193,44 @@ fun DashboardCaregiverScreen(
         if (showLimitDialog) {
             AlertDialog(
                 onDismissRequest = { showLimitDialog = false },
-                title = { Text("Lmite alcanzado", fontFamily = LexendFontFamily, fontWeight = FontWeight.Bold, color = colors.textPrimary) },
-                text = { Text("Has alcanzado el lmite mximo de 5 pacientes vinculados.", fontFamily = LexendFontFamily, color = colors.textSecondary) },
+                title = { Text("Límite alcanzado", fontFamily = LexendFontFamily, fontWeight = FontWeight.Bold, color = colors.textPrimary) },
+                text = { Text("Has alcanzado el límite máximo de 5 pacientes vinculados.", fontFamily = LexendFontFamily, color = colors.textSecondary) },
                 confirmButton = { TextButton(onClick = { showLimitDialog = false }) { Text("Entendido", fontFamily = LexendFontFamily, color = colors.primaryLight, fontWeight = FontWeight.Bold) } },
                 containerColor = colors.surface
+            )
+        }
+
+        selectedMissedCheckInAlert?.let { alert ->
+            MissedCheckInDialog(
+                patientName = alert.patientName,
+                dateText = alert.createdAtText,
+                onCallClick = {
+                    val phone = patients.find { it.patient.id == alert.patientId }?.patient?.phone.orEmpty()
+                    if (phone.isNotBlank()) {
+                        context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone")))
+                    } else {
+                        toastState.showError("Número no disponible para este paciente.")
+                    }
+                    viewModel.markAlertResolved(alert.id)
+                    selectedMissedCheckInAlert = null
+                },
+                onDismiss = {
+                    viewModel.markAlertResolved(alert.id)
+                    selectedMissedCheckInAlert = null
+                }
+            )
+        }
+
+        var selectedUnlinkAlert by remember { mutableStateOf<com.relaxmind.app.data.model.CaregiverAlert?>(null) }
+        selectedUnlinkAlert?.let { alert ->
+            com.relaxmind.app.ui.components.UnlinkNotificationDialog(
+                type = com.relaxmind.app.ui.components.UnlinkDialogType.RECEIVED,
+                otherPartyName = alert.patientName,
+                primaryColor = CaregiverPurple,
+                onDismissRequest = {
+                    viewModel.markAlertResolved(alert.id)
+                    selectedUnlinkAlert = null
+                }
             )
         }
 
@@ -232,6 +270,18 @@ fun DashboardCaregiverScreen(
                         .padding(top = 20.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
+                    val handlePatientClick = { patientId: String ->
+                        if (caregiver?.biometricEnabled == true) {
+                            com.relaxmind.app.utils.BiometricHelper.authenticate(
+                                context = context,
+                                onSuccess = { onPatientClick(patientId) },
+                                onError = { toastState.showError(it) }
+                            )
+                        } else {
+                            onPatientClick(patientId)
+                        }
+                    }
+
                     // 1. Header
                     DashboardHeader(
                         colors = colors,
@@ -247,9 +297,13 @@ fun DashboardCaregiverScreen(
                         onAlertClick = { alert ->
                             if (alert.type.equals("sos", ignoreCase = true) || alert.severity.equals("high", ignoreCase = true)) {
                                 onNavigate(Screen.SOSAlert.createRoute(alert.id))
+                            } else if (alert.type.equals("UNLINK", ignoreCase = true)) {
+                                selectedUnlinkAlert = alert
+                            } else if (alert.title.contains("no registrado", ignoreCase = true) || alert.type.contains("missed", ignoreCase = true)) {
+                                selectedMissedCheckInAlert = alert
                             } else {
                                 viewModel.markAlertResolved(alert.id)
-                                onNavigate(Screen.PatientDetail.createRoute(alert.patientId))
+                                handlePatientClick(alert.patientId)
                             }
                         }
                     )
@@ -259,7 +313,7 @@ fun DashboardCaregiverScreen(
                         colors = colors,
                         patients = patients,
                         onViewAll = { onNavigate(Screen.PatientsList.route) },
-                        onPatientClick = onPatientClick
+                        onPatientClick = handlePatientClick
                     )
 
                     Spacer(modifier = Modifier.height(80.dp))

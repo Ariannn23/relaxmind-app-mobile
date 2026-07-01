@@ -38,6 +38,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -132,6 +135,21 @@ fun PatientsListScreen(
         }
     }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val caregiver by viewModel.caregiver.collectAsState()
+
+    val handlePatientClick = { patientId: String ->
+        if (caregiver?.biometricEnabled == true) {
+            com.relaxmind.app.utils.BiometricHelper.authenticate(
+                context = context,
+                onSuccess = { onPatientClick(patientId) },
+                onError = { toastState.showError(it) }
+            )
+        } else {
+            onPatientClick(patientId)
+        }
+    }
+
     Scaffold(
         containerColor = BackgroundWhite,
         bottomBar = {
@@ -142,7 +160,21 @@ fun PatientsListScreen(
                         role = AppRole.CAREGIVER
                     )
                 }
+            },
+        floatingActionButton = {
+            androidx.compose.material3.FloatingActionButton(
+                onClick = onScanQr,
+                containerColor = com.relaxmind.app.ui.themes.CaregiverPurple,
+                contentColor = androidx.compose.ui.graphics.Color.White,
+                elevation = FloatingActionButtonDefaults.elevation(8.dp),
+                modifier = Modifier.padding(bottom = if (showBottomNav) 80.dp else 16.dp)
+            ) {
+                Icon(
+                    imageVector = androidx.compose.material.icons.Icons.Default.Add,
+                    contentDescription = "Vincular nuevo paciente"
+                )
             }
+        }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -196,7 +228,7 @@ fun PatientsListScreen(
                         items(filteredPatients, key = { it.patient.id }) { summary ->
                             PatientCard(
                                 summary = summary,
-                                onClick = { onPatientClick(summary.patient.id) },
+                                onClick = { handlePatientClick(summary.patient.id) },
                                 onAlertClick = { onNavigate(Screen.AlertsHistory.route) }
                             )
                         }

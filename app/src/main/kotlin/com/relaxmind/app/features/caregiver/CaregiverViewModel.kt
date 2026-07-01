@@ -12,6 +12,7 @@ import com.relaxmind.app.data.remote.FirebaseAuthService
 import com.relaxmind.app.data.remote.FirestoreRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.relaxmind.app.utils.toUserFriendlyMessage
 
@@ -61,10 +62,10 @@ class CaregiverViewModel(
     val isLoading = _isLoading.asStateFlow()
 
     private val _isPatientsLoading = MutableStateFlow(true)
-    val isPatientsLoading = _isPatientsLoading.asStateFlow()
+    val isPatientsLoading: StateFlow<Boolean> = _isPatientsLoading.asStateFlow()
 
     private val _isLinking = MutableStateFlow(false)
-    val isLinking = _isLinking.asStateFlow()
+    val isLinking: StateFlow<Boolean> = _isLinking.asStateFlow()
 
     private val _message = MutableStateFlow<String?>(null)
     val message = _message.asStateFlow()
@@ -231,6 +232,36 @@ class CaregiverViewModel(
                 }
 
             _isLinking.value = false
+        }
+    }
+
+    fun unlinkPatient(patientId: String, passwordConfirm: String, reason: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            _error.value = null
+
+            val reauthResult = authService.reauthenticate(passwordConfirm)
+            if (reauthResult.isFailure) {
+                val errorMsg = reauthResult.exceptionOrNull().toUserFriendlyMessage("Contraseña incorrecta.")
+                onError(errorMsg)
+                return@launch
+            }
+
+            val updateResult = firestoreRepository.updatePatient(
+                patientId,
+                mapOf<String, Any?>(
+                    "caregiverId" to null,
+                    "linkedCaregiverAt" to null,
+                    "pendingCaregiverUnlinkAlert" to true
+                )
+            )
+
+            if (updateResult.isSuccess) {
+                loadDashboard()
+                onSuccess()
+            } else {
+                val errorMsg = updateResult.exceptionOrNull().toUserFriendlyMessage("Error al desvincular.")
+                onError(errorMsg)
+            }
         }
     }
 

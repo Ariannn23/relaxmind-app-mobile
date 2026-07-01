@@ -2,13 +2,17 @@ package com.relaxmind.app.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.StartOffset
+import androidx.compose.animation.core.StartOffsetType
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +24,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -117,7 +123,7 @@ fun RelaxLoadingContent(
     ) {
         RadarAnimation(
             color = color,
-            modifier = Modifier.size(if (compact) 112.dp else 136.dp)
+            modifier = Modifier.size(if (compact) 120.dp else 160.dp)
         )
 
         Spacer(modifier = Modifier.height(if (compact) 18.dp else 26.dp))
@@ -241,47 +247,35 @@ fun RadarLoadingOverlay(
 @Composable
 fun RadarAnimation(
     color: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier.size(160.dp)
 ) {
     val transition = rememberInfiniteTransition(label = "radar")
 
-    val scale1 by transition.animateFloat(
-        initialValue = 1f,
-        targetValue = 3.5f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = androidx.compose.animation.core.LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "scale1"
-    )
-    val alpha1 by transition.animateFloat(
-        initialValue = 0.6f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = androidx.compose.animation.core.LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "alpha1"
-    )
+    val ringScales = List(4) { i ->
+        transition.animateFloat(
+            initialValue = 0.8f,
+            targetValue = 4.8f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+                initialStartOffset = StartOffset(offsetMillis = i * 500, offsetType = StartOffsetType.FastForward)
+            ),
+            label = "scale_$i"
+        )
+    }
 
-    val scale2 by transition.animateFloat(
-        initialValue = 1f,
-        targetValue = 3.5f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = androidx.compose.animation.core.LinearEasing, delayMillis = 1000),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "scale2"
-    )
-    val alpha2 by transition.animateFloat(
-        initialValue = 0.6f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = androidx.compose.animation.core.LinearEasing, delayMillis = 1000),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "alpha2"
-    )
+    val ringAlphas = List(4) { i ->
+        transition.animateFloat(
+            initialValue = 0.75f,
+            targetValue = 0f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+                initialStartOffset = StartOffset(offsetMillis = i * 500, offsetType = StartOffsetType.FastForward)
+            ),
+            label = "alpha_$i"
+        )
+    }
 
     val innerScale by transition.animateFloat(
         initialValue = 1f,
@@ -293,31 +287,42 @@ fun RadarAnimation(
         label = "innerScale"
     )
 
-    Box(
-        modifier = modifier.size(120.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .scale(scale1)
-                .clip(CircleShape)
-                .background(color.copy(alpha = alpha1))
+    Canvas(modifier = modifier) {
+        val centerOffset = Offset(size.width / 2f, size.height / 2f)
+        val baseRadius = (size.minDimension / 2f) / 4.8f
+
+        for (i in 0 until 4) {
+            val scale = ringScales[i].value
+            val alpha = ringAlphas[i].value.coerceIn(0f, 1f)
+            val radius = baseRadius * scale
+
+            // Draw translucent fill for gradient effect
+            drawCircle(
+                color = color.copy(alpha = alpha * 0.35f),
+                radius = radius,
+                center = centerOffset
+            )
+            // Draw crisp outer ring (anillo)
+            drawCircle(
+                color = color.copy(alpha = alpha),
+                radius = radius,
+                center = centerOffset,
+                style = Stroke(width = 2.dp.toPx())
+            )
+        }
+
+        // Glow under center dot
+        drawCircle(
+            color = color.copy(alpha = 0.25f),
+            radius = baseRadius * innerScale * 1.35f,
+            center = centerOffset
         )
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .scale(scale2)
-                .clip(CircleShape)
-                .background(color.copy(alpha = alpha2))
-        )
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .scale(innerScale)
-                .clip(CircleShape)
-                .background(color)
+
+        // Center solid dot
+        drawCircle(
+            color = color,
+            radius = baseRadius * innerScale,
+            center = centerOffset
         )
     }
 }
-

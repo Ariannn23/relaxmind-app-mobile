@@ -166,7 +166,8 @@ class PatientViewModel(
             val patientData = patientResult.getOrNull()
             _patient.value = patientData
             patientData?.let {
-                com.relaxmind.app.ui.themes.ThemeState.darkMode.value = it.darkMode
+                // Ignored dark mode to force light mode
+                // com.relaxmind.app.ui.themes.ThemeState.darkMode.value = it.darkMode
                 com.relaxmind.app.ui.themes.ThemeState.language.value = it.language
             }
 
@@ -397,6 +398,17 @@ class PatientViewModel(
                 onError(errorMsg)
             }
             _isLoading.value = false
+        }
+    }
+
+    fun clearUnlinkAlert() {
+        val userId = authService.getCurrentUser()?.uid ?: return
+        viewModelScope.launch {
+            firestoreRepository.updatePatient(
+                userId,
+                mapOf("pendingCaregiverUnlinkAlert" to false)
+            )
+            _patient.update { it?.copy(pendingCaregiverUnlinkAlert = false) }
         }
     }
 

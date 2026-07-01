@@ -47,6 +47,14 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.window.Dialog
+import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -154,6 +162,49 @@ fun PatientDetailScreen(
 
     val fullName = patient?.let { "${it.name} ${it.lastName}".trim() }.orEmpty().ifBlank { "Paciente" }
 
+    var showUnlinkDialog by remember { mutableStateOf(false) }
+    var unlinkErrorMessage by remember { mutableStateOf<String?>(null) }
+    var showUnlinkConfirmationDialog by remember { mutableStateOf(false) }
+
+    if (showUnlinkConfirmationDialog) {
+        com.relaxmind.app.ui.components.UnlinkNotificationDialog(
+            type = com.relaxmind.app.ui.components.UnlinkDialogType.CONFIRMATION,
+            otherPartyName = fullName,
+            primaryColor = CaregiverPurple,
+            onDismissRequest = {
+                showUnlinkConfirmationDialog = false
+                onNavigateBack()
+            }
+        )
+    }
+
+    if (showUnlinkDialog) {
+        UnlinkPatientDialog(
+            patientName = fullName,
+            onDismiss = {
+                showUnlinkDialog = false
+                unlinkErrorMessage = null
+            },
+            onConfirm = { password, reason ->
+                viewModel.unlinkPatient(
+                    patientId = patientId,
+                    passwordConfirm = password,
+                    reason = reason,
+                    onSuccess = {
+                        showUnlinkDialog = false
+                        unlinkErrorMessage = null
+                        showUnlinkConfirmationDialog = true
+                    },
+                    onError = { errorMsg ->
+                        unlinkErrorMessage = errorMsg
+                    }
+                )
+            },
+            isLoading = isLoading,
+            errorMessage = unlinkErrorMessage
+        )
+    }
+
     Scaffold(
         containerColor = Color.White,
         bottomBar = {
@@ -193,7 +244,8 @@ fun PatientDetailScreen(
                             } else {
                                 toastState.showError("Número no disponible. Este paciente no tiene un teléfono registrado.")
                             }
-                        }
+                        },
+                        onUnlinkClick = { showUnlinkDialog = true }
                     )
                 }
 
@@ -293,7 +345,8 @@ private fun PatientDetailBackground() {
 private fun PatientDetailHeader(
     title: String,
     onBackClick: () -> Unit,
-    onCallClick: () -> Unit
+    onCallClick: () -> Unit,
+    onUnlinkClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -316,16 +369,32 @@ private fun PatientDetailHeader(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
-        HeaderIconButton(
-            contentDescription = "Llamar paciente",
-            onClick = onCallClick
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.Phone,
-                contentDescription = null,
-                tint = CaregiverPurple,
-                modifier = Modifier.size(30.dp)
-            )
+            HeaderIconButton(
+                contentDescription = "Llamar paciente",
+                onClick = onCallClick
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Phone,
+                    contentDescription = null,
+                    tint = CaregiverPurple,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            HeaderIconButton(
+                contentDescription = "Desvincular paciente",
+                onClick = onUnlinkClick
+            ) {
+                Icon(
+                    imageVector = Icons.Default.LinkOff,
+                    contentDescription = null,
+                    tint = Color(0xFFE11D48),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
     }
 }
@@ -1306,6 +1375,160 @@ private fun CheckInDetailBottomSheet(
                             fontSize = 13.sp,
                             color = TextSecondary
                         )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun UnlinkPatientDialog(
+    patientName: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String, String) -> Unit,
+    isLoading: Boolean,
+    errorMessage: String? = null
+) {
+    var password by remember { mutableStateOf("") }
+    var reason by remember { mutableStateOf("") }
+
+    Dialog(onDismissRequest = { if (!isLoading) onDismiss() }) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = Color.White,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .background(Color(0xFFFFE4E6), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LinkOff,
+                        contentDescription = "Desvincular",
+                        tint = Color(0xFFE11D48),
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Desvincular Paciente",
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = TextPrimary
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "¿Estás seguro que deseas desvincular a $patientName? Ya no tendrás acceso a su información de bienestar.",
+                    fontFamily = LexendFontFamily,
+                    fontSize = 14.sp,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                OutlinedTextField(
+                    value = reason,
+                    onValueChange = { reason = it },
+                    label = { Text("Motivo (Opcional)", fontFamily = LexendFontFamily, fontSize = 13.sp) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = CaregiverPurple,
+                        unfocusedBorderColor = Color(0xFFE2E8F0)
+                    ),
+                    textStyle = androidx.compose.ui.text.TextStyle(fontFamily = LexendFontFamily),
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Tu contraseña actual", fontFamily = LexendFontFamily, fontSize = 13.sp) },
+                    modifier = Modifier.fillMaxWidth(),
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Password
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = CaregiverPurple,
+                        unfocusedBorderColor = Color(0xFFE2E8F0)
+                    ),
+                    textStyle = androidx.compose.ui.text.TextStyle(fontFamily = LexendFontFamily),
+                    singleLine = true
+                )
+
+                if (errorMessage != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = errorMessage,
+                        fontFamily = LexendFontFamily,
+                        color = Color.Red,
+                        fontSize = 12.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                        enabled = !isLoading
+                    ) {
+                        Text(
+                            text = "Cancelar",
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextSecondary
+                        )
+                    }
+
+                    Button(
+                        onClick = { onConfirm(password, reason) },
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48)),
+                        enabled = !isLoading && password.isNotBlank()
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = "Desvincular",
+                                fontFamily = LexendFontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
             }

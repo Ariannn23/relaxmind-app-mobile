@@ -21,6 +21,8 @@ import androidx.compose.foundation.border
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.ui.window.Dialog
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -228,33 +230,11 @@ fun SOSPatientScreen(
         }
 
         uiState.error?.let { errorMessage ->
-            AlertDialog(
-                onDismissRequest = {
+            SOSNoCaregiverDialog(
+                errorMessage = errorMessage,
+                onDismiss = {
                     viewModel.clearError()
                     onNavigateBack()
-                },
-                title = { 
-                    Text(
-                        text = "Aviso", 
-                        fontFamily = LexendFontFamily, 
-                        fontWeight = FontWeight.Bold 
-                    ) 
-                },
-                text = { 
-                    Text(
-                        text = errorMessage,
-                        fontFamily = LexendFontFamily
-                    ) 
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            viewModel.clearError()
-                            onNavigateBack()
-                        }
-                    ) {
-                        Text("Entendido", fontFamily = LexendFontFamily, fontWeight = FontWeight.SemiBold)
-                    }
                 }
             )
         }
@@ -307,24 +287,64 @@ private fun SOSBackground() {
 private fun SOSPulseIndicator(isSending: Boolean) {
     val infiniteTransition = rememberInfiniteTransition(label = "Pulse")
     
-    val ringScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.8f,
+    val ringScale1 by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 1.6f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
+            animation = tween(1800, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "RingScale"
+        label = "RingScale1"
     )
     
-    val ringAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.8f,
+    val ringAlpha1 by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
         targetValue = 0f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
+            animation = tween(1800, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "RingAlpha"
+        label = "RingAlpha1"
+    )
+
+    val ringScale2 by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 1.6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = FastOutSlowInEasing, delayMillis = 600),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "RingScale2"
+    )
+    
+    val ringAlpha2 by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = FastOutSlowInEasing, delayMillis = 600),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "RingAlpha2"
+    )
+
+    val ringScale3 by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 1.6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = FastOutSlowInEasing, delayMillis = 1200),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "RingScale3"
+    )
+    
+    val ringAlpha3 by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = FastOutSlowInEasing, delayMillis = 1200),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "RingAlpha3"
     )
 
     // Inner icon pulse
@@ -339,36 +359,41 @@ private fun SOSPulseIndicator(isSending: Boolean) {
     )
 
     Box(
-        modifier = Modifier.size(200.dp),
+        modifier = Modifier.size(240.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Expanding ring
+        // Expanding rings (ondas)
         Box(
             modifier = Modifier
-                .size(140.dp)
-                .scale(ringScale)
+                .size(150.dp)
+                .scale(ringScale1)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = ringAlpha))
+                .background(Color.White.copy(alpha = ringAlpha1))
+        )
+        Box(
+            modifier = Modifier
+                .size(150.dp)
+                .scale(ringScale2)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = ringAlpha2))
+        )
+        Box(
+            modifier = Modifier
+                .size(150.dp)
+                .scale(ringScale3)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = ringAlpha3))
         )
 
-        // Main circle with white border
-        Box(
+        // Main Image (without extra clip/shape behind it)
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(id = com.relaxmind.app.R.drawable.sos_paciente),
+            contentDescription = "Alerta SOS activa",
             modifier = Modifier
-                .size(140.dp)
-                .scale(iconScale)
-                .shadow(16.dp, CircleShape, ambientColor = SOSCoralDark)
-                .clip(CircleShape)
-                .background(SOSCoralDark.copy(alpha = 0.4f))
-                .border(4.dp, Color.White, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.NotificationsActive,
-                contentDescription = "Alerta SOS activa",
-                tint = Color.White,
-                modifier = Modifier.size(64.dp)
-            )
-        }
+                .size(150.dp)
+                .scale(iconScale),
+            contentScale = androidx.compose.ui.layout.ContentScale.Fit
+        )
     }
 }
 
@@ -536,3 +561,98 @@ private fun CancelSOSDialog(
         shape = RoundedCornerShape(20.dp)
     )
 }
+
+@Composable
+private fun SOSNoCaregiverDialog(
+    errorMessage: String,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+                .shadow(24.dp, RoundedCornerShape(28.dp), ambientColor = SOSCoralDark),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .background(Color(0xFFFFF0ED), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = "Atención",
+                        tint = SOSCoral,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = if (errorMessage.contains("cuidador", ignoreCase = true)) "Sin Cuidador Vinculado" else "Atención",
+                    fontFamily = LexendFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp,
+                    color = TextPrimary,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = errorMessage,
+                    fontFamily = LexendFontFamily,
+                    fontSize = 15.sp,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 22.sp
+                )
+
+                if (errorMessage.contains("cuidador", ignoreCase = true)) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Para enviar alertas de emergencia y compartir tu progreso, vincula a un cuidador de confianza desde la sección 'Vincular Cuidador' en tu perfil o inicio.",
+                        fontFamily = LexendFontFamily,
+                        fontSize = 13.sp,
+                        color = TextSecondary.copy(alpha = 0.8f),
+                        textAlign = TextAlign.Center,
+                        lineHeight = 18.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .shadow(6.dp, RoundedCornerShape(16.dp), spotColor = SOSCoralDark),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = SOSCoral,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text(
+                        text = "Entendido, volver",
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 16.sp
+                    )
+                }
+            }
+        }
+    }
+}
+

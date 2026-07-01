@@ -163,15 +163,6 @@ fun SettingsCaregiverScreen(
                         ) {
                             CaregiverSettingsSectionTitle("Preferencias")
                             CaregiverSettingsGroupCard {
-                                // Modo oscuro
-                                CaregiverSettingsToggleRow(
-                                    label = "Modo oscuro",
-                                    icon = Icons.Filled.DarkMode,
-                                    checked = currCaregiver.darkMode,
-                                    onToggle = { viewModel.updateDarkMode(it) }
-                                )
-                                CaregiverSettingsDivider()
-
                                 // Notificaciones
                                 CaregiverSettingsToggleRow(
                                     label = "Notificaciones",

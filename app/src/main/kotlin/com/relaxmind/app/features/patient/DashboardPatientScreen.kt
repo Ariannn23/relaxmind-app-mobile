@@ -3,14 +3,8 @@ package com.relaxmind.app.features.patient
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -41,6 +35,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.SentimentDissatisfied
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
@@ -83,6 +78,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -253,8 +249,6 @@ fun DashboardPatientScreen(
     val notificationsPermissionGranted = rememberNotificationPermissionStatus()
     var showNotificationPermissionDialog by remember { mutableStateOf(false) }
     var notificationPromptShown by remember { mutableStateOf(false) }
-    var showTestLoaderPatient by remember { mutableStateOf(false) }
-    var showTestLoaderCaregiver by remember { mutableStateOf(false) }
     val notificationPermissionLauncher = rememberNotificationPermissionLauncher { granted ->
         viewModel.updateNotificationsEnabled(granted)
         showNotificationPermissionDialog = !granted
@@ -364,8 +358,11 @@ fun DashboardPatientScreen(
                             onAvatarClick = { onNavigate(Screen.PatientSettings.route) },
                             initialTestBannerState = initialTestBannerState,
                             isDismissed = isDismissed,
+                            hasPendingUnlink = patient?.pendingCaregiverUnlinkAlert == true,
+                            caregiverName = "${patient?.caregiverName.orEmpty()} ${patient?.caregiverLastName.orEmpty()}".trim(),
                             onCompleteInitialTestClick = onNavigateToInitialTest,
-                            onDismissNotification = { viewModel.dismissInitialTestNotification() }
+                            onDismissNotification = { viewModel.dismissInitialTestNotification() },
+                            onUnlinkNotificationClick = { viewModel.clearUnlinkAlert() }
                         )
                         
                         // 2. Main Wellbeing Today Card
@@ -382,27 +379,6 @@ fun DashboardPatientScreen(
                             onStartClick = onNavigateToCheckIn,
                             onProgressClick = { onNavigate(Screen.Progress.route) }
                         )
-
-                        // Test Buttons for Radar Loaders
-                        androidx.compose.foundation.layout.Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 8.dp),
-                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceEvenly
-                        ) {
-                            androidx.compose.material3.Button(
-                                onClick = { showTestLoaderPatient = true },
-                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = PatientGreen)
-                            ) {
-                                androidx.compose.material3.Text("Test Loader Patient", fontFamily = Urbanist, color = Color.White)
-                            }
-                            androidx.compose.material3.Button(
-                                onClick = { showTestLoaderCaregiver = true },
-                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CaregiverIndigo)
-                            ) {
-                                androidx.compose.material3.Text("Test Loader Caregiver", fontFamily = Urbanist, color = Color.White)
-                            }
-                        }
 
                         // 3. "Para ti hoy" Section
                         ParaTiHoySection(
@@ -467,28 +443,6 @@ fun DashboardPatientScreen(
                     )
                 }
 
-                if (showTestLoaderPatient) {
-                    com.relaxmind.app.ui.components.FullScreenRadarLoaderOverlay(
-                        color = PatientGreen,
-                        backgroundColor = Color.Black.copy(alpha = 0.5f)
-                    )
-                    LaunchedEffect(Unit) {
-                        delay(3000)
-                        showTestLoaderPatient = false
-                    }
-                }
-                
-                if (showTestLoaderCaregiver) {
-                    com.relaxmind.app.ui.components.FullScreenRadarLoaderOverlay(
-                        color = CaregiverIndigo,
-                        backgroundColor = Color.Black.copy(alpha = 0.5f)
-                    )
-                    LaunchedEffect(Unit) {
-                        delay(3000)
-                        showTestLoaderCaregiver = false
-                    }
-                }
-
             }
         }
         }
@@ -533,13 +487,29 @@ private fun DashboardHeader(
     onAvatarClick: () -> Unit,
     initialTestBannerState: InitialTestBannerState = InitialTestBannerState.None,
     isDismissed: Boolean = false,
+    hasPendingUnlink: Boolean = false,
+    caregiverName: String = "",
     onCompleteInitialTestClick: () -> Unit = {},
-    onDismissNotification: () -> Unit = {}
+    onDismissNotification: () -> Unit = {},
+    onUnlinkNotificationClick: () -> Unit = {}
 ) {
     val colors = LocalPatientDashboardColors.current
     val hasInitialTestNotification = !isDismissed && initialTestBannerState is InitialTestBannerState.SkippedWithin24h
-    val hasNotifications = hasInitialTestNotification
+    val hasNotifications = hasInitialTestNotification || hasPendingUnlink
     var notificationsExpanded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showUnlinkReceivedDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    if (showUnlinkReceivedDialog) {
+        com.relaxmind.app.ui.components.UnlinkNotificationDialog(
+            type = com.relaxmind.app.ui.components.UnlinkDialogType.RECEIVED,
+            otherPartyName = if (caregiverName.isNotBlank()) caregiverName else "Tu cuidador",
+            primaryColor = com.relaxmind.app.ui.themes.PatientGreen,
+            onDismissRequest = {
+                showUnlinkReceivedDialog = false
+                onUnlinkNotificationClick()
+            }
+        )
+    }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -596,86 +566,136 @@ private fun DashboardHeader(
                     onDismissRequest = { notificationsExpanded = false },
                     properties = PopupProperties(focusable = true)
                 ) {
-                    ElevatedCard(
-                        modifier = Modifier
-                            .width(340.dp)
-                            .shadow(
-                                elevation = 16.dp, 
-                                shape = RoundedCornerShape(24.dp),
-                                ambientColor = if (colors.isDark) colors.primary.copy(alpha = 0.4f) else Color(0xFF8A88A6).copy(alpha = 0.5f),
-                                spotColor = if (colors.isDark) colors.primary.copy(alpha = 0.4f) else Color(0xFF8A88A6).copy(alpha = 0.5f)
-                            )
-                            .border(1.dp, if (colors.isDark) colors.primary.copy(alpha=0.3f) else Color(0xFFE2E8F0), RoundedCornerShape(24.dp)),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = androidx.compose.material3.CardDefaults.elevatedCardColors(
-                            containerColor = if (colors.isDark) Color(0xFF111827) else Color(0xFFF8FAFC)
-                        )
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            if (hasNotifications) {
-                                Text(
-                                    text = "Notificaciones",
-                                    fontFamily = LexendFontFamily,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    color = colors.textPrimary,
-                                    modifier = Modifier.padding(bottom = 10.dp)
-                                )
-                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    if (hasInitialTestNotification && initialTestBannerState is InitialTestBannerState.SkippedWithin24h) {
-                                        val state = initialTestBannerState as InitialTestBannerState.SkippedWithin24h
-                                        val timeText = if (state.hoursLeft > 0) "${state.hoursLeft}h ${state.minutesLeft}min" else "${state.minutesLeft} min"
-                                        DashboardNotificationItem(
-                                            title = "Test inicial pendiente",
-                                            subtitle = "Te quedan $timeText para completarlo",
-                                            icon = Icons.Filled.DateRange,
-                                            iconColorLight = Color(0xFFB91C1C), // Red 700
-                                            iconColorDark = Color(0xFFFCA5A5), // Red 300
-                                            bgColorLight = Color(0xFFFFF0F0), // Very soft red
-                                            bgColorDark = Color(0xFF3F1919),
-                                            fillColorLight = Color(0xFFFFD6D6), // Darker red fill
-                                            fillColorDark = Color(0xFF5C2323),
-                                            onDismiss = {
-                                                notificationsExpanded = false
-                                                onDismissNotification()
-                                            },
-                                            onClick = {
-                                                notificationsExpanded = false
-                                                onCompleteInitialTestClick()
-                                            }
+                    var animateIn by remember { mutableStateOf(false) }
+                    LaunchedEffect(Unit) {
+                        animateIn = true
+                    }
+                    Column {
+                        AnimatedVisibility(
+                            visible = animateIn,
+                            enter = fadeIn(animationSpec = tween(220)) +
+                                    scaleIn(
+                                        initialScale = 0.35f,
+                                        transformOrigin = TransformOrigin(1f, 0f),
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioLowBouncy,
+                                            stiffness = Spring.StiffnessMediumLow
                                         )
-                                    }
+                                    ) +
+                                    expandVertically(
+                                        expandFrom = Alignment.Top,
+                                        animationSpec = tween(250, easing = FastOutSlowInEasing)
+                                    ),
+                            exit = fadeOut(animationSpec = tween(150)) +
+                                    scaleOut(
+                                        targetScale = 0.6f,
+                                        transformOrigin = TransformOrigin(1f, 0f),
+                                        animationSpec = tween(150)
+                                    )
+                        ) {
+                            ElevatedCard(
+                                modifier = Modifier
+                                    .width(340.dp)
+                                    .shadow(
+                                        elevation = 16.dp, 
+                                        shape = RoundedCornerShape(24.dp),
+                                        ambientColor = if (colors.isDark) colors.primary.copy(alpha = 0.4f) else Color(0xFF8A88A6).copy(alpha = 0.5f),
+                                        spotColor = if (colors.isDark) colors.primary.copy(alpha = 0.4f) else Color(0xFF8A88A6).copy(alpha = 0.5f)
+                                    )
+                                    .border(1.dp, if (colors.isDark) colors.primary.copy(alpha=0.3f) else Color(0xFFE2E8F0), RoundedCornerShape(24.dp)),
+                                shape = RoundedCornerShape(24.dp),
+                                colors = androidx.compose.material3.CardDefaults.elevatedCardColors(
+                                    containerColor = if (colors.isDark) Color(0xFF111827) else Color(0xFFF8FAFC)
+                                )
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    if (hasNotifications) {
+                                        Text(
+                                            text = "Notificaciones",
+                                            fontFamily = LexendFontFamily,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 16.sp,
+                                            color = colors.textPrimary,
+                                            modifier = Modifier.padding(bottom = 10.dp)
+                                        )
+                                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                            if (hasPendingUnlink) {
+                                                DashboardNotificationItem(
+                                                    title = "Vínculo Terminado",
+                                                    subtitle = "Toca para ver los detalles.",
+                                                    icon = androidx.compose.material.icons.Icons.Default.SentimentDissatisfied,
+                                                    iconColorLight = Color(0xFFB91C1C),
+                                                    iconColorDark = Color(0xFFFCA5A5),
+                                                    bgColorLight = Color(0xFFFFF0F0),
+                                                    bgColorDark = Color(0xFF3F1919),
+                                                    fillColorLight = Color(0xFFFFD6D6),
+                                                    fillColorDark = Color(0xFF5C2323),
+                                                    onDismiss = {
+                                                        notificationsExpanded = false
+                                                        showUnlinkReceivedDialog = true
+                                                    },
+                                                    onClick = {
+                                                        notificationsExpanded = false
+                                                        showUnlinkReceivedDialog = true
+                                                    }
+                                                )
+                                            }
 
-                                }
-                            } else {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.fillMaxWidth().padding(16.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.NotificationsOff,
-                                        contentDescription = null,
-                                        tint = colors.primary,
-                                        modifier = Modifier.size(42.dp)
-                                    )
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Text(
-                                        text = "No tienes notificaciones",
-                                        fontFamily = LexendFontFamily,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp,
-                                        color = colors.textPrimary,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "Aquí aparecerán tus recordatorios y mensajes.",
-                                        fontFamily = LexendFontFamily,
-                                        fontWeight = FontWeight.Normal,
-                                        fontSize = 13.sp,
-                                        color = colors.textSecondary,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                    )
+                                            if (hasInitialTestNotification && initialTestBannerState is InitialTestBannerState.SkippedWithin24h) {
+                                                val state = initialTestBannerState as InitialTestBannerState.SkippedWithin24h
+                                                val timeText = if (state.hoursLeft > 0) "${state.hoursLeft}h ${state.minutesLeft}min" else "${state.minutesLeft} min"
+                                                DashboardNotificationItem(
+                                                    title = "Test inicial pendiente",
+                                                    subtitle = "Te quedan $timeText para completarlo",
+                                                    icon = Icons.Filled.DateRange,
+                                                    iconColorLight = Color(0xFFB91C1C), // Red 700
+                                                    iconColorDark = Color(0xFFFCA5A5), // Red 300
+                                                    bgColorLight = Color(0xFFFFF0F0), // Very soft red
+                                                    bgColorDark = Color(0xFF3F1919),
+                                                    fillColorLight = Color(0xFFFFD6D6), // Darker red fill
+                                                    fillColorDark = Color(0xFF5C2323),
+                                                    onDismiss = {
+                                                        notificationsExpanded = false
+                                                        onDismissNotification()
+                                                    },
+                                                    onClick = {
+                                                        notificationsExpanded = false
+                                                        onCompleteInitialTestClick()
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier = Modifier.fillMaxWidth().padding(16.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.NotificationsOff,
+                                                contentDescription = null,
+                                                tint = colors.primary,
+                                                modifier = Modifier.size(42.dp)
+                                            )
+                                            Spacer(modifier = Modifier.height(16.dp))
+                                            Text(
+                                                text = "No tienes notificaciones",
+                                                fontFamily = LexendFontFamily,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 16.sp,
+                                                color = colors.textPrimary,
+                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = "Aquí aparecerán tus recordatorios y mensajes.",
+                                                fontFamily = LexendFontFamily,
+                                                fontWeight = FontWeight.Normal,
+                                                fontSize = 13.sp,
+                                                color = colors.textSecondary,
+                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }

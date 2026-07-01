@@ -137,57 +137,7 @@ fun PatientLinkCaregiverScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // 1. Connection Illustration with leaf silhouettes
-                    Box(
-                        modifier = Modifier
-                            .padding(vertical = 4.dp)
-                            .size(64.dp)
-                            .shadow(
-                                elevation = 10.dp,
-                                shape = CircleShape,
-                                ambientColor = PatientGreen.copy(alpha = 0.14f),
-                                spotColor = PatientGreen.copy(alpha = 0.14f)
-                            )
-                            .background(Color(0xFFEAF8F1), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Canvas(modifier = Modifier.size(38.dp)) {
-                            val strokeWidth = 3.dp.toPx()
-                            // Heart-like outline with circles
-                            drawCircle(
-                                color = PatientGreen,
-                                radius = size.width * 0.28f,
-                                center = Offset(size.width * 0.38f, size.height * 0.44f),
-                                style = Stroke(width = strokeWidth)
-                            )
-                            drawCircle(
-                                color = PatientGreen.copy(alpha = 0.65f),
-                                radius = size.width * 0.28f,
-                                center = Offset(size.width * 0.62f, size.height * 0.44f),
-                                style = Stroke(width = strokeWidth)
-                            )
-                            drawLine(
-                                color = PatientGreen,
-                                start = Offset(size.width * 0.28f, size.height * 0.55f),
-                                end = Offset(size.width * 0.5f, size.height * 0.78f),
-                                strokeWidth = strokeWidth,
-                                cap = StrokeCap.Round
-                            )
-                            drawLine(
-                                color = PatientGreen.copy(alpha = 0.65f),
-                                start = Offset(size.width * 0.72f, size.height * 0.55f),
-                                end = Offset(size.width * 0.5f, size.height * 0.78f),
-                                strokeWidth = strokeWidth,
-                                cap = StrokeCap.Round
-                            )
-                            // Sharing/linking point
-                            drawCircle(
-                                color = PatientGreen,
-                                radius = 4.dp.toPx(),
-                                center = Offset(size.width * 0.5f, size.height * 0.25f)
-                            )
-                        }
-                    }
+
 
                     Text(
                         text = "Muestra este código a tu cuidador",
