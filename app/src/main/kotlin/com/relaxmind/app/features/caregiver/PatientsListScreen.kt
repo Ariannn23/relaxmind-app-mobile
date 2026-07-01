@@ -75,7 +75,6 @@ import com.relaxmind.app.R
 import com.relaxmind.app.ui.components.getAvatarDrawableRes
 import com.relaxmind.app.Screen
 import com.relaxmind.app.ui.components.AppRole
-import com.relaxmind.app.ui.components.CaregiverAddPatientButton
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxButton
 import com.relaxmind.app.ui.components.RelaxLoadingContent
@@ -217,13 +216,6 @@ fun PatientsListScreen(
             }
 
             RelaxToastHost(state = toastState)
-
-            CaregiverAddPatientButton(
-                onClick = onScanQr,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(bottom = if (showBottomNav) 172.dp else 24.dp, end = 20.dp)
-            )
         }
     }
 }

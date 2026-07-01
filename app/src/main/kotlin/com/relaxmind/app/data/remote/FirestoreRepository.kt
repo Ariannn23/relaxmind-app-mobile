@@ -155,11 +155,27 @@ class FirestoreRepository(
         require(patientId.isNotBlank()) { "Patient id cannot be blank." }
         require(code.length == 6) { "Binding code must have six digits." }
 
+        val patient = patients.document(patientId)
+            .get()
+            .await()
+            .toObject(Patient::class.java)
+            ?.copy(id = patientId)
+            ?: error("No se encontro el paciente.")
+
+        if (!patient.caregiverId.isNullOrBlank()) {
+            error("Este paciente ya esta vinculado a un cuidador.")
+        }
+
         val document = bindingCodes.document()
         val bindingCode = BindingCode(
             id = document.id,
             code = code,
             patientId = patientId,
+            patientName = patient.name,
+            patientLastName = patient.lastName,
+            patientCondition = patient.condition,
+            patientAvatarUrl = patient.avatarUrl,
+            patientPhone = patient.phone,
             expiresAt = expiresAt
         )
         document.set(bindingCode).await()
@@ -214,23 +230,14 @@ class FirestoreRepository(
             error("Has alcanzado el limite de $MAX_PATIENTS_PER_CAREGIVER pacientes vinculados.")
         }
 
-        val patient = patients.document(bindingCode.patientId)
-            .get()
-            .await()
-            .toObject(Patient::class.java)
-            ?.copy(id = bindingCode.patientId)
-            ?: error("No se encontro el paciente del codigo.")
-
-        val currentCaregiverId = patient.caregiverId
-        if (!currentCaregiverId.isNullOrBlank()) {
-            if (currentCaregiverId == caregiverId) {
-                error("Este paciente ya esta vinculado contigo.")
-            } else {
-                error("Este paciente ya esta vinculado a otro cuidador.")
-            }
-        }
-
-        patient
+        Patient(
+            id = bindingCode.patientId,
+            name = bindingCode.patientName,
+            lastName = bindingCode.patientLastName,
+            condition = bindingCode.patientCondition,
+            avatarUrl = bindingCode.patientAvatarUrl,
+            phone = bindingCode.patientPhone
+        )
     }
 
     fun listenPatientsForCaregiver(
@@ -347,16 +354,6 @@ class FirestoreRepository(
         val bindingCode = bindingSnapshot.toObject(BindingCode::class.java)
             ?: error("Código inválido o expirado")
         val patientRef = patients.document(bindingCode.patientId)
-        val patient = patientRef.get().await().toObject(Patient::class.java)
-            ?: error("No se encontro el paciente del codigo.")
-        val currentCaregiverId = patient.caregiverId
-        if (!currentCaregiverId.isNullOrBlank()) {
-            if (currentCaregiverId == caregiverId) {
-                error("Este paciente ya esta vinculado contigo.")
-            } else {
-                error("Este paciente ya esta vinculado a otro cuidador.")
-            }
-        }
 
         val linkedPatientsCount = patients
             .whereEqualTo("caregiverId", caregiverId)

@@ -7,6 +7,11 @@ data class BindingCode(
     val id: String = "",
     val code: String = "",
     val patientId: String = "",
+    val patientName: String = "",
+    val patientLastName: String = "",
+    val patientCondition: String = "",
+    val patientAvatarUrl: String = "",
+    val patientPhone: String = "",
     val caregiverId: String? = null,
     val expiresAt: Date? = null,
     @ServerTimestamp

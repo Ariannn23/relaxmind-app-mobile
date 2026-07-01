@@ -303,22 +303,22 @@ fun DashboardCaregiverScreen(
 
                 // Toast overlay
                 RelaxToastHost(state = toastState)
-
-                CaregiverAddPatientButton(
-                    isAtLimit = patients.size >= 5,
-                    onClick = {
-                        if (patients.size >= 5) {
-                            showLimitDialog = true
-                        } else {
-                            onScanQr()
-                        }
-                    },
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(bottom = if (showBottomNav) 172.dp else 24.dp, end = 20.dp)
-                )
             }
         }
+
+        CaregiverAddPatientButton(
+            isAtLimit = patients.size >= 5,
+            onClick = {
+                if (patients.size >= 5) {
+                    showLimitDialog = true
+                } else {
+                    onScanQr()
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(bottom = if (showBottomNav) 190.dp else 24.dp, end = 20.dp)
+        )
     }
 
     if (showNotificationPermissionDialog) {
