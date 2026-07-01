@@ -2,6 +2,10 @@ package com.relaxmind.app.features.patient
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.FirebaseFirestore
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import java.io.ByteArrayOutputStream
 import com.relaxmind.app.data.model.Appointment
 import com.relaxmind.app.data.model.Caregiver
 import com.relaxmind.app.data.model.CheckIn
@@ -31,13 +35,8 @@ import java.util.Date
 import android.net.Uri
 import android.content.Context
 import android.util.Log
-import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.ExistingWorkPolicy
 import androidx.work.WorkManager
-import androidx.work.workDataOf
-import java.util.concurrent.TimeUnit
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.tasks.await
 import com.google.firebase.storage.FirebaseStorage
 
@@ -763,72 +762,7 @@ class PatientViewModel(
     }
 
     private fun scheduleAppointmentReminder(context: Context, appointment: Appointment) {
-        runCatching {
-            if (appointment.recurring) {
-                appointment.recurringDays.forEach { dayOfWeek ->
-                    val delayMs = getDelayForNextOccurrence(dayOfWeek, appointment.time, appointment.reminderTime)
-                    if (delayMs > 0) {
-                        val data = workDataOf(
-                            "appointmentId" to appointment.id,
-                            "title" to appointment.title,
-                            "type" to appointment.type,
-                            "dayOfWeek" to dayOfWeek
-                        )
-                        
-                        val request = OneTimeWorkRequestBuilder<com.relaxmind.app.utils.AppointmentReminderWorker>()
-                            .setInitialDelay(delayMs, TimeUnit.MILLISECONDS)
-                            .setInputData(data)
-                            .addTag("appointment_${appointment.id}")
-                            .addTag("appointment_${appointment.id}_$dayOfWeek")
-                            .build()
-                        
-                        WorkManager.getInstance(context).enqueueUniqueWork(
-                            "appointment_${appointment.id}_$dayOfWeek",
-                            androidx.work.ExistingWorkPolicy.REPLACE,
-                            request
-                        )
-                    } else {
-                        Log.w(
-                            "PatientViewModel",
-                            "Skipping recurring reminder because target time is in the past: ${appointment.id} day=$dayOfWeek"
-                        )
-                    }
-                }
-            } else {
-                val dateTimeStr = "${appointment.date}T${appointment.time}"
-                val formatter = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
-                val localDateTime = java.time.LocalDateTime.parse(dateTimeStr, formatter)
-                val appointmentMs = localDateTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
-                val targetMs = appointmentMs - (appointment.reminderTime * 60 * 1000)
-                val delayMs = targetMs - System.currentTimeMillis()
-                
-                if (delayMs > 0) {
-                    val data = workDataOf(
-                        "appointmentId" to appointment.id,
-                        "title" to appointment.title,
-                        "type" to appointment.type,
-                        "dayOfWeek" to -1
-                    )
-                    
-                    val request = OneTimeWorkRequestBuilder<com.relaxmind.app.utils.AppointmentReminderWorker>()
-                        .setInitialDelay(delayMs, TimeUnit.MILLISECONDS)
-                        .setInputData(data)
-                        .addTag("appointment_${appointment.id}")
-                        .build()
-                    
-                    WorkManager.getInstance(context).enqueueUniqueWork(
-                        "appointment_${appointment.id}",
-                        androidx.work.ExistingWorkPolicy.REPLACE,
-                        request
-                    )
-                } else {
-                    Log.w(
-                        "PatientViewModel",
-                        "Skipping appointment reminder because target time is in the past: ${appointment.id}"
-                    )
-                }
-            }
-        }
+        com.relaxmind.app.services.NotificationUtils.scheduleAppointmentReminder(context, appointment)
     }
 
     fun updateAppointmentCompletion(appointmentId: String, completed: Boolean, date: String, context: Context? = null) {

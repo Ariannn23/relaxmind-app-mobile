@@ -841,33 +841,43 @@ private fun PatientHistoryItem(
         }
         // Row 2: Alert label + Score chip + Ver detalle
         Row(
-            modifier = Modifier.padding(start = 46.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 46.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            AnimatedVisibility(visible = generatedAlert || checkIn.score < 25, enter = fadeIn(), exit = fadeOut()) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(3.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ReportProblem,
-                        contentDescription = null,
-                        tint = PatientScoreStatus.CRITICAL.color,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Text(
-                        text = "Alerta",
-                        fontFamily = LexendFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 11.sp,
-                        color = PatientScoreStatus.CRITICAL.color
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f, fill = false)
+            ) {
+                AnimatedVisibility(visible = generatedAlert || checkIn.score < 25, enter = fadeIn(), exit = fadeOut()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ReportProblem,
+                            contentDescription = null,
+                            tint = PatientScoreStatus.CRITICAL.color,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = "Alerta",
+                            fontFamily = LexendFontFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 11.sp,
+                            color = PatientScoreStatus.CRITICAL.color,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
                 }
+                PatientScoreChip(score = checkIn.score)
             }
-            PatientScoreChip(score = checkIn.score)
-            Spacer(modifier = Modifier.weight(1f))
+            
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(2.dp)

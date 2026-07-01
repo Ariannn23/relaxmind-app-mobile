@@ -109,7 +109,6 @@ class CaregiverViewModel(
             caregiverId = caregiverId,
             onChange = { patients ->
                 rawPatients = patients
-                _isPatientsLoading.value = false
                 rebuildPatientSummaries()
             },
             onError = {
@@ -261,6 +260,8 @@ class CaregiverViewModel(
                     hasPendingAlert = pendingPatientIds.contains(patient.id)
                 )
             }.sortedBy { it.patient.name }
+            
+            _isPatientsLoading.value = false
         }
     }
 

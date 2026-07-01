@@ -253,6 +253,8 @@ fun DashboardPatientScreen(
     val notificationsPermissionGranted = rememberNotificationPermissionStatus()
     var showNotificationPermissionDialog by remember { mutableStateOf(false) }
     var notificationPromptShown by remember { mutableStateOf(false) }
+    var showTestLoaderPatient by remember { mutableStateOf(false) }
+    var showTestLoaderCaregiver by remember { mutableStateOf(false) }
     val notificationPermissionLauncher = rememberNotificationPermissionLauncher { granted ->
         viewModel.updateNotificationsEnabled(granted)
         showNotificationPermissionDialog = !granted
@@ -381,6 +383,27 @@ fun DashboardPatientScreen(
                             onProgressClick = { onNavigate(Screen.Progress.route) }
                         )
 
+                        // Test Buttons for Radar Loaders
+                        androidx.compose.foundation.layout.Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 8.dp),
+                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceEvenly
+                        ) {
+                            androidx.compose.material3.Button(
+                                onClick = { showTestLoaderPatient = true },
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = PatientGreen)
+                            ) {
+                                androidx.compose.material3.Text("Test Loader Patient", fontFamily = Urbanist, color = Color.White)
+                            }
+                            androidx.compose.material3.Button(
+                                onClick = { showTestLoaderCaregiver = true },
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CaregiverIndigo)
+                            ) {
+                                androidx.compose.material3.Text("Test Loader Caregiver", fontFamily = Urbanist, color = Color.White)
+                            }
+                        }
+
                         // 3. "Para ti hoy" Section
                         ParaTiHoySection(
                             goalCompleted = dailyGoal?.completed ?: false,
@@ -442,6 +465,28 @@ fun DashboardPatientScreen(
                             // 100.dp to avoid the bottom bar, 16.dp for normal margin
                             .padding(bottom = 116.dp, end = 20.dp)
                     )
+                }
+
+                if (showTestLoaderPatient) {
+                    com.relaxmind.app.ui.components.FullScreenRadarLoaderOverlay(
+                        color = PatientGreen,
+                        backgroundColor = Color.Black.copy(alpha = 0.5f)
+                    )
+                    LaunchedEffect(Unit) {
+                        delay(3000)
+                        showTestLoaderPatient = false
+                    }
+                }
+                
+                if (showTestLoaderCaregiver) {
+                    com.relaxmind.app.ui.components.FullScreenRadarLoaderOverlay(
+                        color = CaregiverIndigo,
+                        backgroundColor = Color.Black.copy(alpha = 0.5f)
+                    )
+                    LaunchedEffect(Unit) {
+                        delay(3000)
+                        showTestLoaderCaregiver = false
+                    }
                 }
 
             }

@@ -103,10 +103,10 @@ fun EditProfileScreen(
         val currentAvatarUrl = it.avatarUrl.ifBlank { "relaxmind://avatar/01" }
         name.trim() != it.name.trim() ||
                 lastName.trim() != it.lastName.trim() ||
-                birthDate != it.birthDate ||
-                sex != it.sex ||
-                phone != it.phone ||
-                condition.trim() != it.condition.trim() ||
+                birthDate != (it.birthDate ?: "") ||
+                sex != (it.sex ?: "") ||
+                phone != (it.phone ?: "") ||
+                condition.trim() != (it.condition ?: "").trim() ||
                 selectedAvatarUrl != currentAvatarUrl
     } ?: false
 

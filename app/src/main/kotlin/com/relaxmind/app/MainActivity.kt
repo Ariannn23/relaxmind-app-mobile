@@ -47,9 +47,8 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize notification channels and schedule workers
+        // Initialize notification channels
         com.relaxmind.app.services.NotificationUtils.createNotificationChannels(this)
-        com.relaxmind.app.services.NotificationUtils.scheduleDailyCheckInReminder(this)
 
         // Initialize Places API
         if (!Places.isInitialized()) {
@@ -147,6 +146,10 @@ class MainActivity : FragmentActivity() {
                         
                         
                         LaunchedEffect(intent) {
+                            // Wait for the NavController to fully attach its graph
+                            while (navController.currentDestination == null) {
+                                kotlinx.coroutines.delay(50)
+                            }
                             handleIntentAction(intent, navController)
                         }
 
