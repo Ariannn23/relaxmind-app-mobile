@@ -247,7 +247,7 @@ fun DashboardCaregiverScreen(
                 }
             },
             floatingActionButton = {
-                CaregiverFAB(colors = colors, onScanQr = {
+                CaregiverFAB(colors = colors, isAtLimit = patients.size >= 5, onScanQr = {
                     if (patients.size >= 5) {
                         showLimitDialog = true
                     } else {
@@ -270,17 +270,7 @@ fun DashboardCaregiverScreen(
                         .padding(top = 20.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    val handlePatientClick = { patientId: String ->
-                        if (caregiver?.biometricEnabled == true) {
-                            com.relaxmind.app.utils.BiometricHelper.authenticate(
-                                context = context,
-                                onSuccess = { onPatientClick(patientId) },
-                                onError = { toastState.showError(it) }
-                            )
-                        } else {
-                            onPatientClick(patientId)
-                        }
-                    }
+                    val handlePatientClick = { patientId: String -> onPatientClick(patientId) }
 
                     // 1. Header
                     DashboardHeader(
@@ -356,18 +346,23 @@ fun DashboardCaregiverScreen(
 
 //  FAB 
 @Composable
-private fun CaregiverFAB(colors: CaregiverDashboardColors, onScanQr: () -> Unit) {
+private fun CaregiverFAB(
+    colors: CaregiverDashboardColors,
+    isAtLimit: Boolean,
+    onScanQr: () -> Unit
+) {
+    val fabColor = if (isAtLimit) Color(0xFF9B93BD) else colors.primaryLight
     Box(
         modifier = Modifier
             .size(64.dp)
             .shadow(
                 elevation = 16.dp,
                 shape = CircleShape,
-                ambientColor = if (colors.isDark) Color(0xFF7C3AED).copy(alpha = 0.35f) else CaregiverPurple.copy(alpha = 0.4f),
-                spotColor = if (colors.isDark) Color(0xFF7C3AED).copy(alpha = 0.35f) else CaregiverPurple.copy(alpha = 0.5f)
+                ambientColor = fabColor.copy(alpha = if (isAtLimit) 0.18f else 0.4f),
+                spotColor = fabColor.copy(alpha = if (isAtLimit) 0.18f else 0.5f)
             )
             .clip(CircleShape)
-            .background(colors.primary)
+            .background(fabColor)
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },

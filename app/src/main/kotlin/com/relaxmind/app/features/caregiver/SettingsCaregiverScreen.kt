@@ -78,6 +78,7 @@ fun SettingsCaregiverScreen(
     viewModel: CaregiverViewModel = viewModel(),
     onNavigateToEditProfile: () -> Unit,
     onLogout: () -> Unit,
+    onAccountDeleted: () -> Unit = onLogout,
     onNavigate: (String) -> Unit,
     showBottomNav: Boolean = true
 ) {
@@ -326,7 +327,7 @@ fun SettingsCaregiverScreen(
                     onSuccess = {
                         showDeleteAccountDialog = false
                         deleteErrorMessage = null
-                        onLogout()
+                        onAccountDeleted()
                     },
                     onError = { error ->
                         deleteErrorMessage = error

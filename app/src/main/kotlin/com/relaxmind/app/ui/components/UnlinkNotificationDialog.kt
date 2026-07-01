@@ -1,22 +1,25 @@
 package com.relaxmind.app.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.SentimentDissatisfied
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.relaxmind.app.R
 import com.relaxmind.app.ui.themes.LexendFontFamily
+import com.relaxmind.app.ui.themes.PatientGreen
 
 enum class UnlinkDialogType {
     RECEIVED, // When the other party unlinked you
@@ -28,8 +31,16 @@ fun UnlinkNotificationDialog(
     type: UnlinkDialogType,
     otherPartyName: String,
     primaryColor: Color,
+    iconResId: Int? = null,
     onDismissRequest: () -> Unit
 ) {
+    val defaultImageRes = if (primaryColor == PatientGreen) {
+        R.drawable.desvincular_vista_paciente
+    } else {
+        R.drawable.desvincular_vista_cuidador
+    }
+    val imageToShow = iconResId ?: defaultImageRes
+
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
             shape = RoundedCornerShape(28.dp),
@@ -44,20 +55,13 @@ fun UnlinkNotificationDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // Sad Icon Background
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .background(primaryColor.copy(alpha = 0.1f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SentimentDissatisfied,
-                        contentDescription = "Desvinculado",
-                        tint = primaryColor,
-                        modifier = Modifier.size(48.dp)
-                    )
-                }
+                // Sad Illustration
+                Image(
+                    painter = painterResource(id = imageToShow),
+                    contentDescription = "Desvinculado",
+                    modifier = Modifier.size(110.dp),
+                    contentScale = ContentScale.Fit
+                )
 
                 Spacer(modifier = Modifier.height(24.dp))
 

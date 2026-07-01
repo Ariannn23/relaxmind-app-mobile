@@ -79,6 +79,7 @@ fun SettingsPatientScreen(
     viewModel: PatientViewModel = viewModel(),
     onNavigateToEditProfile: () -> Unit,
     onLogout: () -> Unit,
+    onAccountDeleted: () -> Unit = onLogout,
     onNavigate: (String) -> Unit,
     showBottomNav: Boolean = true
 ) {
@@ -442,7 +443,7 @@ fun SettingsPatientScreen(
                     onSuccess = {
                         showDeleteAccountDialog = false
                         deleteErrorMessage = null
-                        onLogout()
+                        onAccountDeleted()
                     },
                     onError = { error ->
                         deleteErrorMessage = error

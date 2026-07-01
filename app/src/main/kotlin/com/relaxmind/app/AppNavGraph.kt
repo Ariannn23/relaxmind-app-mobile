@@ -50,6 +50,7 @@ import com.relaxmind.app.features.patient.PatientLinkCaregiverScreen
 import com.relaxmind.app.features.patient.RelaxSoundsScreen
 import com.relaxmind.app.features.common.LibraryScreen
 import com.relaxmind.app.features.common.ArticleDetailScreen
+import com.relaxmind.app.features.common.AccountDeletedGoodbyeScreen
 import com.relaxmind.app.features.patient.SOSPatientScreen
 import com.relaxmind.app.features.patient.lumi.LumiChatScreen
 import com.relaxmind.app.features.patient.lumi.LumiHistoryScreen
@@ -71,6 +72,10 @@ sealed class Screen(val route: String) {
     data object NotificationPermission : Screen("notification-permission")
     data object ForgotPassword : Screen("forgot-password")
     data object BiometricLock : Screen("biometric-lock")
+    data object AccountDeletedGoodbye : Screen("account-deleted/{role}") {
+        const val RoleArg = "role"
+        fun createRoute(role: String): String = "account-deleted/$role"
+    }
 
     data object PatientDashboard : Screen("patient/dashboard")
     data object PatientNotifications : Screen("patient/notifications")
@@ -342,6 +347,20 @@ fun AppNavGraph(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
+        composable(
+            route = Screen.AccountDeletedGoodbye.route,
+            arguments = listOf(navArgument(Screen.AccountDeletedGoodbye.RoleArg) { type = NavType.StringType })
+        ) { backStackEntry ->
+            val role = backStackEntry.arguments?.getString(Screen.AccountDeletedGoodbye.RoleArg).orEmpty()
+            AccountDeletedGoodbyeScreen(
+                role = if (role == "caregiver") AppRole.CAREGIVER else AppRole.PATIENT,
+                onBackToLogin = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
+        }
 
         composable(Screen.PatientNotifications.route) {
             com.relaxmind.app.features.patient.PatientNotificationsScreen(
@@ -527,6 +546,11 @@ fun AppNavGraph(
                         popUpTo(0) { inclusive = true }
                     }
                 },
+                onAccountDeleted = {
+                    navController.navigate(Screen.AccountDeletedGoodbye.createRoute("patient")) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
                 onNavigate = { route ->
                     navController.navigate(route) {
                         popUpTo(Screen.PatientDashboard.route) { saveState = true }
@@ -648,6 +672,11 @@ fun AppNavGraph(
                 onNavigateToEditProfile = { navController.navigate(Screen.CaregiverEditProfile.route) },
                 onLogout = { 
                     navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onAccountDeleted = {
+                    navController.navigate(Screen.AccountDeletedGoodbye.createRoute("caregiver")) {
                         popUpTo(0) { inclusive = true }
                     }
                 },

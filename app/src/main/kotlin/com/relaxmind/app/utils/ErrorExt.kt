@@ -43,6 +43,9 @@ fun Throwable?.toUserFriendlyMessage(
             "Error de red. Revisa tu conexión a internet e inténtalo de nuevo."
         msg.contains("network connection") -> 
             "Error de red. Revisa tu conexión a internet."
+        msg.contains("PERMISSION_DENIED", ignoreCase = true) ||
+            msg.contains("Missing or insufficient permissions", ignoreCase = true) ->
+            "No tienes permisos para completar esta accion. Actualiza las reglas de Firebase e intentalo de nuevo."
         else -> fallback
     }
 }

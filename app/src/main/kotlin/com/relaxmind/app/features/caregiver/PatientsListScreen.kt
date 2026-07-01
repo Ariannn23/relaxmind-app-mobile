@@ -135,21 +135,6 @@ fun PatientsListScreen(
         }
     }
 
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val caregiver by viewModel.caregiver.collectAsState()
-
-    val handlePatientClick = { patientId: String ->
-        if (caregiver?.biometricEnabled == true) {
-            com.relaxmind.app.utils.BiometricHelper.authenticate(
-                context = context,
-                onSuccess = { onPatientClick(patientId) },
-                onError = { toastState.showError(it) }
-            )
-        } else {
-            onPatientClick(patientId)
-        }
-    }
-
     Scaffold(
         containerColor = BackgroundWhite,
         bottomBar = {
@@ -208,10 +193,17 @@ fun PatientsListScreen(
 
                     if ((isLoading || isPatientsLoading) && patients.isEmpty() && error == null) {
                         item {
-                            com.relaxmind.app.ui.components.RelaxLoadingContent(
-                                message = "Cargando...",
-                                isCaregiver = true
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(440.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                com.relaxmind.app.ui.components.RelaxLoadingContent(
+                                    message = "Cargando...",
+                                    isCaregiver = true
+                                )
+                            }
                         }
                     } else if (error != null && patients.isEmpty()) {
                         item {
@@ -228,7 +220,7 @@ fun PatientsListScreen(
                         items(filteredPatients, key = { it.patient.id }) { summary ->
                             PatientCard(
                                 summary = summary,
-                                onClick = { handlePatientClick(summary.patient.id) },
+                                onClick = { onPatientClick(summary.patient.id) },
                                 onAlertClick = { onNavigate(Screen.AlertsHistory.route) }
                             )
                         }

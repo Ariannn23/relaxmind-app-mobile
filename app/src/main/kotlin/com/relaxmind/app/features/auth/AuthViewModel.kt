@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.time.Instant
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 
 // ---------------------------------------------------------------------------
 // UI State
@@ -271,11 +273,59 @@ class AuthViewModel(
                 return@launch
             }
 
-            _userRole.value = roleResult.getOrNull()
-            roleResult.getOrNull()?.let { role ->
-                fetchAndSaveFcmToken(userId, role)
+            val role = roleResult.getOrNull().orEmpty()
+            val reactivationResult = reactivateDeletedAccountIfEligible(userId, role)
+            if (reactivationResult.isFailure) {
+                authService.logout()
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = reactivationResult.exceptionOrNull()?.message
+                            ?: "Esta cuenta ya no puede reactivarse."
+                    )
+                }
+                return@launch
             }
+
+            _userRole.value = role
+            fetchAndSaveFcmToken(userId, role)
             _uiState.update { it.copy(isLoading = false, success = true) }
+        }
+    }
+
+    private suspend fun reactivateDeletedAccountIfEligible(userId: String, role: String): Result<Unit> = runCatching {
+        val deletedAt = when (role) {
+            "patient" -> {
+                val patient = firestoreRepository.getPatientById(userId).getOrThrow()
+                if (patient?.isDeleted != true) return@runCatching
+                patient.deletedAt
+            }
+            "caregiver" -> {
+                val caregiver = firestoreRepository.getCaregiverById(userId).getOrThrow()
+                if (caregiver?.isDeleted != true) return@runCatching
+                caregiver.deletedAt
+            }
+            else -> return@runCatching
+        }
+
+        val deletionDate = runCatching { LocalDate.parse(deletedAt.orEmpty()) }.getOrNull()
+            ?: error("No pudimos validar el periodo de reactivacion de esta cuenta.")
+        val daysSinceDeletion = ChronoUnit.DAYS.between(deletionDate, LocalDate.now())
+
+        if (daysSinceDeletion > 7) {
+            error("El periodo de reactivacion de 7 dias ya termino.")
+        }
+
+        val restoreFields = mapOf<String, Any?>(
+            "isDeleted" to false,
+            "deletedAt" to null,
+            "deletionReason" to null
+        )
+
+        if (role == "caregiver") {
+            firestoreRepository.updateCaregiver(userId, restoreFields).getOrThrow()
+        } else {
+            firestoreRepository.updatePatient(userId, restoreFields).getOrThrow()
         }
     }
 
@@ -317,6 +367,20 @@ class AuthViewModel(
             val roleResult = firestoreRepository.getRoleById(userId)
 
             // If it's a new Google user, roleResult will fail/be null, which is expected
+            roleResult.getOrNull()?.let { role ->
+                val reactivationResult = reactivateDeletedAccountIfEligible(userId, role)
+                if (reactivationResult.isFailure) {
+                    authService.logout()
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = reactivationResult.exceptionOrNull()?.message
+                                ?: "Esta cuenta ya no puede reactivarse."
+                        )
+                    }
+                    return@launch
+                }
+            }
             _userRole.value = roleResult.getOrNull()
             _uiState.update { it.copy(isLoading = false, success = true) }
         }

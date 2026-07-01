@@ -1451,7 +1451,10 @@ fun UnlinkPatientDialog(
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = CaregiverPurple,
-                        unfocusedBorderColor = Color(0xFFE2E8F0)
+                        unfocusedBorderColor = Color(0xFFE2E8F0),
+                        focusedLabelColor = CaregiverPurple,
+                        unfocusedLabelColor = TextSecondary,
+                        cursorColor = CaregiverPurple
                     ),
                     textStyle = androidx.compose.ui.text.TextStyle(fontFamily = LexendFontFamily),
                     singleLine = true
@@ -1471,7 +1474,10 @@ fun UnlinkPatientDialog(
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = CaregiverPurple,
-                        unfocusedBorderColor = Color(0xFFE2E8F0)
+                        unfocusedBorderColor = Color(0xFFE2E8F0),
+                        focusedLabelColor = CaregiverPurple,
+                        unfocusedLabelColor = TextSecondary,
+                        cursorColor = CaregiverPurple
                     ),
                     textStyle = androidx.compose.ui.text.TextStyle(fontFamily = LexendFontFamily),
                     singleLine = true
@@ -1495,7 +1501,7 @@ fun UnlinkPatientDialog(
                 ) {
                     OutlinedButton(
                         onClick = onDismiss,
-                        modifier = Modifier.weight(1f).height(48.dp),
+                        modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
                         enabled = !isLoading
@@ -1510,7 +1516,7 @@ fun UnlinkPatientDialog(
 
                     Button(
                         onClick = { onConfirm(password, reason) },
-                        modifier = Modifier.weight(1f).height(48.dp),
+                        modifier = Modifier.weight(1.18f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48)),
                         enabled = !isLoading && password.isNotBlank()
@@ -1526,7 +1532,11 @@ fun UnlinkPatientDialog(
                                 text = "Desvincular",
                                 fontFamily = LexendFontFamily,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color.White
+                                fontSize = 13.sp,
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center
                             )
                         }
                     }

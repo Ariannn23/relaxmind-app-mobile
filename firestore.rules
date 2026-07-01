@@ -54,12 +54,31 @@ service cloud.firestore {
           ]);
     }
 
+    function caregiverUnlinkUpdateOnly() {
+      return signedIn()
+        && resource.data.caregiverId == request.auth.uid
+        && request.resource.data.caregiverId == null
+        && request.resource.data.linkedCaregiverAt == null
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly([
+            'caregiverId',
+            'linkedCaregiverAt',
+            'caregiverName',
+            'caregiverLastName',
+            'caregiverEmail',
+            'caregiverPhone',
+            'caregiverAvatarUrl',
+            'pendingCaregiverUnlinkAlert'
+          ]);
+    }
+
     match /patients/{patientId} {
       allow create: if validBaseProfile(patientId, 'patient');
       allow read: if isSelf(patientId)
         || (signedIn() && resource.data.caregiverId == request.auth.uid);
       allow update: if (isSelf(patientId) && unchangedProtectedFields())
-        || caregiverLinkUpdateOnly();
+        || caregiverLinkUpdateOnly()
+        || caregiverUnlinkUpdateOnly();
       allow delete: if false;
     }
 

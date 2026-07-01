@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.relaxmind.app.utils.toUserFriendlyMessage
+import java.time.LocalDate
 
 data class CaregiverPatientSummary(
     val patient: Patient,
@@ -251,6 +252,11 @@ class CaregiverViewModel(
                 mapOf<String, Any?>(
                     "caregiverId" to null,
                     "linkedCaregiverAt" to null,
+                    "caregiverName" to null,
+                    "caregiverLastName" to null,
+                    "caregiverEmail" to null,
+                    "caregiverPhone" to null,
+                    "caregiverAvatarUrl" to null,
                     "pendingCaregiverUnlinkAlert" to true
                 )
             )
@@ -395,8 +401,38 @@ class CaregiverViewModel(
     }
 
     fun deleteAccount(reason: String, passwordConfirm: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        // Stub
-        onSuccess()
+        val userId = authService.getCurrentUser()?.uid ?: return
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+
+            val reauthResult = authService.reauthenticate(passwordConfirm)
+            if (reauthResult.isFailure) {
+                val errorMsg = reauthResult.exceptionOrNull().toUserFriendlyMessage("Contraseña incorrecta.")
+                onError(errorMsg)
+                _isLoading.value = false
+                return@launch
+            }
+
+            val todayDate = LocalDate.now().toString()
+            val updateResult = firestoreRepository.updateCaregiver(
+                userId,
+                mapOf(
+                    "isDeleted" to true,
+                    "deletedAt" to todayDate,
+                    "deletionReason" to reason
+                )
+            )
+
+            if (updateResult.isSuccess) {
+                authService.logout()
+                onSuccess()
+            } else {
+                val errorMsg = updateResult.exceptionOrNull().toUserFriendlyMessage("Error al borrar la cuenta.")
+                onError(errorMsg)
+            }
+            _isLoading.value = false
+        }
     }
 
     fun logout() {
