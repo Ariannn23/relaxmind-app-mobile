@@ -40,7 +40,6 @@ import android.content.Intent
 import android.net.Uri
 import com.relaxmind.app.ui.components.MissedCheckInDialog
 import com.relaxmind.app.ui.components.AppRole
-import com.relaxmind.app.ui.components.CaregiverAddPatientButton
 import com.relaxmind.app.ui.components.FullScreenLoadingScreen
 import com.relaxmind.app.ui.components.NotificationPermissionDialog
 import com.relaxmind.app.ui.components.RelaxBottomNav
@@ -305,20 +304,6 @@ fun DashboardCaregiverScreen(
                 RelaxToastHost(state = toastState)
             }
         }
-
-        CaregiverAddPatientButton(
-            isAtLimit = patients.size >= 5,
-            onClick = {
-                if (patients.size >= 5) {
-                    showLimitDialog = true
-                } else {
-                    onScanQr()
-                }
-            },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(bottom = if (showBottomNav) 190.dp else 24.dp, end = 20.dp)
-        )
     }
 
     if (showNotificationPermissionDialog) {

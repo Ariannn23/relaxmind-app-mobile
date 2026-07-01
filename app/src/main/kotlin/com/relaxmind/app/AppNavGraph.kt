@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -60,6 +61,7 @@ import com.relaxmind.app.features.patient.NearbyHealthScreen
 import com.relaxmind.app.features.caregiver.SOSAlertScreen
 import com.relaxmind.app.features.common.TermsAndConditionsScreen
 import com.relaxmind.app.ui.components.AppRole
+import com.relaxmind.app.ui.components.CaregiverAddPatientButton
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.themes.ThemeState
 
@@ -221,6 +223,14 @@ fun AppNavGraph(
                 com.relaxmind.app.ui.components.CaregiverBottomNavigationBar(
                     navController = navController,
                     darkMode = darkMode
+                )
+            }
+        },
+        floatingActionButton = {
+            if (currentRoute == Screen.CaregiverDashboard.route) {
+                CaregiverAddPatientButton(
+                    onClick = { navController.navigate(Screen.ScanQR.route) },
+                    modifier = Modifier.padding(bottom = 18.dp, end = 4.dp)
                 )
             }
         }
