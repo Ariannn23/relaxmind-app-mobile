@@ -73,16 +73,25 @@ fun SOSAlertScreen(
     if (alert == null) {
         SOSAlertMessageState(
             title = "Alerta no disponible",
-            message = uiState.error ?: "No pudimos cargar esta alerta.",
+            message = uiState.error ?: "Esta alerta ya no está activa o no tienes acceso para verla.",
+            iconText = "!",
+            accentColor = CaregiverIndigo,
             onNavigateBack = onNavigateBack
         )
         return
     }
 
     if (alert.resolved) {
+        val cancelled = alert.type.equals("sos_cancelled", ignoreCase = true)
         SOSAlertMessageState(
-            title = "Alerta resuelta",
-            message = "Esta emergencia ya fue marcada como resuelta.",
+            title = if (cancelled) "SOS cancelado" else "Alerta resuelta",
+            message = if (cancelled) {
+                "El paciente canceló esta alerta. Ya no aparece como emergencia activa, pero quedó guardada en el historial."
+            } else {
+                "Esta emergencia ya fue marcada como resuelta."
+            },
+            iconText = if (cancelled) "OK" else "✓",
+            accentColor = if (cancelled) CaregiverIndigo else Color(0xFF38C172),
             onNavigateBack = onNavigateBack
         )
         return
@@ -146,21 +155,6 @@ fun SOSAlertScreen(
                 Spacer(modifier = Modifier.weight(1f))
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Custom [SOS] box
-                    Box(
-                        modifier = Modifier
-                            .border(1.5.dp, Color.White, RoundedCornerShape(8.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "SOS",
-                            fontFamily = LexendFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            color = Color.White
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "ALERTA SOS",
                         fontFamily = LexendFontFamily,
@@ -451,7 +445,6 @@ fun SOSAlertScreen(
                         viewModel.markResolved(
                             onSuccess = {
                                 showResolveDialog = false
-                                onNavigateBack()
                             }
                         )
                     },
@@ -480,6 +473,8 @@ fun SOSAlertScreen(
 private fun SOSAlertMessageState(
     title: String,
     message: String,
+    iconText: String,
+    accentColor: Color,
     onNavigateBack: () -> Unit
 ) {
     Box(
@@ -499,14 +494,14 @@ private fun SOSAlertMessageState(
                 modifier = Modifier
                     .size(72.dp)
                     .clip(CircleShape)
-                    .background(SOSCoral.copy(alpha = 0.12f)),
+                    .background(accentColor.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "SOS",
+                    text = iconText,
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.ExtraBold,
-                    color = SOSCoral,
+                    color = accentColor,
                     fontSize = 18.sp
                 )
             }

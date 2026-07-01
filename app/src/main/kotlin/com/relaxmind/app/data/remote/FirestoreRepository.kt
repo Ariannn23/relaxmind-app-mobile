@@ -198,6 +198,11 @@ class FirestoreRepository(
             }
     }
 
+    suspend fun deleteBindingCode(bindingCodeId: String): Result<Unit> = runCatching {
+        require(bindingCodeId.isNotBlank()) { "Binding code id cannot be blank." }
+        bindingCodes.document(bindingCodeId).delete().await()
+    }
+
     suspend fun previewPatientForBindingCode(
         code: String,
         caregiverId: String
@@ -409,6 +414,13 @@ class FirestoreRepository(
         firestore.collection(ALERTS_COLLECTION)
             .document(alertId)
             .update("resolved", resolved)
+            .await()
+    }
+
+    suspend fun updateAlertFields(alertId: String, fields: Map<String, Any?>): Result<Unit> = runCatching {
+        firestore.collection(ALERTS_COLLECTION)
+            .document(alertId)
+            .update(fields)
             .await()
     }
 

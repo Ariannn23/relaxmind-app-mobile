@@ -12,6 +12,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -36,6 +38,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Phone
@@ -73,6 +76,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -93,6 +99,7 @@ import com.relaxmind.app.ui.components.ProgressChart
 import com.relaxmind.app.ui.components.ProgressEmptyState
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxToastHost
+import com.relaxmind.app.ui.components.ShimmerEffect
 import com.relaxmind.app.ui.components.rememberRelaxToastState
 import com.relaxmind.app.ui.themes.BorderSoft
 import com.relaxmind.app.ui.themes.CaregiverIndigo
@@ -140,9 +147,9 @@ fun PatientDetailScreen(
 ) {
     val patient by viewModel.selectedPatient.collectAsState()
     val checkIns by viewModel.selectedPatientCheckIns.collectAsState()
-    val streak by viewModel.selectedPatientStreak.collectAsState()
     val alerts by viewModel.selectedPatientAlerts.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isPatientDetailLoading by viewModel.isPatientDetailLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val context = LocalContext.current
     val toastState = rememberRelaxToastState()
@@ -206,7 +213,7 @@ fun PatientDetailScreen(
     }
 
     Scaffold(
-        containerColor = Color.White,
+        containerColor = Color.Transparent,
         bottomBar = {
                 if (showBottomNav) {
                     RelaxBottomNav(
@@ -220,7 +227,11 @@ fun PatientDetailScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.White)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(SoftLavender, Color(0xFFF8F8FD))
+                    )
+                )
                 .padding(innerPadding)
         ) {
             PatientDetailBackground()
@@ -271,14 +282,14 @@ fun PatientDetailScreen(
                             when (tab) {
                                 PatientDetailTab.PROGRESS -> PatientProgressTab(
                                     checkIns = checkIns,
-                                    streakDays = streak?.currentStreak ?: 0,
-                                    patientName = fullName
+                                    patientName = fullName,
+                                    isLoading = isPatientDetailLoading
                                 )
                                 PatientDetailTab.HISTORY -> PatientHistoryTab(
                                     checkIns = checkIns,
                                     alerts = alerts,
-                                    onSosAlertClick = onSosAlertClick,
-                                    onCheckInClick = { selectedCheckIn = it }
+                                    onCheckInClick = { selectedCheckIn = it },
+                                    isLoading = isPatientDetailLoading
                                 )
                             }
                         }
@@ -311,9 +322,7 @@ fun PatientDetailScreen(
 
     selectedCheckIn?.let { checkIn ->
         val relatedAlert = alerts.firstOrNull { alert ->
-            alert.patientId == checkIn.patientId &&
-            (alert.createdAtText.contains(checkIn.date) ||
-             alert.type.equals("sos", ignoreCase = true))
+            alert.matchesCheckIn(checkIn)
         }
         CheckInDetailBottomSheet(
             checkIn = checkIn,
@@ -335,7 +344,7 @@ private fun PatientDetailBackground() {
             .height(320.dp)
             .background(
                 Brush.verticalGradient(
-                    listOf(SoftLavender.copy(alpha = 0.38f), Color.White)
+                    listOf(SoftLavender.copy(alpha = 0.18f), Color.Transparent)
                 )
             )
     )
@@ -477,7 +486,58 @@ private fun PatientProfileSummary(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
+            Spacer(modifier = Modifier.height(10.dp))
+            PatientContactPill(
+                icon = Icons.Default.Email,
+                text = patient.email.ifBlank { "Sin correo registrado" }
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            PatientContactPill(
+                icon = Icons.Default.Phone,
+                text = patient.phone.ifBlank { "Sin teléfono registrado" }
+            )
         }
+    }
+}
+
+@Composable
+private fun PatientContactPill(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String
+) {
+    val clipboardManager = LocalClipboardManager.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .pointerInput(text) {
+                detectTapGestures(
+                    onLongPress = {
+                        if (!text.startsWith("Sin ")) {
+                            clipboardManager.setText(AnnotatedString(text))
+                        }
+                    }
+                )
+            }
+            .padding(horizontal = 10.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = CaregiverPurple,
+            modifier = Modifier.size(16.dp)
+        )
+        Text(
+            text = text,
+            fontFamily = LexendFontFamily,
+            fontWeight = FontWeight.Medium,
+            fontSize = 11.sp,
+            color = TextSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -531,19 +591,22 @@ private fun PatientDetailTabs(
 @Composable
 private fun PatientProgressTab(
     checkIns: List<CheckIn>,
-    streakDays: Int,
-    patientName: String
+    patientName: String,
+    isLoading: Boolean
 ) {
     var selectedMonth by remember { mutableStateOf(YearMonth.now()) }
     var selectedDay by remember { mutableIntStateOf(LocalDate.now().dayOfMonth) }
 
-    if (checkIns.isEmpty()) {
+    if (isLoading) {
+        PatientDetailDataLoadingState()
+    } else if (checkIns.isEmpty()) {
         ProgressEmptyState(patientName = patientName)
     } else {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             ProgressChart(
                 checkIns = checkIns,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                accentColor = CaregiverPurple
             )
             PatientMonthlyCalendarCard(
                 month = selectedMonth,
@@ -553,7 +616,6 @@ private fun PatientProgressTab(
                 onPreviousMonth = { selectedMonth = selectedMonth.minusMonths(1) },
                 onNextMonth = { selectedMonth = selectedMonth.plusMonths(1) }
             )
-            PatientStreakCard(streakDays = streakDays)
         }
     }
 }
@@ -580,15 +642,19 @@ private fun PatientMonthlyCalendarCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            MonthNavButton(label = previousMonthName(month), isPrevious = true, onClick = onPreviousMonth)
+            MonthNavButton(isPrevious = true, onClick = onPreviousMonth)
             Text(
                 text = monthTitle(month),
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 19.sp,
-                color = TextPrimary
+                color = TextPrimary,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
-            MonthNavButton(label = nextMonthName(month), isPrevious = false, onClick = onNextMonth)
+            MonthNavButton(isPrevious = false, onClick = onNextMonth)
         }
 
         Spacer(modifier = Modifier.height(18.dp))
@@ -644,46 +710,32 @@ private fun PatientMonthlyCalendarCard(
 
 @Composable
 private fun MonthNavButton(
-    label: String,
     isPrevious: Boolean,
     onClick: () -> Unit
 ) {
-    Row(
+    Box(
         modifier = Modifier
             .height(40.dp)
+            .width(40.dp)
+            .clip(CircleShape)
+            .background(CaregiverPurple.copy(alpha = 0.10f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick
-            )
-            .padding(horizontal = 2.dp),
-        verticalAlignment = Alignment.CenterVertically
+            ),
+        contentAlignment = Alignment.Center
     ) {
-        if (isPrevious) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Mes anterior",
-                tint = CaregiverPurple,
-                modifier = Modifier.size(19.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-        }
-        Text(
-            text = label,
-            fontFamily = LexendFontFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
-            color = CaregiverPurple
+        Icon(
+            imageVector = if (isPrevious) {
+                Icons.AutoMirrored.Filled.ArrowBack
+            } else {
+                Icons.AutoMirrored.Filled.KeyboardArrowRight
+            },
+            contentDescription = if (isPrevious) "Mes anterior" else "Mes siguiente",
+            tint = CaregiverPurple,
+            modifier = Modifier.size(if (isPrevious) 19.dp else 22.dp)
         )
-        if (!isPrevious) {
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Mes siguiente",
-                tint = CaregiverPurple,
-                modifier = Modifier.size(21.dp)
-            )
-        }
     }
 }
 
@@ -832,10 +884,13 @@ private fun PatientStreakCard(streakDays: Int) {
 private fun PatientHistoryTab(
     checkIns: List<CheckIn>,
     alerts: List<CaregiverAlert>,
-    onSosAlertClick: (String) -> Unit,
-    onCheckInClick: (CheckIn) -> Unit
+    onCheckInClick: (CheckIn) -> Unit,
+    isLoading: Boolean
 ) {
-    if (checkIns.isEmpty()) {
+    if (isLoading) {
+        PatientDetailDataLoadingState()
+        return
+    } else if (checkIns.isEmpty()) {
         EmptyPatientDetailState(
             title = "Aún no hay historial de check-ins",
             description = "Los registros aparecerán cuando el paciente complete su check-in."
@@ -847,7 +902,7 @@ private fun PatientHistoryTab(
         checkIns.take(10).forEachIndexed { index, checkIn ->
             PatientHistoryItem(
                 checkIn = checkIn,
-                generatedAlert = alerts.any { alert -> alert.patientId == checkIn.patientId && alert.createdAtText.contains(checkIn.date) },
+                generatedAlert = alerts.any { alert -> alert.matchesCheckIn(checkIn) },
                 onClick = { onCheckInClick(checkIn) }
             )
             if (index < checkIns.take(10).lastIndex) {
@@ -869,6 +924,8 @@ private fun PatientHistoryItem(
     generatedAlert: Boolean,
     onClick: () -> Unit
 ) {
+    val showAlert = generatedAlert || checkIn.score < 25
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -879,9 +936,8 @@ private fun PatientHistoryItem(
                 onClick = onClick
             )
             .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Row 1: Icon + Date
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -907,8 +963,33 @@ private fun PatientHistoryItem(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
+            AnimatedVisibility(visible = showAlert, enter = fadeIn(), exit = fadeOut()) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(PatientScoreStatus.CRITICAL.softColor)
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ReportProblem,
+                        contentDescription = null,
+                        tint = PatientScoreStatus.CRITICAL.color,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Text(
+                        text = "Alerta",
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 10.sp,
+                        color = PatientScoreStatus.CRITICAL.color,
+                        maxLines = 1
+                    )
+                }
+            }
         }
-        // Row 2: Alert label + Score chip + Ver detalle
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -916,37 +997,7 @@ private fun PatientHistoryItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f, fill = false)
-            ) {
-                AnimatedVisibility(visible = generatedAlert || checkIn.score < 25, enter = fadeIn(), exit = fadeOut()) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ReportProblem,
-                            contentDescription = null,
-                            tint = PatientScoreStatus.CRITICAL.color,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            text = "Alerta",
-                            fontFamily = LexendFontFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 11.sp,
-                            color = PatientScoreStatus.CRITICAL.color,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                    }
-                }
-                PatientScoreChip(score = checkIn.score)
-            }
-            
+            PatientScoreChip(score = checkIn.score)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(2.dp)
@@ -955,39 +1006,40 @@ private fun PatientHistoryItem(
                     text = "Ver detalle",
                     fontFamily = LexendFontFamily,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     color = CaregiverPurple
                 )
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
                     tint = CaregiverPurple,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(17.dp)
                 )
             }
         }
     }
 }
-
 @Composable
 private fun PatientScoreChip(score: Int) {
     val status = scoreStatus(score)
     Surface(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(999.dp),
         color = status.softColor
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
-            Box(modifier = Modifier.size(8.dp).background(status.color, CircleShape))
+            Box(modifier = Modifier.size(7.dp).background(status.color, CircleShape))
             Text(
                 text = "$score/100 ${status.label}",
                 fontFamily = LexendFontFamily,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 12.sp,
-                color = status.color
+                fontSize = 11.sp,
+                color = status.color,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -1031,6 +1083,70 @@ private fun CaregiverReadOnlyNotice(compact: Boolean) {
                     fontSize = 14.sp,
                     color = TextSecondary
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PatientDetailDataLoadingState() {
+    SoftCard {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(260.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.48f)
+                        .height(24.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .then(ShimmerEffect())
+                )
+                Box(
+                    modifier = Modifier
+                        .width(104.dp)
+                        .height(32.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .then(ShimmerEffect())
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(9.dp)
+            ) {
+                listOf(0.68f, 0.42f, 0.78f, 0.54f, 0.9f, 0.36f, 0.62f).forEach { fraction ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(fraction)
+                            .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
+                            .then(ShimmerEffect())
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                repeat(4) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(16.dp)
+                            .clip(RoundedCornerShape(999.dp))
+                            .then(ShimmerEffect())
+                    )
+                }
             }
         }
     }
@@ -1162,6 +1278,17 @@ private fun CheckIn.relativeDateLabel(): String {
 private fun CheckIn.timeLabel(): String {
     val created = createdAt ?: return "--:--"
     return SimpleDateFormat("HH:mm", Locale("es", "ES")).format(created)
+}
+
+private fun CaregiverAlert.matchesCheckIn(checkIn: CheckIn): Boolean {
+    if (patientId != checkIn.patientId) return false
+    if (type.equals("sos", ignoreCase = true)) return false
+
+    val alertDate = createdAt?.let {
+        SimpleDateFormat("yyyy-MM-dd", Locale("es", "ES")).format(it)
+    }.orEmpty()
+
+    return createdAtText.contains(checkIn.date) || alertDate == checkIn.date
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

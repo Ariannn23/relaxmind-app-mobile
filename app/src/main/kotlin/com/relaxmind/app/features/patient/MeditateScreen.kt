@@ -27,8 +27,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -70,6 +73,7 @@ import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.LoadingIndicator
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.ScreenHeader
+import com.relaxmind.app.ui.components.ScrollToTopEvents
 import com.relaxmind.app.ui.components.MeditateSkeleton
 import com.relaxmind.app.ui.components.ErrorStateScreen
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
@@ -1024,6 +1028,15 @@ fun MeditateScreen(
     // App theme state
     val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
     val bgColor = if (isDark) com.relaxmind.app.ui.themes.BackgroundDark else Color.White
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(Unit) {
+        ScrollToTopEvents.requests.collect { route ->
+            if (route == Screen.Meditate.route) {
+                listState.animateScrollToItem(0)
+            }
+        }
+    }
 
     // Apply Lexend Theme globally inside the screen
     MaterialTheme(
@@ -1054,7 +1067,12 @@ fun MeditateScreen(
                 }
 
                 if (isLoading && exercises.isEmpty() && error == null) {
-                    MeditateSkeleton(modifier = Modifier.align(Alignment.Center))
+                    MeditateSkeleton(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(top = 24.dp, bottom = 120.dp)
+                    )
                 } else if (error != null && exercises.isEmpty()) {
                     ErrorStateScreen(
                         message = error ?: "",
@@ -1065,6 +1083,7 @@ fun MeditateScreen(
                     )
                 } else {
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(horizontal = 24.dp),

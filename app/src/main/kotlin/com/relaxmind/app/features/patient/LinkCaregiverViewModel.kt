@@ -52,7 +52,11 @@ class LinkCaregiverViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
+            val previousBindingCodeId = _bindingCode.value?.id
             listenerRegistration?.remove()
+            if (!previousBindingCodeId.isNullOrBlank()) {
+                firestoreRepository.deleteBindingCode(previousBindingCodeId)
+            }
 
             val expiresAt = Date(System.currentTimeMillis() + CODE_TTL_MILLIS)
             val result = firestoreRepository.createBindingCode(

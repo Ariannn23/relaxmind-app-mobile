@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -22,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.relaxmind.app.R
+import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.components.RelaxIcons
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.*
@@ -31,7 +31,9 @@ fun TermsAndConditionsScreen(
     role: String,
     onNavigateBack: () -> Unit
 ) {
-    val themeColor = if (role == "caregiver") CaregiverIndigo else PatientGreen
+    val appRole = if (role == "caregiver") AppRole.CAREGIVER else AppRole.PATIENT
+    val themeColor = if (appRole == AppRole.CAREGIVER) CaregiverIndigo else PatientGreen
+    val softAccent = themeColor.copy(alpha = if (appRole == AppRole.CAREGIVER) 0.12f else 0.10f)
 
     MaterialTheme(
         colorScheme = MaterialTheme.colorScheme,
@@ -46,7 +48,7 @@ fun TermsAndConditionsScreen(
                     .padding(innerPadding)
             ) {
                 // Background decoration
-                SoftGradientBackground(animateBlobs = true)
+                SoftGradientBackground(animateBlobs = true, role = appRole)
 
                 Column(
                     modifier = Modifier
@@ -63,7 +65,8 @@ fun TermsAndConditionsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         com.relaxmind.app.ui.components.RelaxBackButton(
-                            onClick = onNavigateBack
+                            onClick = onNavigateBack,
+                            role = appRole
                         )
                     }
 
@@ -95,13 +98,13 @@ fun TermsAndConditionsScreen(
                             .fillMaxWidth()
                             .padding(bottom = 24.dp)
                             .shadow(
-                                elevation = 2.dp,
+                                elevation = 8.dp,
                                 shape = RoundedCornerShape(28.dp),
-                                ambientColor = Color(0xFFECEEF2).copy(alpha = 0.5f),
-                                spotColor = Color(0xFFECEEF2).copy(alpha = 0.5f)
+                                ambientColor = themeColor.copy(alpha = 0.10f),
+                                spotColor = themeColor.copy(alpha = 0.12f)
                             )
                             .background(Color.White, RoundedCornerShape(28.dp))
-                            .border(1.dp, Color(0xFFECEEF2), RoundedCornerShape(28.dp))
+                            .border(1.dp, themeColor.copy(alpha = 0.12f), RoundedCornerShape(28.dp))
                             .clip(RoundedCornerShape(28.dp))
                     ) {
                         Column(
@@ -113,19 +116,27 @@ fun TermsAndConditionsScreen(
                         ) {
                             TermsSection(
                                 title = stringResource(id = R.string.terms_section1_title),
-                                description = stringResource(id = R.string.terms_section1_desc)
+                                description = stringResource(id = R.string.terms_section1_desc),
+                                accentColor = themeColor,
+                                accentBackground = softAccent
                             )
                             TermsSection(
                                 title = stringResource(id = R.string.terms_section2_title),
-                                description = stringResource(id = R.string.terms_section2_desc)
+                                description = stringResource(id = R.string.terms_section2_desc),
+                                accentColor = themeColor,
+                                accentBackground = softAccent
                             )
                             TermsSection(
                                 title = stringResource(id = R.string.terms_section3_title),
-                                description = stringResource(id = R.string.terms_section3_desc)
+                                description = stringResource(id = R.string.terms_section3_desc),
+                                accentColor = themeColor,
+                                accentBackground = softAccent
                             )
                             TermsSection(
                                 title = stringResource(id = R.string.terms_section4_title),
-                                description = stringResource(id = R.string.terms_section4_desc)
+                                description = stringResource(id = R.string.terms_section4_desc),
+                                accentColor = themeColor,
+                                accentBackground = softAccent
                             )
                         }
                     }
@@ -138,7 +149,9 @@ fun TermsAndConditionsScreen(
 @Composable
 private fun TermsSection(
     title: String,
-    description: String
+    description: String,
+    accentColor: Color,
+    accentBackground: Color
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -148,7 +161,10 @@ private fun TermsSection(
             fontFamily = LexendFontFamily,
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp,
-            color = TextPrimary
+            color = accentColor,
+            modifier = Modifier
+                .background(accentBackground, RoundedCornerShape(10.dp))
+                .padding(horizontal = 12.dp, vertical = 7.dp)
         )
         Text(
             text = description,

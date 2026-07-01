@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -54,6 +55,7 @@ import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.components.ScheduleSkeleton
 import com.relaxmind.app.ui.components.ErrorStateScreen
+import com.relaxmind.app.ui.components.ScrollToTopEvents
 import com.relaxmind.app.ui.themes.*
 import java.time.LocalDate
 import java.time.format.TextStyle
@@ -82,6 +84,7 @@ fun ScheduleScreen(
     var selectedTabIndex by remember { mutableStateOf(0) } // 0 = Semana, 1 = Calendario
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var calendarYearMonth by remember { mutableStateOf(LocalDate.now()) }
+    var scrollToTopSignal by remember { mutableStateOf(0) }
 
     // Bottom sheet state for Month Views
     var showBottomSheet by remember { mutableStateOf(false) }
@@ -97,6 +100,15 @@ fun ScheduleScreen(
 
     LaunchedEffect(calendarYearMonth) {
         viewModel.loadMonthlyEvents(calendarYearMonth.year, calendarYearMonth.monthValue)
+    }
+
+    LaunchedEffect(Unit) {
+        ScrollToTopEvents.requests.collect { route ->
+            if (route == Screen.Schedule.route) {
+                selectedTabIndex = 0
+                scrollToTopSignal += 1
+            }
+        }
     }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -140,9 +152,10 @@ fun ScheduleScreen(
             }
 
             if (isLoading && selectedDateAppointments.isEmpty() && monthlyAppointments.isEmpty() && error == null) {
-                com.relaxmind.app.ui.components.RelaxLoadingContent(
-                    modifier = Modifier.align(Alignment.Center),
-                    message = "Cargando..."
+                ScheduleSkeleton(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 24.dp)
                 )
             } else if (error != null && selectedDateAppointments.isEmpty() && monthlyAppointments.isEmpty()) {
                 ErrorStateScreen(
@@ -206,6 +219,7 @@ fun ScheduleScreen(
                             monthlyAppointments = monthlyAppointments,
                             diaryEntry = selectedDateDiaryEntry,
                             monthlyDiaryEntries = monthlyDiaryEntries,
+                            scrollToTopSignal = scrollToTopSignal,
                             onDateSelected = { selectedDate = it },
                             onAppointmentClick = { onNavigate(Screen.AppointmentDetail.createRoute(it.id)) }
                         )
@@ -408,9 +422,11 @@ private fun WeeklyView(
     monthlyAppointments: List<Appointment>,
     diaryEntry: DiaryEntry?,
     monthlyDiaryEntries: List<DiaryEntry>,
+    scrollToTopSignal: Int,
     onDateSelected: (LocalDate) -> Unit,
     onAppointmentClick: (Appointment) -> Unit
 ) {
+    val listState = rememberLazyListState()
     val today = LocalDate.now()
     val monday = selectedDate.with(java.time.DayOfWeek.MONDAY)
     val weekDays = remember(monday) { (0..6).map { monday.plusDays(it.toLong()) } }
@@ -423,6 +439,12 @@ private fun WeeklyView(
         monthlyDiaryEntries.mapNotNull { entry ->
             runCatching { LocalDate.parse(entry.date) }.getOrNull()
         }.toSet()
+    }
+
+    LaunchedEffect(scrollToTopSignal) {
+        if (scrollToTopSignal > 0) {
+            listState.animateScrollToItem(0)
+        }
     }
 
     Column(
@@ -568,6 +590,7 @@ private fun WeeklyView(
             EmptyEventsPlaceholder()
         } else {
             LazyColumn(
+                state = listState,
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(bottom = 16.dp)

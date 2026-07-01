@@ -5,6 +5,7 @@ import android.os.Looper
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -34,6 +35,7 @@ class SOSPatientViewModel(
     val uiState: StateFlow<SOSPatientUiState> = _uiState.asStateFlow()
 
     private var currentAlertId: String? = null
+    private var alertListener: ListenerRegistration? = null
     private var locationCallback: LocationCallback? = null
     private var isCreatingAlert = false
 
@@ -146,6 +148,7 @@ class SOSPatientViewModel(
                     val createdAlertId = result.getOrNull()
                     currentAlertId = createdAlertId
                     if (createdAlertId != null) {
+                        listenToCurrentAlert(createdAlertId)
                         val linkedCaregiverId = state.caregiverId
                         if (linkedCaregiverId != null) {
                             notificationApiService.sendSosAlert(
@@ -188,11 +191,51 @@ class SOSPatientViewModel(
         val alertId = currentAlertId
         if (alertId != null) {
             viewModelScope.launch {
-                firestoreRepository.updateAlertResolved(alertId, true)
+                firestoreRepository.updateAlertFields(
+                    alertId,
+                    mapOf(
+                        "resolved" to true,
+                        "type" to "sos_cancelled",
+                        "title" to "SOS cancelado",
+                        "message" to "El paciente canceló la alerta SOS e indicó que está bien.",
+                        "severity" to "cancelled"
+                    )
+                )
             }
         }
         stopLocationUpdates()
-        _uiState.value = _uiState.value.copy(isSOSActive = false)
+        alertListener?.remove()
+        alertListener = null
+        _uiState.value = _uiState.value.copy(
+            isSOSActive = false,
+            sosFinishedTitle = "SOS cancelado",
+            sosFinishedMessage = "Tu cuidador ya no verá esta alerta como activa. Quedará guardada en el historial."
+        )
+    }
+
+    private fun listenToCurrentAlert(alertId: String) {
+        alertListener?.remove()
+        alertListener = firestoreRepository.listenToAlert(
+            alertId = alertId,
+            onChange = { alert ->
+                if (alert?.resolved == true) {
+                    stopLocationUpdates()
+                    val cancelled = alert.type.equals("sos_cancelled", ignoreCase = true)
+                    _uiState.value = _uiState.value.copy(
+                        isSOSActive = false,
+                        sosFinishedTitle = if (cancelled) "SOS cancelado" else "Alerta resuelta",
+                        sosFinishedMessage = if (cancelled) {
+                            "La alerta fue cancelada y quedó registrada en el historial."
+                        } else {
+                            "Tu cuidador marcó la emergencia como resuelta."
+                        }
+                    )
+                }
+            },
+            onError = { throwable ->
+                Log.w("SOSPatientViewModel", "No se pudo escuchar el estado de la alerta SOS.", throwable)
+            }
+        )
     }
 
     fun updateNotificationsEnabled(enabled: Boolean) {
@@ -218,6 +261,7 @@ class SOSPatientViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        alertListener?.remove()
         stopLocationUpdates()
     }
 }
@@ -231,5 +275,7 @@ data class SOSPatientUiState(
     val caregiverPhone: String = "",
     val caregiverName: String = "",
     val notificationsEnabled: Boolean = true,
-    val error: String? = null
+    val error: String? = null,
+    val sosFinishedTitle: String? = null,
+    val sosFinishedMessage: String? = null
 )

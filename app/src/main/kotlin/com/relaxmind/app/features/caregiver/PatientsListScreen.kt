@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -55,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
@@ -79,7 +81,9 @@ import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxButton
 import com.relaxmind.app.ui.components.RelaxLoadingContent
 import com.relaxmind.app.ui.components.ScreenHeader
+import com.relaxmind.app.ui.components.ScrollToTopEvents
 import com.relaxmind.app.ui.components.RelaxToastHost
+import com.relaxmind.app.ui.components.PatientListSkeleton
 import com.relaxmind.app.ui.components.rememberRelaxToastState
 import com.relaxmind.app.ui.themes.*
 
@@ -110,9 +114,18 @@ fun PatientsListScreen(
     val toastState = rememberRelaxToastState()
     var query by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
+    val listState = rememberLazyListState()
 
     LaunchedEffect(Unit) {
         viewModel.observeCaregiverData()
+    }
+
+    LaunchedEffect(Unit) {
+        ScrollToTopEvents.requests.collect { route ->
+            if (route == Screen.PatientsList.route) {
+                listState.animateScrollToItem(0)
+            }
+        }
     }
 
     LaunchedEffect(error) {
@@ -136,7 +149,7 @@ fun PatientsListScreen(
     }
 
     Scaffold(
-        containerColor = BackgroundWhite,
+        containerColor = Color.Transparent,
         bottomBar = {
                 if (showBottomNav) {
                     RelaxBottomNav(
@@ -151,18 +164,26 @@ fun PatientsListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(BackgroundWhite)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(SoftLavender, Color(0xFFF8F8FD))
+                    )
+                )
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp)
+            ) {
                 ScreenHeader(
                     title = "Pacientes",
-                    subtitle = "Personas vinculadas a tu cuidado"
+                    subtitle = "Personas vinculadas a tu cuidado",
+                    horizontalPadding = 0.dp
                 )
                 
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 24.dp),
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     item { Spacer(modifier = Modifier.height(8.dp)) }
@@ -179,17 +200,9 @@ fun PatientsListScreen(
 
                     if ((isLoading || isPatientsLoading) && patients.isEmpty() && error == null) {
                         item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(440.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                com.relaxmind.app.ui.components.RelaxLoadingContent(
-                                    message = "Cargando...",
-                                    isCaregiver = true
-                                )
-                            }
+                            PatientListSkeleton(
+                                modifier = Modifier.padding(horizontal = 0.dp)
+                            )
                         }
                     } else if (error != null && patients.isEmpty()) {
                         item {

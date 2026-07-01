@@ -65,8 +65,14 @@ class CaregiverViewModel(
     private val _isPatientsLoading = MutableStateFlow(true)
     val isPatientsLoading: StateFlow<Boolean> = _isPatientsLoading.asStateFlow()
 
+    private val _isAlertsLoading = MutableStateFlow(true)
+    val isAlertsLoading: StateFlow<Boolean> = _isAlertsLoading.asStateFlow()
+
     private val _isLinking = MutableStateFlow(false)
     val isLinking: StateFlow<Boolean> = _isLinking.asStateFlow()
+
+    private val _isPatientDetailLoading = MutableStateFlow(false)
+    val isPatientDetailLoading: StateFlow<Boolean> = _isPatientDetailLoading.asStateFlow()
 
     private val _message = MutableStateFlow<String?>(null)
     val message = _message.asStateFlow()
@@ -106,6 +112,7 @@ class CaregiverViewModel(
         if (patientsListener != null && alertsListener != null) return
 
         _isPatientsLoading.value = true
+        _isAlertsLoading.value = true
 
         patientsListener = firestoreRepository.listenPatientsForCaregiver(
             caregiverId = caregiverId,
@@ -124,9 +131,13 @@ class CaregiverViewModel(
             onChange = { alerts ->
                 _allAlerts.value = alerts
                 _activeAlerts.value = alerts.filter { !it.resolved }
+                _isAlertsLoading.value = false
                 rebuildPatientSummaries()
             },
-            onError = { _error.value = it.toUserFriendlyMessage("No se pudieron escuchar las alertas.") }
+            onError = {
+                _isAlertsLoading.value = false
+                _error.value = it.toUserFriendlyMessage("No se pudieron escuchar las alertas.")
+            }
         )
     }
 
@@ -134,23 +145,42 @@ class CaregiverViewModel(
         val caregiverId = authService.getCurrentUser()?.uid ?: return
         observeCaregiverData()
 
+        val cachedPatient = rawPatients.firstOrNull { it.id == patientId }
+            ?: _patients.value.firstOrNull { it.patient.id == patientId }?.patient
+        _selectedPatient.value = cachedPatient
+        _selectedPatientCheckIns.value = emptyList()
+        _selectedPatientStreak.value = null
+        _selectedPatientAlerts.value = emptyList()
+        _isPatientDetailLoading.value = true
+
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
 
             firestoreRepository.getPatientById(patientId)
-                .onSuccess { _selectedPatient.value = it }
-                .onFailure { _error.value = it.toUserFriendlyMessage("No se pudo cargar el paciente.") }
+                .onSuccess { patient ->
+                    if (patient != null) {
+                        _selectedPatient.value = patient
+                    } else if (cachedPatient == null) {
+                        _error.value = "No se pudo cargar el paciente."
+                    }
+                }
+                .onFailure {
+                    if (cachedPatient == null) {
+                        _error.value = it.toUserFriendlyMessage("No se pudo cargar el paciente.")
+                    }
+                }
 
             firestoreRepository.getPatientCheckIns(patientId)
                 .onSuccess { _selectedPatientCheckIns.value = it.sortedByDescending { checkIn -> checkIn.date } }
-                .onFailure { _error.value = it.toUserFriendlyMessage("No se pudo cargar el historial.") }
+                .onFailure { _selectedPatientCheckIns.value = emptyList() }
 
             firestoreRepository.getPatientStreak(patientId)
                 .onSuccess { _selectedPatientStreak.value = it }
-                .onFailure { _error.value = it.toUserFriendlyMessage("No se pudo cargar la racha.") }
+                .onFailure { _selectedPatientStreak.value = null }
 
             _isLoading.value = false
+            _isPatientDetailLoading.value = false
         }
 
         patientAlertsListener?.remove()
@@ -158,7 +188,7 @@ class CaregiverViewModel(
             caregiverId = caregiverId,
             patientId = patientId,
             onChange = { _selectedPatientAlerts.value = it },
-            onError = { _error.value = it.toUserFriendlyMessage("No se pudieron escuchar las alertas del paciente.") }
+            onError = { _selectedPatientAlerts.value = emptyList() }
         )
     }
 

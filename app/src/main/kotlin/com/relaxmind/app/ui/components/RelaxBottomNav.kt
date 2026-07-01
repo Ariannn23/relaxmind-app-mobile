@@ -139,7 +139,13 @@ fun RelaxBottomNav(
                 ElevatedNavItem(
                     item = item,
                     isSelected = isSelected,
-                    onClick = { onNavigate(item.route) },
+                    onClick = {
+                        if (isSelected) {
+                            ScrollToTopEvents.request(item.route)
+                        } else {
+                            onNavigate(item.route)
+                        }
+                    },
                     role = role,
                     darkMode = darkMode
                 )

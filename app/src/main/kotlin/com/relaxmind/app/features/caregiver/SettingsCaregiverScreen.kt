@@ -3,7 +3,6 @@ package com.relaxmind.app.features.caregiver
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
@@ -57,7 +56,6 @@ import com.relaxmind.app.ui.components.FullScreenLoadingOverlay
 import com.relaxmind.app.ui.components.NotificationPermissionDialog
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxIcons
-import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.components.getAvatarDrawableRes
 import com.relaxmind.app.ui.components.hasNotificationPermission
 import com.relaxmind.app.ui.components.openNotificationSettings
@@ -67,6 +65,7 @@ import com.relaxmind.app.ui.components.requestNotificationPermission
 import com.relaxmind.app.ui.components.SettingsSkeleton
 import com.relaxmind.app.ui.components.ScreenHeader
 import com.relaxmind.app.ui.components.ErrorStateScreen
+import com.relaxmind.app.ui.components.ScrollToTopEvents
 import com.relaxmind.app.ui.themes.*
 
 private val CaregiverIndigo = Color(0xFF4338A8)
@@ -100,13 +99,22 @@ fun SettingsCaregiverScreen(
     LaunchedEffect(Unit) {
         viewModel.loadDashboard()
     }
+    val scrollState = rememberScrollState()
+
+    LaunchedEffect(Unit) {
+        ScrollToTopEvents.requests.collect { route ->
+            if (route == "caregiver/settings") {
+                scrollState.animateScrollTo(0)
+            }
+        }
+    }
 
     MaterialTheme(
         colorScheme = MaterialTheme.colorScheme,
         typography = LexendTypography
     ) {
         Scaffold(
-            containerColor = Color.White,
+            containerColor = Color.Transparent,
             bottomBar = {
                 if (showBottomNav) {
                     RelaxBottomNav(
@@ -120,11 +128,13 @@ fun SettingsCaregiverScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(CaregiverLavender, Color(0xFFF8F8FD))
+                        )
+                    )
                     .padding(innerPadding)
             ) {
-                // Background decoration
-                SoftGradientBackground(animateBlobs = true, role = AppRole.CAREGIVER)
-
                 if (isLoading && caregiver == null && error == null) {
                     SettingsSkeleton(modifier = Modifier.align(Alignment.Center))
                 } else if (error != null && caregiver == null) {
@@ -136,7 +146,7 @@ fun SettingsCaregiverScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
+                            .verticalScroll(scrollState)
                             .padding(start = 24.dp, end = 24.dp, bottom = 20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(24.dp)
@@ -184,7 +194,6 @@ fun SettingsCaregiverScreen(
                                 CaregiverSettingsDivider()
 
                                 // Biometría
-                                val context = androidx.compose.ui.platform.LocalContext.current
                                 CaregiverSettingsToggleRow(
                                     label = "Inicio con biometría",
                                     icon = Icons.Filled.Fingerprint,
@@ -208,7 +217,7 @@ fun SettingsCaregiverScreen(
                                 CaregiverSettingsNavigationRow(
                                     label = "Términos y condiciones",
                                     icon = Icons.Filled.Description,
-                                    onClick = { openTermsUrl(context) }
+                                    onClick = { onNavigate("common/terms-and-conditions/caregiver") }
                                 )
                                 CaregiverSettingsDivider()
 
@@ -460,10 +469,15 @@ private fun CaregiverSettingsProfileCard(
         modifier = modifier
             .fillMaxWidth()
             .shadow(
-                elevation = 8.dp,
+                elevation = 12.dp,
                 shape = RoundedCornerShape(28.dp),
-                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.15f),
-                spotColor = Color(0xFF8A88A6).copy(alpha = 0.15f)
+                ambientColor = CaregiverIndigo.copy(alpha = 0.14f),
+                spotColor = CaregiverIndigo.copy(alpha = 0.18f)
+            )
+            .border(
+                width = 1.dp,
+                color = CaregiverLavender.copy(alpha = 0.9f),
+                shape = RoundedCornerShape(28.dp)
             )
             .background(Color.White, RoundedCornerShape(28.dp))
             .clickable(onClick = onClick)
@@ -549,10 +563,15 @@ private fun CaregiverSettingsGroupCard(
         modifier = modifier
             .fillMaxWidth()
             .shadow(
-                elevation = 6.dp,
+                elevation = 12.dp,
                 shape = RoundedCornerShape(28.dp),
-                ambientColor = Color(0xFF8A88A6).copy(alpha = 0.12f),
-                spotColor = Color(0xFF8A88A6).copy(alpha = 0.12f)
+                ambientColor = CaregiverIndigo.copy(alpha = 0.12f),
+                spotColor = CaregiverIndigo.copy(alpha = 0.16f)
+            )
+            .border(
+                width = 1.dp,
+                color = CaregiverLavender.copy(alpha = 0.9f),
+                shape = RoundedCornerShape(28.dp)
             )
             .background(Color.White, RoundedCornerShape(28.dp))
             .padding(vertical = 8.dp)
@@ -1119,7 +1138,3 @@ private fun relaunchActivity(context: Context) {
     (context as? Activity)?.finish()
 }
 
-private fun openTermsUrl(context: Context) {
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://relaxmind.com/terms"))
-    context.startActivity(intent)
-}

@@ -44,6 +44,7 @@ import com.relaxmind.app.ui.components.FullScreenLoadingScreen
 import com.relaxmind.app.ui.components.NotificationPermissionDialog
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.RelaxToastHost
+import com.relaxmind.app.ui.components.ScrollToTopEvents
 import com.relaxmind.app.ui.components.getAvatarDrawableRes
 import com.relaxmind.app.ui.components.hasNotificationPermission
 import com.relaxmind.app.ui.components.openNotificationSettings
@@ -135,6 +136,8 @@ fun DashboardCaregiverScreen(
     val patients by viewModel.patients.collectAsState()
     val alerts by viewModel.activeAlerts.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isPatientsLoading by viewModel.isPatientsLoading.collectAsState()
+    val isAlertsLoading by viewModel.isAlertsLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val toastState = rememberRelaxToastState()
     val context = LocalContext.current
@@ -149,8 +152,17 @@ fun DashboardCaregiverScreen(
     
     val isDarkCaregiverDashboard = false
     val colors = caregiverDashboardColors(isDark = isDarkCaregiverDashboard)
+    val scrollState = rememberScrollState()
 
     LaunchedEffect(Unit) { viewModel.loadDashboard() }
+
+    LaunchedEffect(Unit) {
+        ScrollToTopEvents.requests.collect { route ->
+            if (route == Screen.CaregiverDashboard.route) {
+                scrollState.animateScrollTo(0)
+            }
+        }
+    }
 
     LaunchedEffect(error) {
         if (!error.isNullOrBlank()) {
@@ -167,7 +179,7 @@ fun DashboardCaregiverScreen(
         }
     }
 
-    if (isLoading && caregiver == null && error == null) {
+    if ((isLoading && caregiver == null || isPatientsLoading || isAlertsLoading) && error == null) {
         FullScreenLoadingScreen(text = "Cargando...", isCaregiver = true)
         return
     } else if (error != null && caregiver == null) {
@@ -255,7 +267,7 @@ fun DashboardCaregiverScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
+                        .verticalScroll(scrollState)
                         .statusBarsPadding()
                         .padding(horizontal = 20.dp)
                         .padding(top = 20.dp, bottom = 24.dp),

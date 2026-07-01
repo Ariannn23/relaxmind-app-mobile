@@ -59,6 +59,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -461,7 +462,7 @@ fun CaregiverLinkPatientScreen(
                 }
 
                 if (isLinking) {
-                    FullScreenLoadingOverlay()
+                    FullScreenLoadingOverlay(isCaregiver = true)
                 }
 
                 RelaxToastHost(state = toastState)
@@ -570,12 +571,16 @@ private fun ConfirmPatientLinkDialog(
                         modifier = Modifier.weight(1f).height(52.dp),
                         shape = RoundedCornerShape(50),
                         border = BorderStroke(1.3.dp, Color(0xFFE5E0F7)),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = CaregiverIndigo)
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = CaregiverIndigo),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                     ) {
                         Text(
                             text = "Cancelar",
                             fontFamily = LexendFontFamily,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
 
@@ -584,7 +589,8 @@ private fun ConfirmPatientLinkDialog(
                         enabled = !isLoading,
                         modifier = Modifier.weight(1f).height(52.dp),
                         shape = RoundedCornerShape(50),
-                        colors = ButtonDefaults.buttonColors(containerColor = CaregiverIndigo)
+                        colors = ButtonDefaults.buttonColors(containerColor = CaregiverIndigo),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(
@@ -594,10 +600,13 @@ private fun ConfirmPatientLinkDialog(
                             )
                         } else {
                             Text(
-                                text = "Si, vincular",
+                                text = "Vincular",
                                 fontFamily = LexendFontFamily,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                fontSize = 14.sp,
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }

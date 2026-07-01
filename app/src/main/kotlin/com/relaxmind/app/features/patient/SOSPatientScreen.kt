@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.border
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Warning
@@ -103,7 +104,7 @@ fun SOSPatientScreen(
     }
 
     LaunchedEffect(uiState.isDataLoaded) {
-        if (uiState.isDataLoaded && !uiState.isSOSActive) {
+        if (uiState.isDataLoaded && !uiState.isSOSActive && uiState.sosFinishedTitle == null) {
             if (uiState.notificationsEnabled && hasNotificationPermission(context)) {
                 permissionLauncher.launch(
                     arrayOf(
@@ -125,6 +126,15 @@ fun SOSPatientScreen(
     ) {
         // Background gradient and waves
         SOSBackground()
+
+        if (uiState.sosFinishedTitle != null) {
+            SOSFinishedState(
+                title = uiState.sosFinishedTitle.orEmpty(),
+                message = uiState.sosFinishedMessage.orEmpty(),
+                onDone = onNavigateBack
+            )
+            return@Box
+        }
 
         Column(
             modifier = Modifier
@@ -444,6 +454,70 @@ private fun SOSStatusMessage(isSOSActive: Boolean, caregiverName: String) {
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SOSFinishedState(
+    title: String,
+    message: String,
+    onDone: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 28.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.22f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.CheckCircle,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(54.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(22.dp))
+        Text(
+            text = title,
+            fontFamily = LexendFontFamily,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 30.sp,
+            color = Color.White,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            text = message,
+            fontFamily = LexendFontFamily,
+            fontSize = 16.sp,
+            color = TextOnSOSMuted,
+            lineHeight = 23.sp,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(28.dp))
+        Button(
+            onClick = onDone,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(18.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+        ) {
+            Text(
+                text = "Volver al inicio",
+                fontFamily = LexendFontFamily,
+                fontWeight = FontWeight.Bold,
+                color = SOSCoral
+            )
         }
     }
 }

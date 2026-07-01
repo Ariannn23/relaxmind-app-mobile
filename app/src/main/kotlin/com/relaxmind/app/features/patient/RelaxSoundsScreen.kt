@@ -64,6 +64,7 @@ fun RelaxSoundsScreen(
 ) {
     val context = LocalContext.current
     val activeSoundIds by SoundPlayerManager.playingSoundIds.collectAsState()
+    val loopingSoundIds by SoundPlayerManager.loopingSoundIds.collectAsState()
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -124,6 +125,7 @@ fun RelaxSoundsScreen(
                 ) {
                     items(SoundCatalog) { item ->
                         val isPlaying = activeSoundIds.contains(item.id)
+                        val isLooping = loopingSoundIds.contains(item.id)
                         
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -184,6 +186,36 @@ fun RelaxSoundsScreen(
                                                 tint = Color.White,
                                                 modifier = Modifier.size(28.dp)
                                             )
+                                        }
+                                    }
+
+                                    if (isPlaying && isLooping) {
+                                        Surface(
+                                            modifier = Modifier
+                                                .align(Alignment.BottomStart)
+                                                .padding(10.dp),
+                                            shape = CircleShape,
+                                            color = PatientGreen.copy(alpha = 0.92f)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.RepeatOne,
+                                                    contentDescription = null,
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                                Text(
+                                                    text = "Loop",
+                                                    fontFamily = LexendFontFamily,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 11.sp,
+                                                    color = Color.White
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -270,7 +302,7 @@ fun RelaxSoundsScreen(
                                         mutableFloatStateOf(SoundPlayerManager.getVolume(soundId)) 
                                     }
 
-                                    var isLooping by remember(soundId) { mutableStateOf(true) }
+                                    val isLooping = loopingSoundIds.contains(soundId)
 
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -302,19 +334,37 @@ fun RelaxSoundsScreen(
                                         Spacer(modifier = Modifier.width(4.dp))
                                         
                                         // Loop button
-                                        IconButton(
+                                        Surface(
                                             onClick = {
-                                                isLooping = !isLooping
-                                                SoundPlayerManager.setLooping(soundId, isLooping)
+                                                SoundPlayerManager.setLooping(soundId, !isLooping)
                                             },
-                                            modifier = Modifier.size(36.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = if (isLooping) Icons.Default.RepeatOne else Icons.Default.Repeat,
-                                                contentDescription = "Repetir",
-                                                tint = if (isLooping) PatientGreen else TextSecondary,
-                                                modifier = Modifier.size(20.dp)
+                                            modifier = Modifier.height(36.dp),
+                                            shape = CircleShape,
+                                            color = if (isLooping) PatientGreen.copy(alpha = 0.12f) else Color.White,
+                                            border = BorderStroke(
+                                                1.dp,
+                                                if (isLooping) PatientGreen.copy(alpha = 0.45f) else BorderSoft
                                             )
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 10.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = if (isLooping) Icons.Default.RepeatOne else Icons.Default.Repeat,
+                                                    contentDescription = if (isLooping) "Repetición activada" else "Repetición desactivada",
+                                                    tint = if (isLooping) PatientGreen else TextSecondary,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                                Text(
+                                                    text = if (isLooping) "Loop" else "Una vez",
+                                                    fontFamily = LexendFontFamily,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontSize = 11.sp,
+                                                    color = if (isLooping) PatientGreen else TextSecondary
+                                                )
+                                            }
                                         }
 
                                         Spacer(modifier = Modifier.width(4.dp))

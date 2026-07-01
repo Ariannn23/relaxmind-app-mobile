@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.relaxmind.app.data.model.CheckIn
 import com.relaxmind.app.ui.themes.LexendFontFamily
+import com.relaxmind.app.ui.themes.PatientGreen
 import com.relaxmind.app.ui.themes.TextPrimary
 import com.relaxmind.app.ui.themes.TextSecondary
 import com.relaxmind.app.ui.components.RelaxCard
@@ -34,9 +35,11 @@ enum class ChartFilter {
 @Composable
 fun ProgressChart(
     checkIns: List<CheckIn>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    accentColor: Color = PatientGreen
 ) {
     var selectedFilter by remember { mutableStateOf(ChartFilter.WEEKLY) }
+    var selectedBarIndex by remember(selectedFilter) { mutableIntStateOf(-1) }
 
     // Parse checkIns and map them by date
     val checkInMap = remember(checkIns) {
@@ -78,11 +81,9 @@ fun ProgressChart(
     }
 
     RelaxCard(modifier = modifier) {
-        // Toggle Row
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
                 text = "Tendencia de Bienestar",
@@ -94,75 +95,163 @@ fun ProgressChart(
 
             Row(
                 modifier = Modifier
-                    .background(Color(0xFFF3F4F6), RoundedCornerShape(20.dp))
+                    .fillMaxWidth()
+                    .background(accentColor.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
                     .padding(4.dp)
             ) {
                 ChartToggleButton(
                     text = "Semana",
                     selected = selectedFilter == ChartFilter.WEEKLY,
-                    onClick = { selectedFilter = ChartFilter.WEEKLY }
+                    onClick = { selectedFilter = ChartFilter.WEEKLY },
+                    accentColor = accentColor,
+                    modifier = Modifier.weight(1f)
                 )
                 ChartToggleButton(
                     text = "Mes",
                     selected = selectedFilter == ChartFilter.MONTHLY,
-                    onClick = { selectedFilter = ChartFilter.MONTHLY }
+                    onClick = { selectedFilter = ChartFilter.MONTHLY },
+                    accentColor = accentColor,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Bar Chart Area
-        Row(
+        val selectedScore = chartData.getOrNull(selectedBarIndex)?.second
+        val selectedLabel = chartData.getOrNull(selectedBarIndex)?.first.orEmpty()
+
+        if (selectedScore != null) {
+            Text(
+                text = "$selectedLabel · $selectedScore/100",
+                fontFamily = LexendFontFamily,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 12.sp,
+                color = accentColor,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.End
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(180.dp),
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.SpaceEvenly
+                .height(212.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(Color(0xFFFBFAFF))
+                .padding(start = 6.dp, top = 12.dp, end = 10.dp, bottom = 10.dp)
         ) {
-            chartData.forEachIndexed { index, (label, score) ->
-                val targetHeight = if (score != null) (score / 100f).coerceIn(0.05f, 1f) else 0f
-                val animatedHeight by animateFloatAsState(
-                    targetValue = targetHeight,
-                    animationSpec = tween(durationMillis = 800, delayMillis = index * 20, easing = FastOutSlowInEasing),
-                    label = "barHeight"
-                )
-
-                // Bar color logic
-                val barColor = when {
-                    score == null -> Color.Transparent
-                    score >= 70 -> Color(0xFF22C55E) // Green
-                    score >= 40 -> Color(0xFFF59E0B) // Orange
-                    else -> Color(0xFFE8582A) // Red
+            Row(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .width(28.dp)
+                        .height(150.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.End
+                ) {
+                    listOf(100, 75, 50, 25, 0).forEach { value ->
+                        Text(
+                            text = value.toString(),
+                            fontFamily = LexendFontFamily,
+                            fontSize = 9.sp,
+                            color = TextSecondary.copy(alpha = 0.72f),
+                            maxLines = 1
+                        )
+                    }
                 }
 
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Bottom,
-                    modifier = Modifier.weight(1f).fillMaxHeight()
-                ) {
-                    // The Bar
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(if (selectedFilter == ChartFilter.WEEKLY) 0.6f else 0.8f)
-                            .fillMaxHeight(animatedHeight.coerceAtLeast(0.02f))
-                            .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                            .background(if (score != null) barColor else Color.Transparent)
-                    )
+                            .fillMaxWidth()
+                            .height(150.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            repeat(5) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(Color(0xFFE8E3F8).copy(alpha = 0.62f))
+                                )
+                            }
+                        }
 
-                    // Spacer for label
-                    Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalAlignment = Alignment.Bottom,
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            chartData.forEachIndexed { index, (_, score) ->
+                                val targetHeight = if (score != null) (score / 100f).coerceIn(0.04f, 1f) else 0f
+                                val animatedHeight by animateFloatAsState(
+                                    targetValue = targetHeight,
+                                    animationSpec = tween(durationMillis = 800, delayMillis = index * 20, easing = FastOutSlowInEasing),
+                                    label = "barHeight"
+                                )
 
-                    // Label
-                    Text(
-                        text = label,
-                        fontFamily = LexendFontFamily,
-                        fontSize = if (selectedFilter == ChartFilter.WEEKLY) 12.sp else 10.sp,
-                        color = TextSecondary,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                        modifier = Modifier.height(16.dp)
-                    )
+                                val barColor = when {
+                                    score == null -> Color.Transparent
+                                    score >= 70 -> Color(0xFF22C55E)
+                                    score >= 40 -> Color(0xFFF59E0B)
+                                    else -> Color(0xFFE8582A)
+                                }
+                                val isSelected = selectedBarIndex == index
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null,
+                                            enabled = score != null,
+                                            onClick = { selectedBarIndex = index }
+                                        ),
+                                    contentAlignment = Alignment.BottomCenter
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth(if (selectedFilter == ChartFilter.WEEKLY) 0.48f else 0.58f)
+                                            .fillMaxHeight(animatedHeight)
+                                            .clip(RoundedCornerShape(topStart = 7.dp, topEnd = 7.dp))
+                                            .background(
+                                                if (score != null) {
+                                                    if (isSelected) accentColor else barColor
+                                                } else {
+                                                    Color.Transparent
+                                                }
+                                            )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        chartData.forEach { (label, _) ->
+                            Text(
+                                text = label,
+                                fontFamily = LexendFontFamily,
+                                fontSize = if (selectedFilter == ChartFilter.WEEKLY) 11.sp else 9.sp,
+                                color = TextSecondary,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -173,10 +262,12 @@ fun ProgressChart(
 private fun ChartToggleButton(
     text: String,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    accentColor: Color,
+    modifier: Modifier = Modifier
 ) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .background(if (selected) Color.White else Color.Transparent)
             .clickable(
@@ -191,7 +282,9 @@ private fun ChartToggleButton(
             fontFamily = LexendFontFamily,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             fontSize = 12.sp,
-            color = if (selected) TextPrimary else TextSecondary
+            color = if (selected) accentColor else TextSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }

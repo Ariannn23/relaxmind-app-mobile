@@ -79,10 +79,10 @@ import com.relaxmind.app.data.model.CheckIn
 import com.relaxmind.app.data.model.UserAchievement
 import com.relaxmind.app.ui.components.AchievementUnlockedDialog
 import com.relaxmind.app.ui.components.AppRole
-import com.relaxmind.app.ui.components.LoadingIndicator
 import com.relaxmind.app.ui.components.RelaxBottomNav
 import com.relaxmind.app.ui.components.ScreenHeader
-import com.relaxmind.app.ui.components.ProgressCalendarSkeleton
+import com.relaxmind.app.ui.components.ScrollToTopEvents
+import com.relaxmind.app.ui.components.ProgressScreenSkeleton
 import com.relaxmind.app.ui.components.ProgressEmptyState
 import com.relaxmind.app.ui.components.ErrorStateScreen
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
@@ -158,6 +158,15 @@ fun ProgressScreen(
     // App theme state
     val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
     val bgColor = if (isDark) com.relaxmind.app.ui.themes.BackgroundDark else Color.White
+    val scrollState = rememberScrollState()
+
+    LaunchedEffect(Unit) {
+        ScrollToTopEvents.requests.collect { route ->
+            if (route == com.relaxmind.app.Screen.Progress.route) {
+                scrollState.animateScrollTo(0)
+            }
+        }
+    }
 
     MaterialTheme(
         colorScheme = MaterialTheme.colorScheme,
@@ -187,9 +196,11 @@ fun ProgressScreen(
                 }
 
                 if (isLoading && allCheckIns.isEmpty() && streakData == null && error == null) {
-                    com.relaxmind.app.ui.components.RelaxLoadingContent(
-                        modifier = Modifier.align(Alignment.Center),
-                        message = "Cargando..."
+                    ProgressScreenSkeleton(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(top = 24.dp)
                     )
                 } else if (error != null && allCheckIns.isEmpty()) {
                     ErrorStateScreen(
@@ -206,7 +217,7 @@ fun ProgressScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
+                            .verticalScroll(scrollState)
                             .padding(horizontal = 24.dp),
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {

@@ -76,7 +76,15 @@ class SOSAlertViewModel(
     fun markResolved(onSuccess: () -> Unit) {
         val alertId = currentAlertId ?: return
         viewModelScope.launch {
-            val result = firestoreRepository.updateAlertResolved(alertId, true)
+            val result = firestoreRepository.updateAlertFields(
+                alertId,
+                mapOf(
+                    "resolved" to true,
+                    "title" to "Alerta SOS resuelta",
+                    "message" to "El cuidador marcó la emergencia como resuelta.",
+                    "severity" to "resolved"
+                )
+            )
             if (result.isSuccess) {
                 onSuccess()
             }

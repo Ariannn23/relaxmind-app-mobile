@@ -109,6 +109,7 @@ import com.relaxmind.app.ui.components.ErrorStateScreen
 import com.relaxmind.app.ui.components.LoadingIndicator
 import com.relaxmind.app.ui.components.NotificationPermissionDialog
 import com.relaxmind.app.ui.components.RelaxCard
+import com.relaxmind.app.ui.components.ScrollToTopEvents
 import com.relaxmind.app.ui.components.hasNotificationPermission
 import com.relaxmind.app.ui.components.openNotificationSettings
 import com.relaxmind.app.ui.components.rememberNotificationPermissionLauncher
@@ -253,6 +254,7 @@ fun DashboardPatientScreen(
         viewModel.updateNotificationsEnabled(granted)
         showNotificationPermissionDialog = !granted
     }
+    val scrollState = rememberScrollState()
 
     LaunchedEffect(patient?.id, patient?.notificationsEnabled, notificationsPermissionGranted) {
         val currentPatient = patient ?: return@LaunchedEffect
@@ -280,6 +282,14 @@ fun DashboardPatientScreen(
         while (true) {
             kotlinx.coroutines.delay(60_000L)
             viewModel.refreshInitialTestBannerState()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        ScrollToTopEvents.requests.collect { route ->
+            if (route == Screen.PatientDashboard.route) {
+                scrollState.animateScrollTo(0)
+            }
         }
     }
 
@@ -346,7 +356,7 @@ fun DashboardPatientScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
+                            .verticalScroll(scrollState)
                             .padding(horizontal = 24.dp, vertical = 20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(24.dp)

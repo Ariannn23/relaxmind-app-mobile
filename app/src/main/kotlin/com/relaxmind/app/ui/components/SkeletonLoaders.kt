@@ -166,20 +166,47 @@ fun MeditateSkeleton(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        SkeletonBlock(height = 200, modifier = Modifier.clip(CircleShape))
-        SkeletonLine(widthFraction = 0.6f, height = 28)
-        SkeletonLine(widthFraction = 0.4f, height = 16)
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            SkeletonBlock(modifier = Modifier.weight(1f), height = 80)
-            SkeletonBlock(modifier = Modifier.weight(1f), height = 80)
+        SkeletonLine(widthFraction = 0.48f, height = 40)
+        SkeletonLine(widthFraction = 0.78f, height = 18)
+        Spacer(modifier = Modifier.height(18.dp))
+
+        SkeletonBlock(height = 104, modifier = Modifier.clip(RoundedCornerShape(32.dp)))
+
+        repeat(6) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(104.dp)
+                    .clip(RoundedCornerShape(28.dp))
+                    .then(ShimmerEffect())
+                    .padding(horizontal = 18.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .then(ShimmerEffect())
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    SkeletonLine(widthFraction = 0.68f, height = 20)
+                    SkeletonLine(widthFraction = 0.44f, height = 14)
+                }
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .then(ShimmerEffect())
+                )
+            }
         }
-        SkeletonBlock(height = 64)
     }
 }
 
@@ -188,18 +215,65 @@ fun ScheduleSkeleton(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(24.dp),
+            .padding(horizontal = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        SkeletonLine(widthFraction = 0.5f, height = 28)
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            repeat(4) {
-                SkeletonBlock(modifier = Modifier.weight(1f), height = 80)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SkeletonLine(widthFraction = 0.46f, height = 40)
+                SkeletonLine(widthFraction = 0.70f, height = 16)
+            }
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .then(ShimmerEffect())
+            )
+        }
+        SkeletonBlock(height = 54, modifier = Modifier.clip(RoundedCornerShape(18.dp)))
+        SkeletonBlock(height = 128, modifier = Modifier.clip(RoundedCornerShape(28.dp)))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(54.dp)
+                    .clip(CircleShape)
+                    .then(ShimmerEffect())
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SkeletonLine(widthFraction = 0.56f, height = 22)
+                SkeletonLine(widthFraction = 0.42f, height = 14)
             }
         }
-        Spacer(modifier = Modifier.height(16.dp))
         repeat(3) {
-            SkeletonBlock(height = 100)
+            SkeletonBlock(height = 86, modifier = Modifier.clip(RoundedCornerShape(24.dp)))
+        }
+    }
+}
+
+@Composable
+fun ProgressScreenSkeleton(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        SkeletonLine(widthFraction = 0.50f, height = 40)
+        SkeletonLine(widthFraction = 0.62f, height = 16)
+        SkeletonBlock(height = 132, modifier = Modifier.clip(RoundedCornerShape(28.dp)))
+        SkeletonBlock(height = 360, modifier = Modifier.clip(RoundedCornerShape(30.dp)))
+        SkeletonLine(widthFraction = 0.32f, height = 28)
+        SkeletonBlock(height = 92, modifier = Modifier.clip(RoundedCornerShape(24.dp)))
+        SkeletonLine(widthFraction = 0.34f, height = 28)
+        repeat(3) {
+            SkeletonBlock(height = 88, modifier = Modifier.clip(RoundedCornerShape(24.dp)))
         }
     }
 }
@@ -234,13 +308,41 @@ fun AlertsHistorySkeleton(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(top = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        SkeletonLine(widthFraction = 0.4f, height = 28)
-        Spacer(modifier = Modifier.height(8.dp))
         repeat(5) {
-            SkeletonBlock(height = 96)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(112.dp)
+                    .clip(RoundedCornerShape(28.dp))
+                    .then(ShimmerEffect())
+                    .padding(horizontal = 18.dp, vertical = 18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(58.dp)
+                        .clip(CircleShape)
+                        .then(ShimmerEffect())
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(9.dp)
+                ) {
+                    SkeletonLine(widthFraction = 0.76f, height = 18)
+                    SkeletonLine(widthFraction = 0.48f, height = 14)
+                }
+                Box(
+                    modifier = Modifier
+                        .width(86.dp)
+                        .height(34.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .then(ShimmerEffect())
+                )
+            }
         }
     }
 }

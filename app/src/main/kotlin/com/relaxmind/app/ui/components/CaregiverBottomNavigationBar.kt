@@ -136,7 +136,9 @@ fun CaregiverBottomNavigationBar(
                         selected = isSelected,
                         darkMode = darkMode,
                         onClick = {
-                            if (currentRoute != item.route) {
+                            if (isSelected) {
+                                ScrollToTopEvents.request(item.route)
+                            } else {
                                 navController.navigate(item.route) {
                                     popUpTo("caregiver/dashboard") { saveState = true }
                                     launchSingleTop = true

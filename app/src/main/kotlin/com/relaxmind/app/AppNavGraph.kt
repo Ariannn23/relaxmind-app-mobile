@@ -242,6 +242,7 @@ fun AppNavGraph(
         ) {
         composable(Screen.BiometricLock.route) {
             com.relaxmind.app.features.auth.BiometricLockScreen(
+                role = if (userRole == "caregiver") AppRole.CAREGIVER else AppRole.PATIENT,
                 onUnlockSuccess = {
                     val dest = if (userRole == "caregiver") Screen.CaregiverDashboard.route else Screen.PatientDashboard.route
                     navController.navigate(dest) {

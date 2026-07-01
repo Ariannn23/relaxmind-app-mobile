@@ -70,6 +70,7 @@ import com.relaxmind.app.ui.components.RelaxTopBar
 import com.relaxmind.app.ui.components.SettingsSkeleton
 import com.relaxmind.app.ui.components.ErrorStateScreen
 import com.relaxmind.app.ui.components.ScreenHeader
+import com.relaxmind.app.ui.components.ScrollToTopEvents
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.*
 
@@ -112,6 +113,15 @@ fun SettingsPatientScreen(
     // App theme state
     val isDark by com.relaxmind.app.ui.themes.ThemeState.darkMode.collectAsState()
     val bgColor = if (isDark) com.relaxmind.app.ui.themes.BackgroundDark else Color.White
+    val scrollState = rememberScrollState()
+
+    LaunchedEffect(Unit) {
+        ScrollToTopEvents.requests.collect { route ->
+            if (route == "patient/settings") {
+                scrollState.animateScrollTo(0)
+            }
+        }
+    }
 
     MaterialTheme(
         colorScheme = MaterialTheme.colorScheme,
@@ -151,7 +161,7 @@ fun SettingsPatientScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
+                            .verticalScroll(scrollState)
                             .padding(start = 24.dp, end = 24.dp, bottom = 20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(24.dp)

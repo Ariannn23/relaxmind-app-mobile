@@ -28,12 +28,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
@@ -81,6 +83,7 @@ import com.relaxmind.app.ui.components.ErrorStateScreen
 import com.relaxmind.app.ui.components.MissedCheckInDialog
 import com.relaxmind.app.ui.components.RelaxLoadingContent
 import com.relaxmind.app.ui.components.ScreenHeader
+import com.relaxmind.app.ui.components.ScrollToTopEvents
 import com.relaxmind.app.ui.components.RelaxToastHost
 import com.relaxmind.app.ui.components.rememberRelaxToastState
 import com.relaxmind.app.ui.themes.AlertRed
@@ -111,7 +114,8 @@ private enum class AlertType {
     SOS,
     LOW_CHECKIN,
     NO_CHECKIN,
-    UNLINK
+    UNLINK,
+    CANCELLED
 }
 
 private enum class AlertDateRange(val label: String) {
@@ -130,6 +134,7 @@ fun AlertsHistoryScreen(
     val alerts by viewModel.allAlerts.collectAsState()
     val patients by viewModel.patients.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isAlertsLoading by viewModel.isAlertsLoading.collectAsState()
     val message by viewModel.message.collectAsState()
     val error by viewModel.error.collectAsState()
 
@@ -143,9 +148,18 @@ fun AlertsHistoryScreen(
     var alertToView by remember { mutableStateOf<CaregiverAlert?>(null) }
     var missedCheckInAlert by remember { mutableStateOf<CaregiverAlert?>(null) }
     var selectedUnlinkAlert by remember { mutableStateOf<CaregiverAlert?>(null) }
+    val listState = rememberLazyListState()
 
     LaunchedEffect(Unit) {
         viewModel.observeCaregiverData()
+    }
+
+    LaunchedEffect(Unit) {
+        ScrollToTopEvents.requests.collect { route ->
+            if (route == Screen.AlertsHistory.route) {
+                listState.animateScrollToItem(0)
+            }
+        }
     }
 
     LaunchedEffect(message) {
@@ -187,7 +201,7 @@ fun AlertsHistoryScreen(
     }
 
     Scaffold(
-        containerColor = Color.White,
+        containerColor = Color.Transparent,
         bottomBar = {
                 if (showBottomNav) {
                     RelaxBottomNav(
@@ -201,15 +215,19 @@ fun AlertsHistoryScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.White)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(SoftLavender, Color(0xFFF8F8FD))
+                    )
+                )
                 .padding(innerPadding)
         ) {
             SoftCaregiverBackground()
 
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxSize()
-                    .systemBarsPadding()
                     .imePadding()
                     .padding(horizontal = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
@@ -251,11 +269,10 @@ fun AlertsHistoryScreen(
                 }
 
                 when {
-                    isLoading && alerts.isEmpty() && error == null -> {
+                    (isLoading || isAlertsLoading) && alerts.isEmpty() && error == null -> {
                         item {
-                            com.relaxmind.app.ui.components.RelaxLoadingContent(
-                                message = "Cargando...",
-                                isCaregiver = true
+                            AlertsHistorySkeleton(
+                                modifier = Modifier.padding(horizontal = 0.dp)
                             )
                         }
                     }
@@ -368,7 +385,7 @@ private fun SoftCaregiverBackground() {
             .height(260.dp)
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(SoftLavender.copy(alpha = 0.55f), Color.White)
+                    colors = listOf(SoftLavender.copy(alpha = 0.25f), Color.Transparent)
                 )
             )
     )
@@ -658,7 +675,7 @@ private fun AlertItemCard(
                 Spacer(modifier = Modifier.height(10.dp))
             }
 
-            AlertStatusBadge(resolved = alert.resolved)
+            AlertStatusBadge(alert = alert)
         }
     }
 }
@@ -670,6 +687,7 @@ private fun AlertTypeIcon(type: AlertType) {
         AlertType.LOW_CHECKIN -> WarningOrange
         AlertType.NO_CHECKIN -> NeutralPurpleGray
         AlertType.UNLINK -> NeutralPurpleGray
+        AlertType.CANCELLED -> NeutralPurpleGray
     }
 
     Box(
@@ -707,15 +725,40 @@ private fun AlertTypeIcon(type: AlertType) {
                 tint = Color.White,
                 modifier = Modifier.size(26.dp)
             )
+
+            AlertType.CANCELLED -> Icon(
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = "SOS cancelado",
+                tint = Color.White,
+                modifier = Modifier.size(26.dp)
+            )
         }
     }
 }
 
 @Composable
-private fun AlertStatusBadge(resolved: Boolean) {
-    val borderColor = if (resolved) NeutralPurpleGray.copy(alpha = 0.6f) else AlertRed
-    val textColor = if (resolved) NeutralPurpleGray else AlertRed
-    val backgroundColor = if (resolved) Color.White else AlertRedSoft.copy(alpha = 0.55f)
+private fun AlertStatusBadge(alert: CaregiverAlert) {
+    val isCancelled = alert.alertType() == AlertType.CANCELLED
+    val borderColor = when {
+        isCancelled -> NeutralPurpleGray.copy(alpha = 0.55f)
+        alert.resolved -> NeutralPurpleGray.copy(alpha = 0.6f)
+        else -> AlertRed
+    }
+    val textColor = when {
+        isCancelled -> NeutralPurpleGray
+        alert.resolved -> NeutralPurpleGray
+        else -> AlertRed
+    }
+    val backgroundColor = when {
+        isCancelled -> LavenderPill.copy(alpha = 0.45f)
+        alert.resolved -> Color.White
+        else -> AlertRedSoft.copy(alpha = 0.55f)
+    }
+    val label = when {
+        isCancelled -> "CANCELADA"
+        alert.resolved -> stringResource(id = R.string.alerts_resolved)
+        else -> stringResource(id = R.string.alerts_pending)
+    }
 
     Surface(
         shape = RoundedCornerShape(9.dp),
@@ -723,7 +766,7 @@ private fun AlertStatusBadge(resolved: Boolean) {
         border = BorderStroke(1.dp, borderColor)
     ) {
         Text(
-            text = if (resolved) stringResource(id = R.string.alerts_resolved) else stringResource(id = R.string.alerts_pending),
+            text = label,
             fontFamily = LexendFontFamily,
             fontWeight = FontWeight.Bold,
             fontSize = 12.sp,
@@ -888,6 +931,8 @@ private fun ResolveAlertDialog(
 }
 
 private fun CaregiverAlert.alertType(): AlertType = when {
+    type.equals("sos_cancelled", ignoreCase = true) ||
+        severity.equals("cancelled", ignoreCase = true) -> AlertType.CANCELLED
     type.equals("UNLINK", ignoreCase = true) -> AlertType.UNLINK
     type.equals("sos", ignoreCase = true) -> AlertType.SOS
     type.contains("missed", ignoreCase = true) ||
@@ -907,6 +952,7 @@ private fun CaregiverAlert.displayTitle(): String {
             AlertType.LOW_CHECKIN -> "Bienestar bajo"
             AlertType.NO_CHECKIN -> "Sin check-in"
             AlertType.UNLINK -> "Acceso revocado"
+            AlertType.CANCELLED -> "SOS cancelado"
         }
     }
 
@@ -917,6 +963,7 @@ private fun CaregiverAlert.displayTitle(): String {
             .replace("Check-in bajo", "Bienestar bajo", ignoreCase = true)
         AlertType.NO_CHECKIN -> "Sin check-in"
         AlertType.UNLINK -> "Acceso revocado"
+        AlertType.CANCELLED -> "SOS cancelado"
     }
 }
 
@@ -952,31 +999,34 @@ private fun AlertDetailBottomSheet(
 ) {
     val sheetState = rememberModalBottomSheetState()
     val type = alert.alertType()
-    val isSos = type == AlertType.SOS
 
     val headerBg = when (type) {
         AlertType.SOS -> AlertRedSoft
         AlertType.LOW_CHECKIN -> WarningOrangeSoft
         AlertType.NO_CHECKIN -> LavenderPill
         AlertType.UNLINK -> LavenderPill
+        AlertType.CANCELLED -> LavenderPill
     }
     val headerColor = when (type) {
         AlertType.SOS -> AlertRed
         AlertType.LOW_CHECKIN -> WarningOrange
         AlertType.NO_CHECKIN -> CaregiverIndigo
         AlertType.UNLINK -> CaregiverIndigo
+        AlertType.CANCELLED -> NeutralPurpleGray
     }
     val typeLabel = when (type) {
         AlertType.SOS -> "Alerta de emergencia (SOS)"
         AlertType.LOW_CHECKIN -> "Bienestar bajo detectado"
         AlertType.NO_CHECKIN -> "Check-in no realizado"
         AlertType.UNLINK -> "Acceso revocado"
+        AlertType.CANCELLED -> "SOS cancelado"
     }
     val typeDesc = when (type) {
         AlertType.SOS -> "El paciente activó manualmente la alarma de emergencia."
         AlertType.LOW_CHECKIN -> "La puntuación del último check-in fue muy baja, indicando posible malestar."
         AlertType.NO_CHECKIN -> "El paciente no completó su check-in diario en el tiempo esperado."
-        AlertType.UNLINK -> "El paciente revocaró el acceso del cuidador a su cuenta."
+        AlertType.UNLINK -> "El paciente revocó el acceso del cuidador a su cuenta."
+        AlertType.CANCELLED -> "El paciente canceló la alerta e indicó que ya no necesita ayuda inmediata."
     }
 
     ModalBottomSheet(
@@ -1078,7 +1128,7 @@ private fun AlertDetailBottomSheet(
             // Resolution status
             val resolvedBg = if (alert.resolved) Color(0xFFE8F8EF) else WarningOrangeSoft
             val resolvedColor = if (alert.resolved) Color(0xFF38C172) else WarningOrange
-            val resolvedLabel = if (alert.resolved) "✓ Atendida" else "⏳ Pendiente de atención"
+            val resolvedLabel = if (alert.resolved) "✓ Atendida" else "Pendiente de atención"
             val resolvedDesc = if (alert.resolved)
                 "Esta alerta ya fue atendida por el cuidador."
             else

@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fingerprint
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,8 +19,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import com.relaxmind.app.ui.components.AppRole
+import com.relaxmind.app.ui.components.RadarLoadingOverlay
 import com.relaxmind.app.ui.components.auth.SoftGradientBackground
 import com.relaxmind.app.ui.themes.BackgroundWhite
+import com.relaxmind.app.ui.themes.CaregiverPurple
 import com.relaxmind.app.ui.themes.LexendTypography
 import com.relaxmind.app.ui.themes.PatientGreen
 import com.relaxmind.app.ui.themes.TextPrimary
@@ -40,12 +42,16 @@ fun Context.findActivity(): FragmentActivity? {
 }
 @Composable
 fun BiometricLockScreen(
+    role: AppRole = AppRole.PATIENT,
     onUnlockSuccess: () -> Unit,
     onLogoutClick: () -> Unit
 ) {
     val context = LocalContext.current
     var biometricError by remember { mutableStateOf<String?>(null) }
     var isAuthenticating by remember { mutableStateOf(false) }
+    val isCaregiver = role == AppRole.CAREGIVER
+    val accentColor = if (isCaregiver) CaregiverPurple else PatientGreen
+    val iconBackground = accentColor.copy(alpha = if (isCaregiver) 0.14f else 0.10f)
 
     val authenticate = {
         isAuthenticating = true
@@ -100,7 +106,7 @@ fun BiometricLockScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            SoftGradientBackground()
+            SoftGradientBackground(role = role)
 
             Column(
                 modifier = Modifier
@@ -113,14 +119,14 @@ fun BiometricLockScreen(
                     modifier = Modifier
                         .size(100.dp)
                         .clip(RoundedCornerShape(30.dp))
-                        .background(PatientGreen.copy(alpha = 0.1f)),
+                        .background(iconBackground),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Lock,
+                        imageVector = Icons.Default.Fingerprint,
                         contentDescription = "App Bloqueada",
                         modifier = Modifier.size(50.dp),
-                        tint = PatientGreen
+                        tint = accentColor
                     )
                 }
 
@@ -160,7 +166,7 @@ fun BiometricLockScreen(
                         .fillMaxWidth()
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PatientGreen)
+                    colors = ButtonDefaults.buttonColors(containerColor = accentColor)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Fingerprint,
@@ -189,6 +195,12 @@ fun BiometricLockScreen(
                     )
                 }
             }
+
+            RadarLoadingOverlay(
+                visible = isAuthenticating,
+                isCaregiver = isCaregiver,
+                text = "Verificando..."
+            )
         }
     }
 }
