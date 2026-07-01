@@ -1,5 +1,6 @@
 package com.relaxmind.app.features.common
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,10 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -26,10 +25,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.relaxmind.app.R
 import com.relaxmind.app.ui.components.AppRole
 import com.relaxmind.app.ui.themes.CaregiverPurple
 import com.relaxmind.app.ui.themes.LexendFontFamily
@@ -44,6 +46,11 @@ fun AccountDeletedGoodbyeScreen(
 ) {
     val accent = if (role == AppRole.CAREGIVER) CaregiverPurple else PatientGreen
     val softAccent = accent.copy(alpha = 0.12f)
+    val illustration = if (role == AppRole.CAREGIVER) {
+        R.drawable.eliminacion_cuidador
+    } else {
+        R.drawable.eliminacion_paciente
+    }
 
     Box(
         modifier = Modifier
@@ -73,21 +80,14 @@ fun AccountDeletedGoodbyeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(84.dp)
-                        .background(softAccent, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Favorite,
-                        contentDescription = null,
-                        tint = accent,
-                        modifier = Modifier.size(42.dp)
-                    )
-                }
+                Image(
+                    painter = painterResource(id = illustration),
+                    contentDescription = null,
+                    modifier = Modifier.size(158.dp),
+                    contentScale = ContentScale.Fit
+                )
 
-                Spacer(modifier = Modifier.height(22.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
                 Text(
                     text = "Tu cuenta quedó inactiva",

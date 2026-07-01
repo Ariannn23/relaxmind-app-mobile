@@ -515,11 +515,27 @@ class FirestoreRepository(
     }
 
     suspend fun getPatientStreak(patientId: String): Result<Streak?> = runCatching {
-        firestore.collection(STREAKS_COLLECTION)
-            .document(patientId)
+        val streakRef = firestore.collection(STREAKS_COLLECTION).document(patientId)
+        val streak = streakRef
             .get()
             .await()
             .toObject(Streak::class.java)?.copy(patientId = patientId)
+
+        val lastCheckInDate = streak?.lastCheckInDate
+        if (streak != null && lastCheckInDate != null && streak.currentStreak > 0) {
+            val lastDate = runCatching { java.time.LocalDate.parse(lastCheckInDate) }.getOrNull()
+            val yesterday = java.time.LocalDate.now().minusDays(1)
+            if (lastDate != null && lastDate.isBefore(yesterday)) {
+                val resetStreak = streak.copy(
+                    currentStreak = 0,
+                    updatedAt = java.time.Instant.now().toString()
+                )
+                streakRef.set(resetStreak).await()
+                return@runCatching resetStreak
+            }
+        }
+
+        streak
     }
 
     suspend fun updatePatientStreak(patientId: String, checkInDateStr: String): Result<Streak> = runCatching {

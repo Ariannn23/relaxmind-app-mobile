@@ -222,7 +222,7 @@ fun PatientsListScreen(
                 onClick = onScanQr,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(bottom = if (showBottomNav) 116.dp else 24.dp, end = 20.dp)
+                    .padding(bottom = if (showBottomNav) 172.dp else 24.dp, end = 20.dp)
             )
         }
     }
