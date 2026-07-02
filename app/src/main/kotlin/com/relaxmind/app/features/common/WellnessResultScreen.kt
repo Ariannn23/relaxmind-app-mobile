@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.relaxmind.app.ui.components.AppRole
@@ -51,9 +52,9 @@ fun DailyCheckInResultScreen(
 ) {
     WellnessResultScreen(
         score = score,
-        title = "¡Check-in completado!",
+        title = "Check-in completado",
         subtitle = "Tu nivel de bienestar de hoy",
-        ctaText = "Ver mi dashboard",
+        ctaText = "Inicio",
         onDismiss = onDismiss,
         onNavigateToProgress = onNavigateToProgress,
         isInitialTest = false
@@ -68,9 +69,9 @@ fun InitialTestResultScreen(
 ) {
     WellnessResultScreen(
         score = score,
-        title = "¡Test completado!",
+        title = "Test completado",
         subtitle = "Ya tenemos una primera lectura de tu bienestar",
-        ctaText = "Ir a mi dashboard",
+        ctaText = "Inicio",
         onDismiss = onDismiss,
         onNavigateToProgress = onNavigateToProgress,
         isInitialTest = true
@@ -92,15 +93,15 @@ private fun WellnessResultScreen(
 
     // Dynamic support messages based on score
     val supportMessage = when {
-        score < 40 -> if (isInitialTest) "Este resultado nos ayudará a cuidar de ti paso a paso. Lo importante es que estás aquí." else "Tu bienestar hoy está bajo. Está bien no estar bien siempre. Lo importante es que estás aquí."
-        score < 75 -> if (isInitialTest) "Este resultado nos ayudará a personalizar mejor tu experiencia en RelaxMind." else "Hoy te encuentras en un punto intermedio. Sigue escuchándote y cuidando tu ritmo."
-        else -> if (isInitialTest) "¡Qué gran comienzo! Este resultado nos ayudará a potenciar tu experiencia en RelaxMind." else "¡Vas muy bien! Hoy tu bienestar muestra una señal positiva. Sigue cultivando lo que te hace bien."
+        score < 40 -> if (isInitialTest) "Este resultado nos ayuda a cuidarte paso a paso." else "Tu bienestar esta bajo. Gracias por estar aqui."
+        score < 75 -> if (isInitialTest) "Con esto personalizamos mejor tu experiencia." else "Estas en un punto intermedio. Sigue escuchandote."
+        else -> if (isInitialTest) "Gran comienzo. Seguiremos acompanandote." else "Vas muy bien. Sigue cultivando lo que te hace bien."
     }
 
     val bottomMessage = when {
-        score < 40 -> "Gracias por tomarte un momento para ti. Hoy podría ayudarte respirar, escribir en tu diario o hablar con Lumi."
-        score < 75 -> "Sigue así, cada pequeño paso cuenta."
-        else -> "¡Excelente trabajo! Hoy has conectado muy bien contigo."
+        score < 40 -> "Respirar, escribir o hablar con Lumi podria ayudarte hoy."
+        score < 75 -> "Sigue asi, cada pequeno paso cuenta."
+        else -> "Excelente trabajo. Hoy conectaste contigo."
     }
 
     MaterialTheme(
@@ -117,26 +118,25 @@ private fun WellnessResultScreen(
                     .fillMaxSize()
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // Top Section (Illustration & Titles)
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Spacer(modifier = Modifier.height(4.dp))
                     Image(
                         painter = androidx.compose.ui.res.painterResource(id = com.relaxmind.app.R.drawable.resultados),
                         contentDescription = "Resultados",
-                        modifier = Modifier.size(200.dp)
+                        modifier = Modifier.size(150.dp)
                     )                    
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = title,
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.ExtraBold,
                         color = palette.primary,
-                        maxLines = 1,
+                        maxLines = 2,
                         textAlign = TextAlign.Center
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodyLarge,
@@ -151,18 +151,18 @@ private fun WellnessResultScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp),
                     shape = RoundedCornerShape(32.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFEFC)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(14.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         // Progress Ring
                         Box(
-                            modifier = Modifier.size(120.dp),
+                            modifier = Modifier.size(106.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator(
@@ -176,7 +176,7 @@ private fun WellnessResultScreen(
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
                                     text = score.toString(),
-                                    style = MaterialTheme.typography.displayLarge.copy(fontSize = 48.sp),
+                                    style = MaterialTheme.typography.displayLarge.copy(fontSize = 42.sp),
                                     fontWeight = FontWeight.ExtraBold,
                                     color = palette.primary
                                 )
@@ -188,15 +188,15 @@ private fun WellnessResultScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         // Support Message Box
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(palette.softBackground)
-                                .padding(16.dp)
+                                .background(palette.softBackground.copy(alpha = 0.55f))
+                                .padding(horizontal = 14.dp, vertical = 12.dp)
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -204,7 +204,7 @@ private fun WellnessResultScreen(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(40.dp)
+                                        .size(36.dp)
                                         .background(palette.primary, CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -212,14 +212,16 @@ private fun WellnessResultScreen(
                                         imageVector = if (score < 40) Icons.Filled.Favorite else if (score < 75) Icons.Filled.WbSunny else Icons.Filled.Eco,
                                         contentDescription = null,
                                         tint = Color.White,
-                                        modifier = Modifier.size(24.dp)
+                                        modifier = Modifier.size(21.dp)
                                     )
                                 }
                                 Text(
                                     text = supportMessage,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = Color.DarkGray,
-                                    lineHeight = 20.sp
+                                    lineHeight = 18.sp,
+                                    maxLines = 3,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -297,7 +299,7 @@ private fun WellnessResultScreen(
                             text = ctaText,
                             onClick = onDismiss,
                             modifier = Modifier.weight(1f),
-                            variant = ButtonVariant.OUTLINE,
+                            variant = ButtonVariant.PRIMARY,
                             role = AppRole.PATIENT
                         )
                         RelaxButton(

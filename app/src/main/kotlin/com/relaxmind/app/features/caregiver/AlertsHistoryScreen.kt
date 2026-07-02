@@ -332,7 +332,9 @@ fun AlertsHistoryScreen(
             otherPartyName = alert.patientName,
             primaryColor = CaregiverPurple,
             onDismissRequest = {
-                viewModel.markAlertResolved(alert.id)
+                if (!alert.resolved) {
+                    viewModel.markAlertResolved(alert.id)
+                }
                 selectedUnlinkAlert = null
             }
         )

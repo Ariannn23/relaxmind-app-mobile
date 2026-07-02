@@ -420,9 +420,10 @@ fun SettingsPatientScreen(
                 showUnlinkDialog = false
                 unlinkErrorMessage = null
             },
-            onConfirm = { password ->
+            onConfirm = { reason, password ->
                 unlinkedCaregiverName = caregiver?.let { "${it.name} ${it.lastName}" } ?: "tu cuidador"
                 viewModel.unlinkCaregiver(
+                    reason = reason,
                     passwordConfirm = password,
                     onSuccess = {
                         showUnlinkDialog = false
@@ -905,11 +906,22 @@ fun SettingsDivider() {
 fun UnlinkCaregiverDialog(
     caregiverName: String?,
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit,
+    onConfirm: (String, String) -> Unit,
     isLoading: Boolean,
     errorMessage: String?
 ) {
+    var step by remember { mutableStateOf(1) }
+    var selectedReason by remember { mutableStateOf("Necesito cambiar de cuidador") }
+    var otherReason by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    val displayName = caregiverName?.ifBlank { null } ?: "tu cuidador"
+    val reasons = listOf(
+        "Necesito cambiar de cuidador",
+        "Ya no necesito acompanamiento",
+        "Fue un enlace por error",
+        "Otro"
+    )
+    val finalReason = if (selectedReason == "Otro") otherReason.trim() else selectedReason
     
     Dialog(
         onDismissRequest = onDismiss
@@ -962,6 +974,61 @@ fun UnlinkCaregiverDialog(
                     textAlign = TextAlign.Center
                 )
 
+                if (step == 1) {
+                    Text(
+                        text = "El motivo es privado. No se le mostrara este mensaje a $displayName.",
+                        fontFamily = LexendFontFamily,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 12.sp,
+                        color = PatientGreen,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        reasons.forEach { reason ->
+                            val selected = selectedReason == reason
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { selectedReason = reason },
+                                shape = RoundedCornerShape(14.dp),
+                                color = if (selected) PatientGreen.copy(alpha = 0.10f) else Color(0xFFF8FAFB),
+                                border = BorderStroke(1.dp, if (selected) PatientGreen else BorderSoft)
+                            ) {
+                                Text(
+                                    text = reason,
+                                    fontFamily = LexendFontFamily,
+                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                                    fontSize = 13.sp,
+                                    color = if (selected) PatientGreen else TextPrimary,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    AnimatedVisibility(visible = selectedReason == "Otro") {
+                        OutlinedTextField(
+                            value = otherReason,
+                            onValueChange = { otherReason = it.take(120) },
+                            label = { Text("Escribe el motivo", fontFamily = LexendFontFamily) },
+                            minLines = 2,
+                            maxLines = 3,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = PatientGreen,
+                                unfocusedBorderColor = BorderSoft,
+                                focusedLabelColor = PatientGreen
+                            )
+                        )
+                    }
+                }
+
+                AnimatedVisibility(visible = step == 2) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
@@ -994,6 +1061,8 @@ fun UnlinkCaregiverDialog(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -1002,14 +1071,16 @@ fun UnlinkCaregiverDialog(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OutlinedButton(
-                        onClick = onDismiss,
+                        onClick = {
+                            if (step == 1) onDismiss() else step = 1
+                        },
                         modifier = Modifier.weight(1f).height(48.dp),
                         shape = RoundedCornerShape(14.dp),
                         border = BorderStroke(1.dp, PatientGreen),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = PatientGreen)
                     ) {
                         Text(
-                            text = "Cancelar",
+                            text = if (step == 1) "Cancelar" else "Atrás",
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Medium,
                             fontSize = 14.sp
@@ -1017,18 +1088,24 @@ fun UnlinkCaregiverDialog(
                     }
 
                     Button(
-                        onClick = { onConfirm(password) },
-                        enabled = password.isNotBlank() && !isLoading,
+                        onClick = {
+                            if (step == 1) {
+                                step = 2
+                            } else {
+                                onConfirm(finalReason, password)
+                            }
+                        },
+                        enabled = (step == 1 && finalReason.isNotBlank()) || (step == 2 && password.isNotBlank() && !isLoading),
                         modifier = Modifier.weight(1f).height(48.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = WarningOrange,
+                            containerColor = if (step == 1) PatientGreen else WarningOrange,
                             contentColor = Color.White,
                             disabledContainerColor = WarningOrange.copy(alpha = 0.5f)
                         )
                     ) {
                         Text(
-                            text = "Desvincular",
+                            text = if (step == 1) "Continuar" else "Desvincular",
                             fontFamily = LexendFontFamily,
                             fontWeight = FontWeight.Medium,
                             fontSize = 14.sp

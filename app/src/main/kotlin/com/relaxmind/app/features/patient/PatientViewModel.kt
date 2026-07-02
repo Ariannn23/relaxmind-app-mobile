@@ -350,7 +350,7 @@ class PatientViewModel(
         }
     }
 
-    fun unlinkCaregiver(passwordConfirm: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    fun unlinkCaregiver(reason: String, passwordConfirm: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         val userId = authService.getCurrentUser()?.uid ?: return
         viewModelScope.launch {
             _isLoading.value = true

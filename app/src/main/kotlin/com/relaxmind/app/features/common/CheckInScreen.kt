@@ -1163,7 +1163,7 @@ private fun CheckInResultView(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "¡Check-in Completado!",
+                text = "Check-in completado",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.ExtraBold,
                 color = PatientGreen
@@ -1208,14 +1208,14 @@ private fun CheckInResultView(
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "¡Buen trabajo tomándote un momento para ti hoy!",
+                text = "Buen trabajo por tomarte un momento para ti hoy.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray,
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(64.dp))
             RelaxButton(
-                text = "Ver mi dashboard",
+                text = "Inicio",
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth(),
                 variant = ButtonVariant.PRIMARY,
