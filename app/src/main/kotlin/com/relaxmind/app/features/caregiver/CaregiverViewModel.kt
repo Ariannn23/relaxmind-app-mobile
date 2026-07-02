@@ -90,26 +90,47 @@ class CaregiverViewModel(
     private var alertsListener: ListenerRegistration? = null
     private var patientAlertsListener: ListenerRegistration? = null
     private var rawPatients: List<Patient> = emptyList()
+    private var observedCaregiverId: String? = null
 
     fun loadDashboard() {
         observeCaregiverData()
     }
 
     fun observeCaregiverData() {
-        val caregiverId = authService.getCurrentUser()?.uid ?: return
+        val caregiverId = authService.getCurrentUser()?.uid ?: run {
+            clearCaregiverSessionState()
+            return
+        }
+
+        if (observedCaregiverId != null && observedCaregiverId != caregiverId) {
+            clearCaregiverSessionState()
+        }
+        observedCaregiverId = caregiverId
 
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
 
             firestoreRepository.getCaregiverById(caregiverId)
-                .onSuccess { _caregiver.value = it }
-                .onFailure { _error.value = it.toUserFriendlyMessage("No se pudo cargar el cuidador.") }
+                .onSuccess {
+                    if (isCurrentCaregiver(caregiverId)) {
+                        _caregiver.value = it
+                    }
+                }
+                .onFailure {
+                    if (isCurrentCaregiver(caregiverId)) {
+                        _error.value = it.toUserFriendlyMessage("No se pudo cargar el cuidador.")
+                    }
+                }
 
-            _isLoading.value = false
+            if (isCurrentCaregiver(caregiverId)) {
+                _isLoading.value = false
+            }
         }
 
         if (patientsListener != null && alertsListener != null) return
+
+        removeRealtimeListeners()
 
         _isPatientsLoading.value = true
         _isAlertsLoading.value = true
@@ -117,10 +138,12 @@ class CaregiverViewModel(
         patientsListener = firestoreRepository.listenPatientsForCaregiver(
             caregiverId = caregiverId,
             onChange = { patients ->
+                if (!isCurrentCaregiver(caregiverId)) return@listenPatientsForCaregiver
                 rawPatients = patients
-                rebuildPatientSummaries()
+                rebuildPatientSummaries(caregiverId)
             },
             onError = {
+                if (!isCurrentCaregiver(caregiverId)) return@listenPatientsForCaregiver
                 _isPatientsLoading.value = false
                 _error.value = it.toUserFriendlyMessage("No se pudieron escuchar los pacientes.")
             }
@@ -129,12 +152,14 @@ class CaregiverViewModel(
         alertsListener = firestoreRepository.listenAlertsForCaregiver(
             caregiverId = caregiverId,
             onChange = { alerts ->
+                if (!isCurrentCaregiver(caregiverId)) return@listenAlertsForCaregiver
                 _allAlerts.value = alerts
                 _activeAlerts.value = alerts.filter { !it.resolved }
                 _isAlertsLoading.value = false
-                rebuildPatientSummaries()
+                rebuildPatientSummaries(caregiverId)
             },
             onError = {
+                if (!isCurrentCaregiver(caregiverId)) return@listenAlertsForCaregiver
                 _isAlertsLoading.value = false
                 _error.value = it.toUserFriendlyMessage("No se pudieron escuchar las alertas.")
             }
@@ -159,6 +184,7 @@ class CaregiverViewModel(
 
             firestoreRepository.getPatientById(patientId)
                 .onSuccess { patient ->
+                    if (!isCurrentCaregiver(caregiverId)) return@onSuccess
                     if (patient != null) {
                         _selectedPatient.value = patient
                     } else if (cachedPatient == null) {
@@ -166,29 +192,56 @@ class CaregiverViewModel(
                     }
                 }
                 .onFailure {
+                    if (!isCurrentCaregiver(caregiverId)) return@onFailure
                     if (cachedPatient == null) {
                         _error.value = it.toUserFriendlyMessage("No se pudo cargar el paciente.")
                     }
                 }
 
             firestoreRepository.getPatientCheckIns(patientId)
-                .onSuccess { _selectedPatientCheckIns.value = it.sortedByDescending { checkIn -> checkIn.date } }
-                .onFailure { _selectedPatientCheckIns.value = emptyList() }
+                .onSuccess {
+                    if (isCurrentCaregiver(caregiverId)) {
+                        _selectedPatientCheckIns.value = it.sortedByDescending { checkIn -> checkIn.date }
+                    }
+                }
+                .onFailure {
+                    if (isCurrentCaregiver(caregiverId)) {
+                        _selectedPatientCheckIns.value = emptyList()
+                    }
+                }
 
             firestoreRepository.getPatientStreak(patientId)
-                .onSuccess { _selectedPatientStreak.value = it }
-                .onFailure { _selectedPatientStreak.value = null }
+                .onSuccess {
+                    if (isCurrentCaregiver(caregiverId)) {
+                        _selectedPatientStreak.value = it
+                    }
+                }
+                .onFailure {
+                    if (isCurrentCaregiver(caregiverId)) {
+                        _selectedPatientStreak.value = null
+                    }
+                }
 
-            _isLoading.value = false
-            _isPatientDetailLoading.value = false
+            if (isCurrentCaregiver(caregiverId)) {
+                _isLoading.value = false
+                _isPatientDetailLoading.value = false
+            }
         }
 
         patientAlertsListener?.remove()
         patientAlertsListener = firestoreRepository.listenAlertsForPatient(
             caregiverId = caregiverId,
             patientId = patientId,
-            onChange = { _selectedPatientAlerts.value = it },
-            onError = { _selectedPatientAlerts.value = emptyList() }
+            onChange = {
+                if (isCurrentCaregiver(caregiverId)) {
+                    _selectedPatientAlerts.value = it
+                }
+            },
+            onError = {
+                if (isCurrentCaregiver(caregiverId)) {
+                    _selectedPatientAlerts.value = emptyList()
+                }
+            }
         )
     }
 
@@ -255,7 +308,7 @@ class CaregiverViewModel(
                     }
                     _pendingPatientLink.value = null
                     _message.value = "Vinculacion exitosa"
-                    loadDashboard()
+                    observeCaregiverData()
                     onSuccess()
                 }
                 .onFailure { throwable ->
@@ -292,7 +345,7 @@ class CaregiverViewModel(
             )
 
             if (updateResult.isSuccess) {
-                loadDashboard()
+                observeCaregiverData()
                 onSuccess()
             } else {
                 val errorMsg = updateResult.exceptionOrNull().toUserFriendlyMessage("Error al desvincular.")
@@ -313,22 +366,27 @@ class CaregiverViewModel(
         _error.value = null
     }
 
-    private fun rebuildPatientSummaries() {
+    private fun rebuildPatientSummaries(ownerCaregiverId: String) {
         viewModelScope.launch {
-            val pendingPatientIds = _allAlerts.value
+            val sourcePatients = rawPatients
+            val sourceAlerts = _allAlerts.value
+            val pendingPatientIds = sourceAlerts
                 .filter { !it.resolved }
                 .map { it.patientId }
                 .toSet()
 
-            _patients.value = rawPatients.map { patient ->
+            val summaries = sourcePatients.map { patient ->
                 CaregiverPatientSummary(
                     patient = patient,
                     latestCheckIn = firestoreRepository.getLatestCheckIn(patient.id).getOrNull(),
                     hasPendingAlert = pendingPatientIds.contains(patient.id)
                 )
             }.sortedBy { it.patient.name }
-            
-            _isPatientsLoading.value = false
+
+            if (isCurrentCaregiver(ownerCaregiverId) && sourceAlerts == _allAlerts.value) {
+                _patients.value = summaries
+                _isPatientsLoading.value = false
+            }
         }
     }
 
@@ -390,9 +448,7 @@ class CaregiverViewModel(
     }
 
     override fun onCleared() {
-        patientsListener?.remove()
-        alertsListener?.remove()
-        patientAlertsListener?.remove()
+        removeRealtimeListeners()
         super.onCleared()
     }
     fun updateDarkMode(enabled: Boolean) {
@@ -455,6 +511,7 @@ class CaregiverViewModel(
             )
 
             if (updateResult.isSuccess) {
+                clearCaregiverSessionState()
                 authService.logout()
                 onSuccess()
             } else {
@@ -466,7 +523,44 @@ class CaregiverViewModel(
     }
 
     fun logout() {
+        clearCaregiverSessionState()
         authService.logout()
+    }
+
+    private fun isCurrentCaregiver(caregiverId: String): Boolean {
+        return observedCaregiverId == caregiverId && authService.getCurrentUser()?.uid == caregiverId
+    }
+
+    private fun removeRealtimeListeners() {
+        patientsListener?.remove()
+        alertsListener?.remove()
+        patientAlertsListener?.remove()
+        patientsListener = null
+        alertsListener = null
+        patientAlertsListener = null
+    }
+
+    private fun clearCaregiverSessionState() {
+        removeRealtimeListeners()
+        observedCaregiverId = null
+        rawPatients = emptyList()
+        _caregiver.value = null
+        _patients.value = emptyList()
+        _activeAlerts.value = emptyList()
+        _allAlerts.value = emptyList()
+        _selectedPatient.value = null
+        _selectedPatientCheckIns.value = emptyList()
+        _selectedPatientStreak.value = null
+        _selectedPatientAlerts.value = emptyList()
+        _pendingPatientLink.value = null
+        _linkedPatientName.value = null
+        _isLoading.value = false
+        _isPatientsLoading.value = false
+        _isAlertsLoading.value = false
+        _isLinking.value = false
+        _isPatientDetailLoading.value = false
+        _message.value = null
+        _error.value = null
     }
 }
 

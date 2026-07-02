@@ -146,17 +146,26 @@ class PatientViewModel(
     private val _selectedAppointment = MutableStateFlow<Appointment?>(null)
     val selectedAppointment = _selectedAppointment.asStateFlow()
 
+    private var observedPatientId: String? = null
+
     fun loadDashboardData() {
         val userId = authService.getCurrentUser()?.uid ?: run {
+            clearPatientSessionState()
             _error.value = "No hay sesión activa."
             return
         }
+
+        if (observedPatientId != null && observedPatientId != userId) {
+            clearPatientSessionState()
+        }
+        observedPatientId = userId
 
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
 
             val patientResult = firestoreRepository.getPatientById(userId)
+            if (!isCurrentPatient(userId)) return@launch
             if (patientResult.isFailure) {
                 _error.value = patientResult.exceptionOrNull().toUserFriendlyMessage("Error al cargar datos del paciente.")
                 _isLoading.value = false
@@ -201,6 +210,8 @@ class PatientViewModel(
                 val dailyGoalResult = dailyGoalDeferred.await()
                 val appointmentsResult = appointmentsDeferred.await()
                 val caregiverResult = caregiverDeferred.await()
+
+                if (!isCurrentPatient(userId)) return@coroutineScope
 
                 // Map CheckIn
                 _todayCheckIn.value = checkInResult.getOrNull()
@@ -251,7 +262,9 @@ class PatientViewModel(
                 }
             }
 
-            _isLoading.value = false
+            if (isCurrentPatient(userId)) {
+                _isLoading.value = false
+            }
         }
     }
 
@@ -441,6 +454,7 @@ class PatientViewModel(
                 )
             )
             if (updateResult.isSuccess) {
+                clearPatientSessionState()
                 authService.logout()
                 onSuccess()
             } else {
@@ -934,7 +948,39 @@ class PatientViewModel(
     }
 
     fun logout() {
+        clearPatientSessionState()
         authService.logout()
+    }
+
+    private fun isCurrentPatient(patientId: String): Boolean {
+        return observedPatientId == patientId && authService.getCurrentUser()?.uid == patientId
+    }
+
+    private fun clearPatientSessionState() {
+        observedPatientId = null
+        MeditationProgressStore.progressMap.clear()
+        _isLoading.value = false
+        _patient.value = null
+        _todayCheckIn.value = null
+        _dailyGoal.value = null
+        _dailyGoalExercise.value = null
+        _nextAppointment.value = null
+        _caregiver.value = null
+        _error.value = null
+        _streak.value = null
+        _achievements.value = emptyList()
+        _allCheckIns.value = emptyList()
+        _initialTestBannerState.value = InitialTestBannerState.None
+        _isInitialTestNotificationDismissed.value = false
+        _meditationExercises.value = emptyList()
+        _selectedExercise.value = null
+        _selectedYear.value = LocalDate.now().year
+        _selectedMonth.value = LocalDate.now().monthValue
+        _selectedDateAppointments.value = emptyList()
+        _monthlyAppointments.value = emptyList()
+        _monthlyDiaryEntries.value = emptyList()
+        _diaryEntries.value = emptyList()
+        _selectedAppointment.value = null
     }
 
     fun clearError() {
